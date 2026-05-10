@@ -1,0 +1,13 @@
+{
+  "name": "Damkar Malinau Mandu",
+  "description": "Aplikasi Resmi Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau untuk pelaporan darurat dan manajemen informasi.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "Emergency Reporting",
+    "Real-time Dashboard",
+    "AI News Generation"
+  ]
+}

@@ -1,0 +1,285 @@
+{
+  "entities": {
+    "EmergencyReport": {
+      "title": "Emergency Report",
+      "description": "Laporan kedaruratan dari masyarakat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "type": { "type": "string", "enum": ["Kebakaran", "Evakuasi", "Penyelamatan", "Pohon Tumbang", "Hewan Berbahaya", "Banjir", "Lainnya"] },
+        "level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "description": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "mediaUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["Menunggu", "Diproses", "Dalam Penanganan", "Selesai Ditangani"] },
+        "createdAt": { "type": "number", "format": "timestamp" },
+        "resolvedAt": { "type": "number", "format": "timestamp" },
+        "documentation": {
+          "type": "object",
+          "properties": {
+            "chronology": { "type": "string" },
+            "photos": { "type": "array", "items": { "type": "string" } },
+            "videos": { "type": "array", "items": { "type": "string" } },
+            "personnel": { "type": "number" },
+            "units": { "type": "array", "items": { "type": "string" } },
+            "duration": { "type": "string" },
+            "victims": { "type": "string" },
+            "actions": { "type": "string" }
+          }
+        },
+        "officerNotes": { "type": "string" },
+        "newsGenerated": { "type": "boolean" }
+      },
+      "required": ["reporterName", "phoneNumber", "type", "level", "location", "status", "createdAt"]
+    },
+    "NewsArticle": {
+      "title": "News Article",
+      "description": "Berita otomatis hasil penanganan laporan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reportId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "number", "format": "timestamp" },
+        "location": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["Draft", "Menunggu Publish", "Publish Otomatis"] },
+        "isAIGenerated": { "type": "boolean" },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "videos": { "type": "array", "items": { "type": "string" } },
+        "personnelCount": { "type": "number" },
+        "unitsUsed": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["reportId", "title", "content", "date", "location", "status"]
+    },
+    "NotificationRecipient": {
+      "title": "Notification Recipient",
+      "description": "Daftar penerima notifikasi otomatis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "divisi": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "channels": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["name", "phoneNumber", "divisi", "isActive", "categories", "channels", "createdAt"]
+    },
+    "NotificationLog": {
+      "title": "Notification Log",
+      "description": "Riwayat pengiriman notifikasi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reportId": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "channel": { "type": "string" },
+        "status": { "type": "string", "enum": ["sent", "delivered", "failed"] },
+        "timestamp": { "type": "number", "format": "timestamp" },
+        "messageContent": { "type": "string" },
+        "error": { "type": "string" }
+      },
+      "required": ["reportId", "recipientId", "recipientName", "phoneNumber", "channel", "status", "timestamp", "messageContent"]
+    },
+    "GalleryItem": {
+      "title": "Gallery Item",
+      "description": "Dokumentasi kegiatan dan operasional",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["title", "imageUrl", "createdAt"]
+    },
+    "EducationContent": {
+      "title": "Education Content",
+      "description": "Materi edukasi keselamatan warga",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["title", "category", "content", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Record aktivitas admin pada sistem",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["action", "userEmail", "details", "timestamp"]
+    },
+    "AdminUser": {
+      "title": "Admin User",
+      "description": "Pengguna dengan hak akses kontrol panel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["super", "admin"] },
+        "createdAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["email", "role"]
+    },
+    "AppTheme": {
+      "title": "App Theme",
+      "description": "Pengaturan tema visual aplikasi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "secondaryColor": { "type": "string" },
+        "accentColor": { "type": "string" },
+        "backgroundColor": { "type": "string" },
+        "surfaceColor": { "type": "string" },
+        "textColor": { "type": "string" },
+        "fontFamily": { "type": "string" },
+        "isDark": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "thumbnailUrl": { "type": "string" }
+      },
+      "required": ["name", "primaryColor", "isActive"]
+    },
+    "ProfileSection": {
+      "title": "Profile Section",
+      "description": "Konten profil instansi (Sejarah, Visi Misi, dll)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string", "description": "Markdown content" },
+        "slug": { "type": "string" },
+        "order": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "icon": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "updatedAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["title", "slug", "content", "order", "isActive", "updatedAt"]
+    },
+    "AppConfig": {
+      "title": "App Config",
+      "description": "Pengaturan umum aplikasi dan identitas instansi",
+      "type": "object",
+      "properties": {
+        "agencyName": { "type": "string" },
+        "slogan": { "type": "string" },
+        "contact": { "type": "string" },
+        "emergencyNumber": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "faviconUrl": { "type": "string" },
+        "address": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "BannerConfig": {
+      "title": "Banner Config",
+      "description": "Konfigurasi banner dinamis per halaman",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "ctaText": { "type": "string" },
+        "ctaLink": { "type": "string" },
+        "overlayOpacity": { "type": "number", "description": "0 to 1, default is 0.4" },
+        "backgroundColor": { "type": "string" },
+        "backgroundImageUrl": { "type": "string" },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "type": "string" },
+              "icon": { "type": "string" }
+            }
+          }
+        },
+        "updatedAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["title", "imageUrl", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "reports": {
+      "schema": "EmergencyReport",
+      "description": "Koleksi laporan darurat masuk"
+    },
+    "news": {
+      "schema": "NewsArticle",
+      "description": "Koleksi berita resmi DAMKAR"
+    },
+    "notification_recipients": {
+      "schema": "NotificationRecipient",
+      "description": "Daftar nomor HP terdaftar untuk notifikasi"
+    },
+    "notification_logs": {
+      "schema": "NotificationLog",
+      "description": "Log pengiriman notifikasi otomatis"
+    },
+    "gallery": {
+      "schema": "GalleryItem",
+      "description": "Dokumentasi media operasional"
+    },
+    "education": {
+      "schema": "EducationContent",
+      "description": "Materi edukasi publik"
+    },
+    "admins": {
+      "schema": "AdminUser",
+      "description": "Daftar administrator sistem"
+    },
+    "audit_logs": {
+      "schema": "AuditLog",
+      "description": "Record audit keamanan"
+    },
+    "themes": {
+      "schema": "AppTheme",
+      "description": "Koleksi tema visual dinamis"
+    },
+    "profile_sections": {
+      "schema": "ProfileSection",
+      "description": "Konten dinamis profil instansi"
+    },
+    "settings": {
+      "schema": "AppConfig",
+      "description": "Konfigurasi global aplikasi"
+    },
+    "banners": {
+      "schema": "BannerConfig",
+      "description": "Konfigurasi banner dinamis per halaman"
+    }
+  }
+}

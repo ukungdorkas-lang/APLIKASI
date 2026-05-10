@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Poppins:wght@400;600;700;900&family=Montserrat:wght@400;700;900&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --app-primary: #c1121f;
+    --app-dark: #0a0a0a;
+    --app-accent: #f27d26;
+    --app-bg: #ffffff;
+    --app-text: #0a0a0a;
+  }
+
+  body {
+    background-color: var(--app-bg);
+    color: var(--app-text);
+    @apply font-sans antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", sans-serif;
+  --font-accent: "Montserrat", sans-serif;
+  
+  --color-brand-red: var(--app-primary);
+  --color-brand-dark: var(--app-dark);
+  --color-brand-orange: var(--app-accent);
+  --color-bg-page: var(--app-bg);
+  --color-text-base: var(--app-text);
+
+  --shadow-3xl: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+}
+
+.heading-bold {
+  @apply font-display font-black uppercase tracking-tighter;
+}
+
+.heading-accent {
+  @apply font-accent font-black uppercase tracking-tight;
+}
+
+.tag-label {
+  @apply text-[10px] font-bold uppercase tracking-[0.2em];
+}
+
+.emergency-btn {
+  @apply bg-brand-red hover:bg-red-800 text-white font-black uppercase py-4 px-10 rounded-xl shadow-2xl shadow-brand-red/20 transition-all active:scale-95 leading-none tracking-tighter italic;
+}
+
+.glass-card {
+  @apply bg-white/10 backdrop-blur-xl border border-white/10;
+}
+
+.glass-dark {
+  @apply bg-black/40 backdrop-blur-2xl border border-white/5;
+}
+
+.nav-link {
+  @apply text-[11px] font-black uppercase tracking-widest hover:text-brand-red transition-all relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-0.5 after:bg-brand-red after:transition-all hover:after:w-full;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-400 rounded-full hover:bg-slate-500 transition-colors;
+}

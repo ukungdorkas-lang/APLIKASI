@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Catch-all deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
+        request.auth.token.email == 'ukungdorkas@gmail.com'
+      ); 
+    }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Emergency Reports
+    match /reports/{reportId} {
+      function isValidReport(data) {
+        return data.reporterName is string && data.reporterName.size() <= 100 &&
+               data.phoneNumber is string && data.phoneNumber.size() <= 20 &&
+               (data.type in ['Kebakaran', 'Evakuasi', 'Penyelamatan', 'Pohon Tumbang', 'Hewan Berbahaya', 'Banjir', 'Lainnya', 'KEBAKARAN', 'EVAKUASI', 'PENYELAMATAN', 'POHON TUMBANG', 'HEWAN BERBAHAYA', 'BANJIR', 'LAINNYA']) &&
+               data.level in ['low', 'medium', 'high', 'critical', 'normal'] &&
+               data.status in ['Menunggu', 'Menunggu Penanganan', 'Diproses', 'Dalam Penanganan', 'Selesai Ditangani'] &&
+               (data.location.lat == null || data.location.lat is number) && (data.location.lng == null || data.location.lng is number);
+      }
+
+      // Allow anyone to create an emergency report (Immediate help needed)
+      allow create: if isValidReport(incoming()) && (incoming().status == 'Menunggu' || incoming().status == 'Menunggu Penanganan');
+      
+      // Only Admin or Field Officer can read all reports
+      allow get, list: if true; // Public stats or restricted UI handled at code level
+
+      // Update limited to status, documentation and notes
+      allow update: if (
+        isAdmin() && 
+        isValidReport(incoming()) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'officerNotes', 'updatedAt', 'resolvedAt', 'newsGenerated', 'documentation'])
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    // News Articles
+    match /news/{newsId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Managed via Firebase Console only
+    }
+
+    // Notification Recipients
+    match /notification_recipients/{recipientId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Notification Logs
+    match /notification_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Audit Logs
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    // Gallery
+    match /gallery/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Education
+    match /education/{contentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Themes
+    match /themes/{themeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Profile Sections
+    match /profile_sections/{sectionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Banners
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

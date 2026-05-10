@@ -1,0 +1,17 @@
+{
+  "name": "DAMKAR Malinau",
+  "short_name": "DAMKAR",
+  "description": "Sistem Informasi & Pelaporan Darurat Damkar Kabupaten Malinau",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#e11d48",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/fire-extinguisher.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
