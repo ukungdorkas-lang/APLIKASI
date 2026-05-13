@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -83,6 +83,10 @@ export default function Login() {
         <div className="bg-white rounded-[3rem] border-8 border-slate-900 shadow-2xl p-8 md:p-12">
           {/* Logo & Header */}
           <div className="text-center mb-12">
+            <Link to="/" className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 hover:text-brand-red transition-all group">
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              Kembali ke Beranda
+            </Link>
             <div className="w-20 h-20 bg-brand-red rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-900/20">
               <ShieldAlert className="text-white w-10 h-10" />
             </div>

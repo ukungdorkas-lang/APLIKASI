@@ -4,7 +4,7 @@ import DashboardStats from '../components/DashboardStats';
 import ReportList from '../components/ReportList';
 import { db, auth } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
-import { generateNewsFromReport } from '../lib/gemini';
+import { generateNewsFromReport, developNarrative } from '../lib/gemini';
 import { 
   BarChart3, 
   Users, 
@@ -29,8 +29,15 @@ import {
   MapPin,
   Radio,
   Filter,
-  Image,
-  User
+  Image as ImageIcon,
+  User,
+  PenTool,
+  Sparkles,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  CloudLightning
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -129,7 +136,8 @@ export default function AdminDashboard() {
   const [galleryForm, setGalleryForm] = React.useState({
     title: '',
     category: 'OPERASIONAL',
-    imageUrl: ''
+    imageUrl: '',
+    description: ''
   });
 
   const [eduForm, setEduForm] = React.useState({
@@ -153,12 +161,12 @@ export default function AdminDashboard() {
     id: '', // Page ID
     title: '',
     subtitle: '',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1516562309708-05f3b2b2c238?auto=format&fit=crop&q=80',
     ctaText: '',
     ctaLink: '',
     overlayOpacity: 0.4,
     backgroundColor: '#0f172a',
-    backgroundImageUrl: '',
+    backgroundImageUrl: 'https://images.unsplash.com/photo-1516562309708-05f3b2b2c238?auto=format&fit=crop&q=80',
     stats: [] as { label: string; value: string; icon?: string }[]
   });
 
@@ -193,12 +201,65 @@ export default function AdminDashboard() {
     agencyName: 'DAMKAR MALINAU',
     slogan: 'Pantang Pulang Sebelum Padam',
     contact: '0551-21113',
-    emergencyNumber: '112 / 081122334455',
+    emergencyNumber: '0553 2021476',
     logoUrl: '',
     faviconUrl: '',
     email: '',
-    address: ''
+    address: '',
+    geminiApiKey: '',
+    socialMedia: {
+      instagram: '',
+      facebook: '',
+      twitter: '',
+      youtube: '',
+      tiktok: ''
+    },
+    footerText: '',
+    footerCopyright: `© ${new Date().getFullYear()} PEMADAM KEBAKARAN KABUPATEN MALINAU. ALL RIGHTS RESERVED.`,
+    homeLayout: {
+      showAnnouncement: false,
+      announcementText: '🚨 SIAGA DARURAT: Tetap waspada terhadap titik api di wilayah pemukiman padat.',
+      announcementColor: '#e11d48',
+      heroVideoUrl: '',
+      showNewsSection: true,
+      showGallerySection: true,
+      showEducationSection: true,
+      quickActions: [
+        { title: 'Kebakaran', label: 'TANGGAP API', color: 'bg-red-500', icon: 'Flame', enabled: true },
+        { title: 'Evakuasi', label: 'EVAKUASI', color: 'bg-orange-500', icon: 'ShieldAlert', enabled: true },
+        { title: 'Penyelamatan', label: 'SAR TEAM', color: 'bg-blue-500', icon: 'Phone', enabled: true },
+        { title: 'Perbantuan', label: 'SUPPORT', color: 'bg-slate-700', icon: 'Info', enabled: true }
+      ]
+    }
   });
+
+  const [isAiDeveloping, setIsAiDeveloping] = React.useState(false);
+
+  const handleDevelopNarrative = async () => {
+    if (!newsForm.content || newsForm.content.length < 20) {
+      showToast('Tulis kerangka berita minimal 20 karakter', 'error');
+      return;
+    }
+
+    setIsAiDeveloping(true);
+    try {
+      const result = await developNarrative(newsForm.content, settingsForm as any);
+      if (result) {
+        setNewsForm(prev => ({
+          ...prev,
+          title: result.title || prev.title,
+          content: result.content || prev.content
+        }));
+        showToast('Narasi AI berhasil dikembangkan');
+      } else {
+        showToast('Gagal menghubungkan ke AI', 'error');
+      }
+    } catch (err) {
+      showToast('Terjadi kesalahan saat menghubungi AI', 'error');
+    } finally {
+      setIsAiDeveloping(false);
+    }
+  };
 
   const handleSaveTheme = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,11 +352,18 @@ export default function AdminDashboard() {
   const handleSaveGallery = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'gallery'), { ...galleryForm, createdAt: Date.now() });
+      if (editingItem) {
+        await updateDoc(doc(db, 'gallery', editingItem.id), galleryForm);
+        showToast('Media diperbarui');
+      } else {
+        await addDoc(collection(db, 'gallery'), { ...galleryForm, createdAt: Date.now() });
+        showToast('Media berhasil diunggah');
+      }
       setShowGalleryModal(false);
-      showToast('Media berhasil diunggah');
+      setEditingItem(null);
+      setGalleryForm({ title: '', category: 'OPERASIONAL', imageUrl: '', description: '' });
     } catch (err) {
-      showToast('Gagal mengunggah media', 'error');
+      showToast('Gagal memproses media', 'error');
     }
   };
 
@@ -369,13 +437,13 @@ export default function AdminDashboard() {
   const handleSaveSettings = async () => {
     try {
       // Typically settings go in a singleton doc
-      await updateDoc(doc(db, 'settings', 'general'), settingsForm);
+      await updateDoc(doc(db, 'settings', 'app'), settingsForm);
       showToast('Pengaturan sistem diperbarui');
     } catch (err) {
       // If doc doesn't exist, try setting it
       try {
         const { setDoc } = await import('firebase/firestore');
-        await setDoc(doc(db, 'settings', 'general'), settingsForm);
+        await setDoc(doc(db, 'settings', 'app'), settingsForm);
         showToast('Pengaturan sistem diperbarui');
       } catch (e) {
         showToast('Gagal menyimpan pengaturan', 'error');
@@ -452,12 +520,15 @@ export default function AdminDashboard() {
       setDataLoading(prev => ({ ...prev, banners: false }));
     });
 
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
       if (snap.exists()) {
         setSettingsForm(prev => ({ ...prev, ...snap.data() }));
       }
       setDataLoading(prev => ({ ...prev, settings: false }));
-    }, () => setDataLoading(prev => ({ ...prev, settings: false })));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, 'settings/app', auth);
+      setDataLoading(prev => ({ ...prev, settings: false }));
+    });
 
     return () => {
       unsubNews(); unsubUsers(); unsubLogs(); unsubGallery(); unsubEducation(); unsubProfiles(); unsubBanners(); unsubSettings();
@@ -468,12 +539,12 @@ export default function AdminDashboard() {
     try {
       showToast('Menyiapkan banner default...');
       const defaults = [
-        { id: 'home', title: 'CEPAT TANGGAP DAN PROFESIONAL', subtitle: 'Kami siap melindungi masyarakat dari bahaya kebakaran dengan pelayanan cepat, akurat, dan terpercaya selama 24 jam penuh.', imageUrl: 'https://images.unsplash.com/photo-1542343607-16076fe95b7b?auto=format&fit=crop&q=80', ctaText: 'LAPOR SEKARANG', ctaLink: '/report', overlayOpacity: 0.4 },
+        { id: 'home', title: 'CEPAT TANGGAP DAN PROFESIONAL', subtitle: 'Kami siap melindungi masyarakat dari bahaya kebakaran dengan pelayanan cepat, akurat, dan terpercaya selama 24 jam penuh.', imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80', ctaText: 'LAPOR SEKARANG', ctaLink: '/report', overlayOpacity: 0.4 },
         { id: 'news', title: 'WARTA DAMKAR', subtitle: 'Informasi terkini seputar operasional, sosialisasi, dan edukasi pencegahan kebakaran di Kabupaten Malinau.', imageUrl: 'https://images.unsplash.com/photo-1542343607-16076fe95b7b?auto=format&fit=crop&q=80', overlayOpacity: 0.6 },
-        { id: 'report', title: 'PUSAT PELAPORAN', subtitle: 'Laporkan kejadian darurat dengan cepat untuk penanganan segera oleh tim profesional kami.', imageUrl: 'https://images.unsplash.com/photo-1542343607-16076fe95b7b?auto=format&fit=crop&q=80', overlayOpacity: 0.7 },
-        { id: 'documentation', title: 'GALERI EDUKASI', subtitle: 'Pelajari cara pencegahan dan penanganan dini kebakaran melalui materi edukasi kami.', imageUrl: 'https://images.unsplash.com/photo-1542343607-16076fe95b7b?auto=format&fit=crop&q=80', overlayOpacity: 0.5 },
-        { id: 'profile', title: 'PROFIL INSTANSI', subtitle: 'Kenali lebih dekat Satuan Pemadam Kebakaran Kabupaten Malinau, tugas, dan fungsi kami.', imageUrl: 'https://images.unsplash.com/photo-1542343607-16076fe95b7b?auto=format&fit=crop&q=80', overlayOpacity: 0.6 },
-        { id: 'contact', title: 'HUBUNGI KAMI', subtitle: 'Layanan bantuan dan informasi 24 jam. Siaga melindungi masyarakat Malinau.', imageUrl: 'https://images.unsplash.com/photo-1542343607-16076fe95b7b?auto=format&fit=crop&q=80', overlayOpacity: 0.6 },
+        { id: 'report', title: 'PUSAT PELAPORAN', subtitle: 'Laporkan kejadian darurat dengan cepat untuk penanganan segera oleh tim profesional kami.', imageUrl: 'https://images.unsplash.com/photo-1629813204127-909565652516?auto=format&fit=crop&q=80', overlayOpacity: 0.7 },
+        { id: 'documentation', title: 'GALERI EDUKASI', subtitle: 'Pelajari cara pencegahan dan penanganan dini kebakaran melalui materi edukasi kami.', imageUrl: 'https://images.unsplash.com/photo-1588612140404-03a893cb6294?auto=format&fit=crop&q=80', overlayOpacity: 0.5 },
+        { id: 'profile', title: 'PROFIL INSTANSI', subtitle: 'Kenali lebih dekat Satuan Pemadam Kebakaran Kabupaten Malinau, tugas, dan fungsi kami.', imageUrl: 'https://images.unsplash.com/photo-1534062835843-0975877c8e54?auto=format&fit=crop&q=80', overlayOpacity: 0.6 },
+        { id: 'contact', title: 'HUBUNGI KAMI', subtitle: 'Layanan bantuan dan informasi 24 jam. Siaga melindungi masyarakat Malinau.', imageUrl: 'https://images.unsplash.com/photo-1518112166137-859095980004?auto=format&fit=crop&q=80', overlayOpacity: 0.6 },
       ];
 
       const { setDoc } = await import('firebase/firestore');
@@ -574,7 +645,7 @@ export default function AdminDashboard() {
     { id: 'gallery', name: 'Galeri Media', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'education', name: 'Edukasi Warga', icon: <Info className="w-5 h-5" /> },
     { id: 'profiles', name: 'Manajemen Profil', icon: <User className="w-5 h-5" /> },
-    { id: 'banners', name: 'Manajemen Banner', icon: <Image className="w-5 h-5" /> },
+    { id: 'banners', name: 'Manajemen Banner', icon: <ImageIcon className="w-5 h-5" /> },
     { id: 'notifications', name: 'Sistem Notif', icon: <Bell className="w-5 h-5" /> },
     { id: 'users', name: 'Admin & Petugas', icon: <Users className="w-5 h-5" /> },
     { id: 'logs', name: 'Audit & Riwayat', icon: <Clock className="w-5 h-5" /> },
@@ -1054,7 +1125,12 @@ export default function AdminDashboard() {
               <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
                 <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                    <div className="flex gap-4"> {['SEMUA', 'OPERASIONAL', 'KEGIATAN'].map(f => (<button key={f} className="px-6 py-2 rounded-lg font-black text-xs uppercase italic tracking-tighter bg-slate-50 border-2 border-slate-100">{f}</button>))} </div>
-                   <button className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:scale-105 transition-all" onClick={() => setShowGalleryModal(true)}>Unggah Dokumentasi</button>
+                           <button className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:scale-105 transition-all" 
+                             onClick={() => {
+                               setEditingItem(null);
+                               setGalleryForm({ title: '', category: 'OPERASIONAL', imageUrl: '', description: '' });
+                               setShowGalleryModal(true);
+                             }}>Unggah Dokumentasi</button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {dataLoading.gallery ? (
@@ -1078,7 +1154,12 @@ export default function AdminDashboard() {
                       <div className="absolute inset-0 bg-brand-dark/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
                          <button onClick={() => {
                             setEditingItem(item);
-                            setGalleryForm({ title: item.title, category: item.category || 'OPERASIONAL', imageUrl: item.imageUrl });
+                            setGalleryForm({ 
+                              title: item.title, 
+                              category: item.category || 'OPERASIONAL', 
+                              imageUrl: item.imageUrl,
+                              description: item.description || ''
+                            });
                             setShowGalleryModal(true);
                          }} className="p-3 bg-white rounded-xl hover:scale-110 transition-transform"><Edit className="w-5 h-5 text-brand-dark" /></button>
                          <button onClick={() => handleDeleteItem('gallery', item.id)} className="p-3 bg-brand-red rounded-xl hover:scale-110 transition-transform"><Trash2 className="w-5 h-5 text-white" /></button>
@@ -1221,8 +1302,8 @@ export default function AdminDashboard() {
                   <LoadingSpinner message="Sinkronisasi Konfigurasi Sistem..." />
                 ) : (
                   <div className="grid md:grid-cols-2 gap-12">
-                   <div className="bg-white p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl space-y-10">
-                      <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 border-b-8 border-brand-red pb-4 inline-block">Konfigurasi <span className="text-brand-red">Inti</span></h3>
+                    <div className="bg-white p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl space-y-10 overflow-y-auto max-h-[80vh]">
+                      <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 border-b-8 border-brand-red pb-4 inline-block">Ekosistem <span className="text-brand-red">Digital</span></h3>
                        <div className="space-y-6">
                          <div className="flex items-center gap-6">
                             <div className="w-24 h-24 bg-slate-50 border-4 border-slate-100 rounded-2xl flex items-center justify-center font-black italic text-brand-red text-3xl overflow-hidden shadow-inner shrink-0 text-center">
@@ -1249,16 +1330,252 @@ export default function AdminDashboard() {
                             className="w-full bg-slate-50 border-4 border-slate-100 rounded-2xl p-5 font-black italic outline-none focus:border-brand-red" 
                           />
                         </div>
-                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Kontak Utama</label>
-                          <input 
-                            value={settingsForm.contact} 
-                            onChange={e => setSettingsForm(prev => ({ ...prev, contact: e.target.value }))}
-                            className="w-full bg-slate-50 border-4 border-slate-100 rounded-2xl p-5 font-black italic outline-none focus:border-brand-red" 
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                           <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Kontak Utama</label>
+                             <input 
+                               value={settingsForm.contact} 
+                               onChange={e => setSettingsForm(prev => ({ ...prev, contact: e.target.value }))}
+                               className="w-full bg-slate-50 border-4 border-slate-100 rounded-2xl p-5 font-black italic outline-none focus:border-brand-red" 
+                             />
+                           </div>
+                           <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nomor Darurat</label>
+                             <input 
+                               value={settingsForm.emergencyNumber} 
+                               onChange={e => setSettingsForm(prev => ({ ...prev, emergencyNumber: e.target.value }))}
+                               className="w-full bg-slate-50 border-4 border-slate-100 rounded-2xl p-5 font-black italic outline-none focus:border-brand-red text-brand-red" 
+                             />
+                           </div>
                         </div>
+
+                        <div className="pt-6 border-t-4 border-slate-50">
+                           <h4 className="text-sm font-black uppercase italic tracking-widest mb-6 flex items-center gap-2"><Sparkles className="w-4 h-4 text-brand-red" /> Konfigurasi Gemini AI</h4>
+                           <div className="space-y-4">
+                              <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Gemini API Key (Dinamis)</label>
+                                <input 
+                                  type="password"
+                                  placeholder="Masukan API Key Gemini untuk Fitur AI"
+                                  value={settingsForm.geminiApiKey} 
+                                  onChange={e => setSettingsForm(prev => ({ ...prev, geminiApiKey: e.target.value }))}
+                                  className="w-full bg-slate-50 border-4 border-slate-100 rounded-2xl p-5 font-black italic outline-none focus:border-brand-red" 
+                                />
+                                <p className="text-[8px] font-bold text-slate-400 mt-2 italic">*Kosongkan jika ingin menggunakan API Key sistem/default.</p>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="pt-6 border-t-4 border-slate-50">
+                           <h4 className="text-sm font-black uppercase italic tracking-widest mb-6 flex items-center gap-2"><Radio className="w-4 h-4 text-brand-red" /> Media Sosial</h4>
+                           <div className="grid grid-cols-2 gap-4">
+                              <div className="relative font-bold">
+                                 <Instagram className="absolute left-4 top-4 w-5 h-5 text-slate-300" />
+                                 <input 
+                                   placeholder="Username Instagram"
+                                   value={settingsForm.socialMedia.instagram} 
+                                   onChange={e => setSettingsForm(prev => ({ ...prev, socialMedia: { ...prev.socialMedia, instagram: e.target.value } }))}
+                                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pl-12 font-bold outline-none focus:border-brand-red" 
+                                 />
+                              </div>
+                              <div className="relative font-bold">
+                                 <Facebook className="absolute left-4 top-4 w-5 h-5 text-slate-300" />
+                                 <input 
+                                   placeholder="Link Facebook"
+                                   value={settingsForm.socialMedia.facebook} 
+                                   onChange={e => setSettingsForm(prev => ({ ...prev, socialMedia: { ...prev.socialMedia, facebook: e.target.value } }))}
+                                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pl-12 font-bold outline-none focus:border-brand-red" 
+                                 />
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="pt-6 border-t-4 border-slate-50">
+                           <h4 className="text-sm font-black uppercase italic tracking-widest mb-6 flex items-center gap-2">Footer Website</h4>
+                           <div className="space-y-4">
+                              <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Teks Footer (Markdown)</label>
+                                <textarea 
+                                  value={settingsForm.footerText} 
+                                  onChange={e => setSettingsForm(prev => ({ ...prev, footerText: e.target.value }))}
+                                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-brand-red resize-none h-32" 
+                                  placeholder="Masukan deskripsi instansi yang akan tampil di bagian bawah website..."
+                                />
+                              </div>
+                              <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Hak Cipta / Copyright</label>
+                                <input 
+                                  value={settingsForm.footerCopyright} 
+                                  onChange={e => setSettingsForm(prev => ({ ...prev, footerCopyright: e.target.value }))}
+                                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-brand-red" 
+                                />
+                              </div>
+                           </div>
+                        </div>
+
+                         {/* DETAILED HOME PAGE SETTINGS */}
+                         <div className="pt-8 mt-8 border-t-4 border-slate-900">
+                            <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-8 text-brand-red flex items-center gap-4">
+                               <LayoutDashboard className="w-8 h-8" /> Kustomisasi Beranda
+                            </h3>
+                            
+                            <div className="space-y-8">
+                               <div className="p-8 bg-slate-900 rounded-[2.5rem] border-l-8 border-brand-red text-white shadow-2xl">
+                                  <div className="flex items-center justify-between mb-6">
+                                     <h4 className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
+                                        <Bell className="w-4 h-4 text-brand-red" /> Bar Pengumuman
+                                     </h4>
+                                     <div className="flex items-center gap-3">
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">{(settingsForm as any).homeLayout?.showAnnouncement ? 'AKTIF' : 'NON-AKTIF'}</span>
+                                        <button 
+                                          type="button"
+                                          onClick={() => setSettingsForm(prev => ({ 
+                                            ...prev, 
+                                            homeLayout: { ...(prev as any).homeLayout, showAnnouncement: !(prev as any).homeLayout?.showAnnouncement } 
+                                          }))}
+                                          className={cn(
+                                            "w-12 h-6 rounded-full transition-all relative",
+                                            (settingsForm as any).homeLayout?.showAnnouncement ? "bg-brand-red" : "bg-slate-700"
+                                          )}
+                                        >
+                                           <div className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", (settingsForm as any).homeLayout?.showAnnouncement ? "right-1" : "left-1")} />
+                                        </button>
+                                     </div>
+                                  </div>
+                                  <div className="space-y-4">
+                                     <textarea 
+                                       value={(settingsForm as any).homeLayout?.announcementText}
+                                       onChange={e => setSettingsForm(prev => ({ 
+                                         ...prev, 
+                                         homeLayout: { ...(prev as any).homeLayout, announcementText: e.target.value } 
+                                       }))}
+                                       className="w-full bg-white/5 border border-white/10 rounded-xl p-4 font-bold text-xs outline-none focus:border-brand-red min-h-[80px]"
+                                       placeholder="Teks pengumuman darurat atau informasi penting..."
+                                     />
+                                     <div className="flex items-center gap-4">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Warna Bar</label>
+                                        <input 
+                                          type="color" 
+                                          value={(settingsForm as any).homeLayout?.announcementColor}
+                                          onChange={e => setSettingsForm(prev => ({ 
+                                            ...prev, 
+                                            homeLayout: { ...(prev as any).homeLayout, announcementColor: e.target.value } 
+                                          }))}
+                                          className="w-10 h-10 rounded-lg bg-transparent cursor-pointer"
+                                        />
+                                     </div>
+                                  </div>
+                               </div>
+
+                               <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-slate-100">
+                                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 italic">Hero Section (Video & Media)</h4>
+                                  <div className="space-y-4">
+                                     <div className="space-y-2">
+                                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-400">URL Video Hero (YouTube/Direct Link - Opsional)</label>
+                                        <input 
+                                          value={(settingsForm as any).homeLayout?.heroVideoUrl}
+                                          onChange={e => setSettingsForm(prev => ({ 
+                                            ...prev, 
+                                            homeLayout: { ...(prev as any).homeLayout, heroVideoUrl: e.target.value } 
+                                          }))}
+                                          className="w-full bg-white border-2 border-slate-200 p-4 rounded-xl font-bold text-sm outline-none focus:border-brand-red"
+                                          placeholder="https://..."
+                                        />
+                                        <p className="text-[8px] font-bold text-slate-400 italic">Jika diisi, video ini akan menggantikan gambar hero di halaman utama.</p>
+                                     </div>
+                                  </div>
+                               </div>
+
+                               <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-slate-100">
+                                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 italic">Kontrol Visibilitas Bagian</h4>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                     {[
+                                       { key: 'showNewsSection', label: 'BERITA', icon: <Newspaper className="w-4 h-4" /> },
+                                       { key: 'showGallerySection', label: 'GALERI', icon: <ImageIcon className="w-4 h-4" /> },
+                                       { key: 'showEducationSection', label: 'EDUKASI', icon: <PenTool className="w-4 h-4" /> }
+                                     ].map((sec) => (
+                                       <button 
+                                         key={sec.key}
+                                         type="button"
+                                         onClick={() => setSettingsForm(prev => ({ 
+                                           ...prev, 
+                                           homeLayout: { ...(prev as any).homeLayout, [sec.key]: !(prev as any).homeLayout?.[sec.key] } 
+                                         }))}
+                                         className={cn(
+                                           "p-6 rounded-2xl border-4 transition-all flex flex-col items-center gap-3",
+                                           (settingsForm as any).homeLayout?.[sec.key] 
+                                             ? "bg-slate-900 border-brand-red text-white" 
+                                             : "bg-white border-slate-200 text-slate-300 opacity-60"
+                                         )}
+                                       >
+                                          {sec.icon}
+                                          <span className="text-[10px] font-black uppercase tracking-widest">{sec.label}</span>
+                                          <div className={cn(
+                                            "px-4 py-1 rounded-full text-[8px] font-black",
+                                            (settingsForm as any).homeLayout?.[sec.key] ? "bg-brand-red" : "bg-slate-200 text-slate-400"
+                                          )}>
+                                             {(settingsForm as any).homeLayout?.[sec.key] ? 'ON' : 'OFF'}
+                                          </div>
+                                       </button>
+                                     ))}
+                                  </div>
+                               </div>
+
+                               {/* QUICK ACTIONS EDITOR */}
+                               <div className="p-8 bg-white rounded-[2.5rem] border-4 border-slate-900">
+                                  <h4 className="text-sm font-black uppercase italic tracking-widest mb-6 border-b-2 border-slate-100 pb-4">Navigasi Tombol Cepat (Beranda)</h4>
+                                  <div className="space-y-4">
+                                     {(settingsForm as any).homeLayout?.quickActions?.map((action: any, idx: number) => (
+                                       <div key={idx} className="flex flex-col sm:flex-row gap-4 p-6 bg-slate-50 rounded-2xl border-2 border-slate-100">
+                                          <div className="flex-1 space-y-4">
+                                             <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                   <label className="text-[8px] font-black text-slate-400 uppercase">Judul Tombol</label>
+                                                   <input 
+                                                     value={action.title}
+                                                     onChange={e => {
+                                                       const newActions = [...(settingsForm as any).homeLayout!.quickActions];
+                                                       newActions[idx].title = e.target.value;
+                                                       setSettingsForm(prev => ({ ...prev, homeLayout: { ...(prev as any).homeLayout!, quickActions: newActions } }));
+                                                     }}
+                                                     className="w-full bg-white p-2 rounded-lg border border-slate-200 font-bold text-xs"
+                                                   />
+                                                </div>
+                                                <div className="space-y-1">
+                                                   <label className="text-[8px] font-black text-slate-400 uppercase">Label Kecil</label>
+                                                   <input 
+                                                     value={action.label}
+                                                     onChange={e => {
+                                                       const newActions = [...(settingsForm as any).homeLayout!.quickActions];
+                                                       newActions[idx].label = e.target.value;
+                                                       setSettingsForm(prev => ({ ...prev, homeLayout: { ...(prev as any).homeLayout!, quickActions: newActions } }));
+                                                     }}
+                                                     className="w-full bg-white p-2 rounded-lg border border-slate-200 font-bold text-xs"
+                                                   />
+                                                </div>
+                                             </div>
+                                          </div>
+                                          <div className="flex items-center gap-4">
+                                             <button 
+                                               type="button"
+                                               onClick={() => {
+                                                 const newActions = [...(settingsForm as any).homeLayout!.quickActions];
+                                                 newActions[idx].enabled = !newActions[idx].enabled;
+                                                 setSettingsForm(prev => ({ ...prev, homeLayout: { ...(prev as any).homeLayout!, quickActions: newActions } }));
+                                               }}
+                                               className={cn(
+                                                 "px-6 py-2 rounded-lg font-black text-[10px] uppercase transition-all shadow-sm",
+                                                 action.enabled ? "bg-brand-red text-white" : "bg-slate-200 text-slate-400"
+                                               )}
+                                             >
+                                                {action.enabled ? 'AKTIF' : 'NONAKTIF'}
+                                             </button>
+                                          </div>
+                                       </div>
+                                     ))}
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
                       </div>
-                      <button className="w-full py-5 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl shadow-red-200 mt-4 hover:scale-[1.02] transition-all" onClick={handleSaveSettings}>Update Identitas</button>
+                      <button className="w-full py-5 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl shadow-red-200 mt-4 hover:scale-[1.02] transition-all" onClick={handleSaveSettings}>Update Konfigurasi Sistem</button>
                    </div>
+
                    <div className="space-y-12">
                       <div className="bg-white p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl">
                          <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-10 pb-4 border-b-8 border-slate-900 inline-block">Sistem <span className="text-brand-red">API</span></h3>
@@ -1648,8 +1965,22 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-2">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Konten Berita (Markdown)</label>
-                     <textarea required value={newsForm.content} onChange={e => setNewsForm({...newsForm, content: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red resize-none h-64" placeholder="Tulis rincian warta di sini..." />
+                     <div className="flex justify-between items-end mb-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Konten Berita (Markdown)</label>
+                        <button 
+                          type="button"
+                          onClick={handleDevelopNarrative}
+                          disabled={isAiDeveloping}
+                          className="flex items-center gap-2 bg-brand-red/10 text-brand-red px-4 py-1.5 rounded-full text-[10px] font-black italic uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all disabled:opacity-50"
+                        >
+                          {isAiDeveloping ? (
+                            <><CloudLightning className="w-3 h-3 animate-bounce" /> Mengembangkan...</>
+                          ) : (
+                            <><Sparkles className="w-3 h-3" /> Pena Narasi AI</>
+                          )}
+                        </button>
+                     </div>
+                     <textarea required value={newsForm.content} onChange={e => setNewsForm({...newsForm, content: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red resize-none h-64" placeholder="Tulis rincian warta atau kerangka draf di sini..." />
                   </div>
                   <button type="submit" className="w-full py-5 bg-slate-900 text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl hover:scale-[1.02] transition-all">Publish Warta</button>
                </form>
@@ -1716,6 +2047,10 @@ export default function AdminDashboard() {
                     onUploadSuccess={(url) => setGalleryForm({...galleryForm, imageUrl: url})}
                   />
                   {galleryForm.imageUrl && <div className="mt-4 rounded-xl overflow-hidden border-2 border-slate-100 aspect-video"><img src={galleryForm.imageUrl} className="w-full h-full object-cover" /></div>}
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Deskripsi Media</label>
+                     <textarea value={galleryForm.description} onChange={e => setGalleryForm({...galleryForm, description: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red min-h-[120px]" placeholder="Berikan keterangan singkat mengenai foto dokumentasi ini..." />
+                  </div>
                   <button type="submit" className="w-full py-5 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl hover:scale-[1.02] transition-all">Selesai Unggah</button>
                </form>
             </motion.div>
@@ -1984,7 +2319,7 @@ export default function AdminDashboard() {
                             onClick={() => setBannerForm({...bannerForm, backgroundImageUrl: ''})}
                             className="p-4 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
                           >
-                            <X className="w-5 h-5" />
+                            <CloseIcon className="w-5 h-5" />
                           </button>
                         )}
                      </div>
@@ -2034,7 +2369,7 @@ export default function AdminDashboard() {
                               }}
                               className="p-2 text-slate-300 hover:text-red-500 transition-colors"
                             >
-                              <X className="w-5 h-5" />
+                              <CloseIcon className="w-5 h-5" />
                             </button>
                           </div>
                         ))}

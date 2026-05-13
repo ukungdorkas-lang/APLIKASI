@@ -56,6 +56,7 @@
         "type": { "type": "string" },
         "status": { "type": "string", "enum": ["Draft", "Menunggu Publish", "Publish Otomatis"] },
         "isAIGenerated": { "type": "boolean" },
+        "aiPrompt": { "type": "string" },
         "photos": { "type": "array", "items": { "type": "string" } },
         "videos": { "type": "array", "items": { "type": "string" } },
         "personnelCount": { "type": "number" },
@@ -199,7 +200,20 @@
         "logoUrl": { "type": "string" },
         "faviconUrl": { "type": "string" },
         "address": { "type": "string" },
-        "email": { "type": "string" }
+        "email": { "type": "string" },
+        "geminiApiKey": { "type": "string", "description": "Kunci API Gemini untuk fitur AI" },
+        "socialMedia": {
+          "type": "object",
+          "properties": {
+            "instagram": { "type": "string" },
+            "facebook": { "type": "string" },
+            "twitter": { "type": "string" },
+            "youtube": { "type": "string" },
+            "tiktok": { "type": "string" }
+          }
+        },
+        "footerText": { "type": "string" },
+        "footerCopyright": { "type": "string" }
       }
     },
     "BannerConfig": {

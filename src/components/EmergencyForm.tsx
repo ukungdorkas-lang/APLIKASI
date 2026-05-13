@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { ShieldAlert, Send, AlertTriangle, User, Phone, MapPin, CheckCircle2, Radio } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ShieldAlert, Send, AlertTriangle, User, Phone, MapPin, CheckCircle2, Radio, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { IncidentType } from '../types';
 import { cn } from '../lib/utils';
@@ -63,12 +63,20 @@ export default function EmergencyForm({ onSubmit }: { onSubmit: (data: any) => P
            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red opacity-[0.03] -translate-y-1/2 translate-x-1/2 rounded-full" />
         </div>
 
-        <button 
-          onClick={() => setSuccess(null)}
-          className="w-full py-5 bg-brand-dark text-white rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-red transition-all shadow-xl"
-        >
-          Buat Laporan Lain
-        </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link 
+            to={`/check-ticket?ticket=${success}`}
+            className="w-full flex items-center justify-center gap-3 py-5 bg-brand-red text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition-all shadow-xl shadow-red-200"
+          >
+            Cek Status <ArrowRight className="w-4 h-4" />
+          </Link>
+          <button 
+            onClick={() => setSuccess(null)}
+            className="w-full py-5 bg-brand-dark text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 transition-all shadow-xl"
+          >
+            Lapor Lagi
+          </button>
+        </div>
       </motion.div>
     );
   }

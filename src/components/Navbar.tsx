@@ -23,7 +23,7 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
 
     // Fetch Config
-    const unsubConfig = onSnapshot(doc(db, 'settings', 'general'), (doc) => {
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (doc) => {
       if (doc.exists()) {
         setConfig(doc.data() as AppConfig);
       }
@@ -47,6 +47,7 @@ export default function Navbar() {
 
   const menuItems = [
     { name: 'Beranda', path: '/' },
+    { name: 'Cek Tiket', path: '/check-ticket' },
     { name: 'Laporan', path: '/report' },
     { name: 'Berita', path: '/news' },
     { name: 'Dokumentasi', path: '/documentation' },

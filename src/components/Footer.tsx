@@ -1,8 +1,34 @@
 import React from 'react';
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Shield, ArrowRight } from 'lucide-react';
+import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Shield, ArrowRight, Youtube } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { AppConfig } from '../types';
+import Markdown from 'react-markdown';
 
 export default function Footer() {
+  const [settings, setSettings] = React.useState<AppConfig | null>(null);
+
+  React.useEffect(() => {
+    return onSnapshot(doc(db, 'settings', 'app'), (snap) => {
+      if (snap.exists()) setSettings(snap.data() as AppConfig);
+    });
+  }, []);
+
+  const socialLinks = settings?.socialMedia || {
+    instagram: '',
+    facebook: '',
+    twitter: '',
+    youtube: ''
+  };
+
+  const socialIcons = [
+    { Icon: Facebook, url: socialLinks.facebook, label: 'Facebook' },
+    { Icon: Instagram, url: socialLinks.instagram, label: 'Instagram' },
+    { Icon: Twitter, url: socialLinks.twitter, label: 'Twitter' },
+    { Icon: Youtube, url: socialLinks.youtube, label: 'Youtube' }
+  ].filter(s => s.url);
+
   return (
     <footer className="bg-brand-dark text-white relative overflow-hidden pt-32 pb-12 border-t border-white/5">
       {/* Decorative elements */}
@@ -14,19 +40,36 @@ export default function Footer() {
           <div className="lg:col-span-5 space-y-10">
             <div>
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
-                  <Shield className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40 overflow-hidden">
+                  {settings?.logoUrl ? (
+                    <img src={settings.logoUrl} className="w-full h-full object-contain p-2" alt="Logo" />
+                  ) : (
+                    <Shield className="w-6 h-6 text-white" />
+                  )}
                 </div>
-                <h2 className="text-3xl font-display font-black tracking-tighter uppercase italic">Damkar <span className="text-brand-red">Malinau</span></h2>
+                <h2 className="text-3xl font-display font-black tracking-tighter uppercase italic">
+                  {settings?.agencyName?.split(' ')[0] || 'Damkar'} <span className="text-brand-red">{settings?.agencyName?.split(' ').slice(1).join(' ') || 'Malinau'}</span>
+                </h2>
               </div>
-              <p className="text-slate-400 font-medium leading-relaxed max-w-sm italic">
-                Pelayanan Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau. Bekerja dengan cepat, tepat, dan selamat untuk perlindungan masyarakat.
-              </p>
+              <div className="text-slate-400 font-medium leading-relaxed max-w-sm italic prose prose-invert prose-sm">
+                {settings?.footerText ? (
+                  <Markdown>{settings.footerText}</Markdown>
+                ) : (
+                  "Pelayanan Pemadam Kebakaran dan Penyelamatan. Bekerja dengan cepat, tepat, dan selamat untuk perlindungan masyarakat."
+                )}
+              </div>
             </div>
             
             <div className="flex gap-4">
-              {[Facebook, Instagram, Twitter].map((Icon, i) => (
-                <a key={i} href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-brand-red transition-all group">
+              {socialIcons.map(({ Icon, url, label }, i) => (
+                <a 
+                  key={i} 
+                  href={url.startsWith('http') ? url : `https://${label.toLowerCase()}.com/${url}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-brand-red transition-all group"
+                  title={label}
+                >
                    <Icon className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
                 </a>
               ))}
@@ -67,13 +110,20 @@ export default function Footer() {
                          <Phone className="w-8 h-8 text-white" />
                       </div>
                       <div>
-                         <p className="text-4xl font-display font-black tracking-tighter text-white italic leading-none">112</p>
+                         <p className="text-4xl font-display font-black tracking-tighter text-white italic leading-none">
+                           {settings?.emergencyNumber || '0553 2021476'}
+                         </p>
                          <p className="text-[9px] font-black text-brand-red uppercase animate-pulse mt-1">Ready for response</p>
                       </div>
                    </div>
-                   <button className="w-full py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                   <a 
+                    href={`https://wa.me/${settings?.contact?.replace(/[^0-9]/g, '')}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full block text-center py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                   >
                       Kontak via WhatsApp
-                   </button>
+                   </a>
                 </div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-[60px] rounded-full" />
              </div>
@@ -82,7 +132,7 @@ export default function Footer() {
 
         <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">
-            © 2026 BPBD Pemadam Kebakaran Malinau. All Rights Reserved.
+            {settings?.footerCopyright || `© ${new Date().getFullYear()} BPBD Pemadam Kebakaran Malinau. All Rights Reserved.`}
           </p>
           <div className="flex items-center gap-6">
              <div className="flex items-center gap-3">

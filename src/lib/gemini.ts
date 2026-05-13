@@ -1,9 +1,22 @@
 import { GoogleGenAI } from "@google/genai";
-import { EmergencyReport } from "../types";
+import { EmergencyReport, AppConfig } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+let currentApiKey = process.env.GEMINI_API_KEY || '';
+let aiInstance = new GoogleGenAI({ apiKey: currentApiKey });
 
-export async function generateNewsFromReport(report: EmergencyReport) {
+export function getAiInstance(settings?: AppConfig) {
+  const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY || '';
+  
+  if (apiKey !== currentApiKey && apiKey !== '') {
+    currentApiKey = apiKey;
+    aiInstance = new GoogleGenAI({ apiKey: currentApiKey });
+  }
+  
+  return aiInstance;
+}
+
+export async function generateNewsFromReport(report: EmergencyReport, settings?: AppConfig) {
+  const ai = getAiInstance(settings);
   const prompt = `
     Anda adalah Pejabat Pengelola Informasi dan Dokumentasi (PPID) Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
     Tugas Anda adalah memproduksi rilis berita resmi pemerintah berdasarkan data kejadian yang telah ditangani oleh tim lapangan.
@@ -58,5 +71,90 @@ export async function generateNewsFromReport(report: EmergencyReport) {
   } catch (error) {
     console.error("AI Generation Error:", error);
     return null;
+  }
+}
+
+export async function developNarrative(outline: string, settings?: AppConfig) {
+  const ai = getAiInstance(settings);
+  const prompt = `
+    Anda adalah Asisten Penulis Berita (Pena Narasi AI) untuk Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
+    Tugas Anda adalah mengembangkan draf atau kerangka berita singkat menjadi narasi berita yang lengkap, menarik, dan profesional.
+
+    DRAF/KERANGKA:
+    "${outline}"
+
+    INSTRUKSI:
+    1. Kembangkan draf di atas menjadi artikel berita formal (300-500 kata).
+    2. Pertahankan akurasi fakta dari draf.
+    3. Gunakan gaya bahasa jurnalistik resmi pemerintah.
+    4. Berikan judul yang menarik dan mencerminkan instansi.
+    5. Tambahkan detail-detail narasi yang logis untuk memperkaya cerita (misal: kesigapan tim, koordinasi dengan warga, atau pesan bupati/kepala dinas jika relevan secara umum).
+    6. Akhiri dengan pesan edukasi pencegahan kebakaran/bahaya.
+    7. FORMAT: Return JSON.
+
+    JSON STRUCTURE:
+    {
+      "title": "Judul Berita",
+      "content": "Narasi Berita Lengkap dalam format Markdown",
+      "summary": "Ringkasan singkat"
+    }
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    return JSON.parse(response.text || '{}');
+  } catch (error) {
+    console.error("AI Narrative Development Error:", error);
+    return null;
+  }
+}
+
+export async function getChatAssistantResponse(message: string, history: { role: string, text: string }[], settings?: AppConfig) {
+  const ai = getAiInstance(settings);
+  const systemPrompt = `
+    Anda adalah "Tanya Damkar", asisten virtual resmi dari Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
+    Tugas Anda adalah melayani masyarakat dengan memberikan informasi seputar:
+    1. Prosedur pelaporan darurat (Hubungi Nomor Darurat ${settings?.emergencyNumber || '112'}).
+    2. Edukasi pencegahan kebakaran.
+    3. Informasi umum mengenai profil Damkar Malinau.
+    4. Status laporan (jika relevan).
+
+    KEPRIBADIAN:
+    - Sigap, ramah, dan profesional.
+    - Menggunakan bahasa Indonesia yang sopan (bisa sedikit santai tapi tetap hormat).
+    - Selalu mengutamakan keselamatan warga.
+
+    KONTRAK RESPON:
+    - Jika ada yang melaporkan kebakaran SEKARANG, segera arahkan untuk menekan tombol darurat atau hubungi nomor telepon ${settings?.emergencyNumber || '112'}. JANGAN HANYA DICHAT.
+    - Berikan jawaban yang singkat, padat, dan informatif.
+  `;
+
+  try {
+    const chat = ai.chats.create({ 
+      model: "gemini-3-flash-preview",
+      config: {
+        systemInstruction: systemPrompt
+      }
+    });
+    
+    // Concatenate history for the first message since ai.chats.create simple SDK 
+    // might not support history initialization directly in all variants.
+    // Or just use the last message if history is too complex for this simplified call.
+    const fullMessage = history.length > 0 
+      ? history.map(h => `${h.role === 'user' ? 'Masyarakat' : 'Damkar'}: ${h.text}`).join('\n') + '\n\nMasyarakat: ' + message
+      : message;
+
+    const response = await chat.sendMessage({ message: fullMessage });
+    return response.text || "Maaf, saya tidak mengerti.";
+  } catch (error) {
+    console.error("Chat Assistant Error:", error);
+    return "Maaf, sistem sedang mengalami gangguan. Mohon hubungi nomor darurat kami segera jika ada kejadian kritis.";
   }
 }

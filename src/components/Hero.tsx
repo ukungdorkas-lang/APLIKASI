@@ -16,7 +16,7 @@ export default function Hero() {
   const opacity = useTransform(scrollY, [0, 500], [0.4, 0.1]);
 
   useEffect(() => {
-    const unsubConfig = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
       if (snap.exists()) {
         setConfig(snap.data() as AppConfig);
       }
@@ -68,12 +68,22 @@ export default function Hero() {
         className="absolute inset-0 z-0"
         style={{ y: y1, opacity }}
       >
-        <img 
-          src={banner?.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=2069"} 
-          alt="Firefighters Background"
-          className="w-full h-full object-cover scale-110"
-          referrerPolicy="no-referrer"
-        />
+        {config?.homeLayout?.heroVideoUrl ? (
+          <div className="absolute inset-0 w-full h-full overflow-hidden">
+             <iframe 
+               src={`${config.homeLayout.heroVideoUrl}${config.homeLayout.heroVideoUrl.includes('?') ? '&' : '?'}autoplay=1&mute=1&loop=1&controls=0&background=1&playlist=${config.homeLayout.heroVideoUrl.split('/').pop()?.split('?')[0]}`}
+               className="w-[100vw] h-[100vh] min-w-full min-h-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[1.5] pointer-events-none"
+               allow="autoplay; fullscreen"
+             />
+          </div>
+        ) : (
+          <img 
+            src={banner?.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=2069"} 
+            alt="Firefighters Background"
+            className="w-full h-full object-cover scale-110"
+            referrerPolicy="no-referrer"
+          />
+        )}
         <div 
           className="absolute inset-0 bg-brand-dark transition-opacity duration-700" 
           style={{ opacity: banner?.overlayOpacity ?? 0.4 }}
@@ -108,7 +118,7 @@ export default function Hero() {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
               </Link>
               <a 
-                href="tel:112" 
+                href={`tel:${config?.emergencyNumber?.replace(/[^0-9]/g, '') || '05532021476'}`} 
                 className="bg-white/10 backdrop-blur-md border border-white/20 px-10 py-5 rounded-xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-dark transition-all flex items-center gap-4 shadow-2xl"
               >
                 <Phone className="w-6 h-6 text-brand-red animate-pulse" /> HUBUNGI KAMI

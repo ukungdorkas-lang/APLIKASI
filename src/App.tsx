@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EmergencyForm from './components/EmergencyForm';
@@ -9,18 +9,31 @@ import { useReports } from './hooks/useReports';
 import { generateNewsFromReport } from './lib/gemini';
 import { collection, addDoc, getDoc, doc, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
-import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity } from 'lucide-react';
-import { NewsArticle, BannerConfig } from './types';
+import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle } from 'lucide-react';
+import { NewsArticle, BannerConfig, AppConfig } from './types';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LoadingSpinner, Skeleton } from './components/Loading';
+import DynamicBanner from './components/DynamicBanner';
 import { cn } from './lib/utils';
+
+import News from './pages/News';
+import NewsDetail from './pages/NewsDetail';
+import Profile from './pages/Profile';
+import Education from './pages/Education';
+import Documentation from './pages/Documentation';
+import Contact from './pages/Contact';
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import CheckTicket from './pages/CheckTicket';
+import Footer from './components/Footer';
+import AiAssistant from './components/AiAssistant';
 
 function Home() {
   const [news, setNews] = React.useState<NewsArticle[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [banner, setBanner] = React.useState<BannerConfig | null>(null);
+  const [config, setConfig] = React.useState<AppConfig | null>(null);
   const { reports } = useReports();
   const recentReports = reports.slice(0, 3);
 
@@ -41,11 +54,33 @@ function Home() {
       if (snap.exists()) setBanner(snap.data() as BannerConfig);
     });
 
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
+      if (snap.exists()) setConfig(snap.data() as AppConfig);
+    });
+
     return () => {
       unsubNews();
       unsubBanner();
+      unsubConfig();
     };
   }, []);
+
+  const iconMap: Record<string, React.ReactNode> = {
+    Flame: <Flame className="w-8 h-8" />,
+    ShieldAlert: <ShieldAlert className="w-8 h-8" />,
+    Phone: <Phone className="w-8 h-8" />,
+    Info: <Info className="w-8 h-8" />,
+    Activity: <Activity className="w-8 h-8" />
+  };
+
+  const activeActions = config?.homeLayout?.quickActions 
+    ? config.homeLayout.quickActions.filter(a => a.enabled) 
+    : [
+        { title: 'Kebakaran', icon: 'Flame', label: 'TANGGAP API', color: 'bg-red-500' },
+        { title: 'Evakuasi', icon: 'ShieldAlert', label: 'EVAKUASI', color: 'bg-orange-500' },
+        { title: 'Penyelamatan', icon: 'Phone', label: 'SAR TEAM', color: 'bg-blue-500' },
+        { title: 'Perbantuan', icon: 'Info', label: 'SUPPORT', color: 'bg-slate-700' },
+      ];
 
   const counterStats = banner?.stats && banner.stats.length >= 4 ? banner.stats : [
     { label: 'POS WILAYAH', value: '05' },
@@ -56,7 +91,7 @@ function Home() {
 
   return (
     <div 
-      className="space-y-32" 
+      className="space-y-32 relative" 
       style={{ 
         backgroundColor: banner?.backgroundColor || 'var(--app-bg)',
         backgroundImage: banner?.backgroundImageUrl ? `url(${banner.backgroundImageUrl})` : 'none',
@@ -65,35 +100,50 @@ function Home() {
         backgroundAttachment: 'fixed'
       }}
     >
+      {config?.homeLayout?.showAnnouncement && (
+         <div 
+           className="fixed top-24 left-1/2 -translate-x-1/2 z-[40] w-full max-w-4xl px-6"
+         >
+            <motion.div 
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="rounded-full py-4 px-8 flex items-center gap-4 shadow-2xl backdrop-blur-md border border-white/10"
+              style={{ backgroundColor: `${config.homeLayout.announcementColor}CC` || '#e11d48CC' }}
+            >
+               <div className="bg-white/20 p-2 rounded-full animate-pulse"><AlertTriangle className="w-5 h-5 text-white" /></div>
+               <p className="text-xs sm:text-sm font-black italic uppercase italic tracking-wider text-white flex-1 line-clamp-1">{config.homeLayout.announcementText}</p>
+               <div className="hidden sm:flex items-center gap-2 px-4 py-1 bg-white/20 rounded-full text-[10px] font-black text-white italic">LIVE ALERT</div>
+            </motion.div>
+         </div>
+      )}
+
       <Hero />
       
       {/* Quick Action Navigation */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-10 -mt-24 relative z-20">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
-          {[
-            { title: 'Kebakaran', icon: <Flame className="w-8 h-8" />, label: 'TANGGAP API', color: 'bg-red-500' },
-            { title: 'Evakuasi', icon: <ShieldAlert className="w-8 h-8" />, label: 'EVAKUASI', color: 'bg-orange-500' },
-            { title: 'Penyelamatan', icon: <Phone className="w-8 h-8" />, label: 'SAR TEAM', color: 'bg-blue-500' },
-            { title: 'Perbantuan', icon: <Info className="w-8 h-8" />, label: 'SUPPORT', color: 'bg-slate-700' },
-          ].map((action, i) => (
-            <Link 
-              key={i} 
-              to={`/report?type=${action.title}`}
-              className="group bg-white rounded-[2rem] p-8 sm:p-10 border border-slate-50 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col items-center text-center overflow-hidden relative"
-            >
-              <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 transition-transform group-hover:scale-110 duration-500", action.color)}>
-                 {action.icon}
-              </div>
-              <h3 className="text-xl sm:text-2xl font-display font-black uppercase italic tracking-tighter text-slate-900 leading-none mb-4">{action.title}</h3>
-              <span className="text-[9px] font-black tracking-[0.2em] text-slate-400 group-hover:text-brand-red uppercase">{action.label}</span>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 -mr-12 -mt-12 rounded-full group-hover:bg-brand-red/5 transition-colors" />
-            </Link>
-          ))}
-        </div>
-      </section>
+      {(!config?.homeLayout || config.homeLayout.quickActions?.length > 0) && (
+        <section className="max-w-7xl mx-auto px-6 sm:px-10 -mt-24 relative z-20">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
+            {activeActions.map((action, i) => (
+              <Link 
+                key={i} 
+                to={`/report?type=${action.title}`}
+                className="group bg-white rounded-[2rem] p-8 sm:p-10 border border-slate-50 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col items-center text-center overflow-hidden relative"
+              >
+                <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 transition-transform group-hover:scale-110 duration-500", action.color)}>
+                   {iconMap[action.icon] || <Info className="w-8 h-8" />}
+                </div>
+                <h3 className="text-xl sm:text-2xl font-display font-black uppercase italic tracking-tighter text-slate-900 leading-none mb-4">{action.title}</h3>
+                <span className="text-[9px] font-black tracking-[0.2em] text-slate-400 group-hover:text-brand-red uppercase">{action.label}</span>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 -mr-12 -mt-12 rounded-full group-hover:bg-brand-red/5 transition-colors" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Latest News Section */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-10">
+      {(!config?.homeLayout || config.homeLayout.showNewsSection) && (
+        <section className="max-w-7xl mx-auto px-6 sm:px-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16">
           <div className="max-w-2xl">
              <div className="flex items-center gap-3 mb-6">
@@ -165,9 +215,11 @@ function Home() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Recent Cases Section */}
-      <section className="bg-white py-32">
+      {(!config?.homeLayout || config.homeLayout.showGallerySection) && (
+        <section className="bg-white py-32">
         <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-20">
             <div className="max-w-2xl">
@@ -236,6 +288,7 @@ function Home() {
           </div>
         </div>
       </section>
+      )}
       <section className="bg-brand-dark py-40 text-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-16 text-center">
           {counterStats.slice(0, 4).map((stat, i) => (
@@ -249,7 +302,8 @@ function Home() {
       </section>
 
       {/* Featured Education Snippet */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-10 py-32 grid lg:grid-cols-12 gap-20 items-center">
+      {(!config?.homeLayout || config.homeLayout.showEducationSection) && (
+        <section className="max-w-7xl mx-auto px-6 sm:px-10 py-32 grid lg:grid-cols-12 gap-20 items-center">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-red/5 rounded-full blur-3xl -z-10" />
         
         <div className="lg:col-span-4">
@@ -279,11 +333,10 @@ function Home() {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }
-
-import DynamicBanner from './components/DynamicBanner';
 
 function Report() {
   const { submitReport } = useReports();
@@ -348,15 +401,6 @@ function Dashboard() {
   );
 }
 
-import News from './pages/News';
-import NewsDetail from './pages/NewsDetail';
-import Profile from './pages/Profile';
-import Education from './pages/Education';
-import Contact from './pages/Contact';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import Footer from './components/Footer';
-
 // Auth Protection Wrapper
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<any>(null);
@@ -391,41 +435,52 @@ export default function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen relative flex flex-col">
-          <Navbar />
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/report" element={<Report />} />
-              <Route path="/login" element={<Login />} />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <RequireAdmin>
-                    <AdminDashboard />
-                  </RequireAdmin>
-                } 
-              />
-              <Route 
-                path="/admin/*" 
-                element={
-                  <RequireAdmin>
-                    <AdminDashboard />
-                  </RequireAdmin>
-                } 
-              />
-              <Route path="/news" element={<News />} />
-              <Route path="/news/:id" element={<NewsDetail />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:slug" element={<Profile />} />
-              <Route path="/education" element={<Education />} />
-              <Route path="/documentation" element={<Education />} />
-              <Route path="/contact" element={<Contact />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
+        <AppContent />
       </Router>
     </ThemeProvider>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard' || location.pathname === '/login';
+
+  return (
+    <div className="min-h-screen relative flex flex-col">
+      {!isAdminRoute && <Navbar />}
+      <main className="flex-1">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/report" element={<Report />} />
+          <Route path="/login" element={<Login />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <RequireAdmin>
+                <AdminDashboard />
+              </RequireAdmin>
+            } 
+          />
+          <Route 
+            path="/admin/*" 
+            element={
+              <RequireAdmin>
+                <AdminDashboard />
+              </RequireAdmin>
+            } 
+          />
+          <Route path="/news" element={<News />} />
+          <Route path="/news/:id" element={<NewsDetail />} />
+          <Route path="/check-ticket" element={<CheckTicket />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:slug" element={<Profile />} />
+          <Route path="/education" element={<Education />} />
+          <Route path="/documentation" element={<Documentation />} />
+          <Route path="/contact" element={<Contact />} />
+        </Routes>
+      </main>
+      {!isAdminRoute && <Footer />}
+      <AiAssistant />
+    </div>
   );
 }

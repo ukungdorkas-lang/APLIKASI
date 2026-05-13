@@ -91,6 +91,7 @@ export interface NewsArticle {
   type?: string;
   status: 'Draft' | 'Menunggu Publish' | 'Publish Otomatis';
   isAIGenerated: boolean;
+  aiPrompt?: string; // Original prompt used for generation
   photos: string[];
   videos: string[];
   personnelCount: number;
@@ -164,6 +165,39 @@ export interface AppConfig {
   email?: string;
   backgroundColor?: string;
   backgroundImageUrl?: string;
+  geminiApiKey?: string;
+  socialMedia?: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+    youtube?: string;
+    tiktok?: string;
+  };
+  footerText?: string;
+  footerCopyright?: string;
+  homeDisplay?: {
+    showQuickActions: boolean;
+    showNews: boolean;
+    showRecentCases: boolean;
+    showStats: boolean;
+    showEducation: boolean;
+  };
+  homeLayout?: {
+    showAnnouncement: boolean;
+    announcementText: string;
+    announcementColor: string;
+    heroVideoUrl?: string;
+    showNewsSection: boolean;
+    showGallerySection: boolean;
+    showEducationSection: boolean;
+    quickActions: {
+      title: string;
+      label: string;
+      color: string;
+      icon: string;
+      enabled: boolean;
+    }[];
+  };
 }
 
 export interface BannerConfig {
