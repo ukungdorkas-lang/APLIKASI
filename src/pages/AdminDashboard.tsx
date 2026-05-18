@@ -40,7 +40,10 @@ import {
   Facebook,
   Twitter,
   Youtube,
-  CloudLightning
+  CloudLightning,
+  Droplets,
+  Waves,
+  CloudRain
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -56,7 +59,7 @@ import { FileUpload } from '../components/FileUpload';
 import { useTheme } from '../contexts/ThemeContext';
 import { LoadingSpinner, Skeleton } from '../components/Loading';
 
-type AdminTab = 'overview' | 'reports' | 'maps' | 'notifications' | 'news' | 'users' | 'gallery' | 'education' | 'profiles' | 'banners' | 'settings' | 'logs' | 'themes' | 'internal_ops' | 'internal_reports' | 'internal_master';
+type AdminTab = 'overview' | 'reports' | 'monitoring' | 'notifications' | 'news' | 'users' | 'gallery' | 'education' | 'profiles' | 'banners' | 'settings' | 'logs' | 'themes' | 'internal_ops' | 'internal_reports' | 'internal_master';
 
 export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }) {
   const navigate = useNavigate();
@@ -75,6 +78,8 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
   const [education, setEducation] = React.useState<any[]>([]);
   const [profileSections, setProfileSections] = React.useState<any[]>([]);
   const [banners, setBanners] = React.useState<any[]>([]);
+  const [riverSensors, setRiverSensors] = React.useState<any[]>([]);
+  const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [prevReportsCount, setPrevReportsCount] = React.useState(reports.length);
 
@@ -86,11 +91,13 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
     education: true,
     profiles: true,
     banners: true,
-    settings: true
+    settings: true,
+    monitoring: true
   });
 
   // Success Toast State
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isFetchingAiWeather, setIsFetchingAiWeather] = React.useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -105,6 +112,8 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
   const [showEduModal, setShowEduModal] = React.useState(false);
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [showBannerModal, setShowBannerModal] = React.useState(false);
+  const [showFloodModal, setShowFloodModal] = React.useState(false);
+  const [showWeatherModal, setShowWeatherModal] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<any>(null);
 
   const [reportForm, setReportForm] = React.useState({
@@ -177,6 +186,21 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
     backgroundColor: '#0f172a',
     backgroundImageUrl: 'https://images.unsplash.com/photo-1516562309708-05f3b2b2c238?auto=format&fit=crop&q=80',
     stats: [] as { label: string; value: string; icon?: string }[]
+  });
+
+  const [riverForm, setRiverForm] = React.useState({
+    locationName: '',
+    waterLevel: 0,
+    status: 'Aman' as 'Aman' | 'Waspada' | 'Siaga' | 'Bahaya',
+    trend: 'stable' as 'stable' | 'rising' | 'falling'
+  });
+
+  const [weatherForm, setWeatherForm] = React.useState({
+    location: 'Hulu Sungai Malinau',
+    condition: 'Cerah',
+    rainfall: 0,
+    overflowPotential: 'Rendah' as 'Rendah' | 'Sedang' | 'Tinggi' | 'Sangat Tinggi',
+    recommendation: 'Tetap waspada dan pantau informasi resmi.'
   });
 
   const [filter, setFilter] = React.useState<'SEMUA' | 'MENUNGGU' | 'PROSES' | 'SELESAI'>('SEMUA');
@@ -486,7 +510,67 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
     }
   };
 
-  const handleSaveSettings = async () => {
+  const handleFetchAiWeather = async () => {
+    setIsFetchingAiWeather(true);
+    try {
+      const response = await fetch('/api/ai/weather-upstream', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        setWeatherForm({
+          location: 'Hulu Sungai Malinau',
+          condition: data.data.condition,
+          rainfall: data.data.rainfall,
+          overflowPotential: data.data.overflowPotential,
+          recommendation: data.data.recommendation
+        });
+        showToast('Data cuaca terbaru berhasil ditarik via AI BMKG');
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal memantau cuaca hulu via AI', 'error');
+    } finally {
+      setIsFetchingAiWeather(false);
+    }
+  };
+
+  const handleSaveRiver = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, 'river_sensors', editingItem.id), { ...riverForm, updatedAt: Date.now() });
+        showToast('Data sensor diperbarui');
+      } else {
+        await addDoc(collection(db, 'river_sensors'), { ...riverForm, updatedAt: Date.now() });
+        showToast('Sensor baru ditambahkan');
+      }
+      setShowFloodModal(false);
+      setEditingItem(null);
+    } catch (err) {
+      showToast('Gagal menyimpan data sensor', 'error');
+    }
+  };
+
+  const handleSaveWeather = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, 'weather_upstream', editingItem.id), { ...weatherForm, updatedAt: Date.now() });
+        showToast('Cuaca hulu diperbarui');
+      } else {
+        await addDoc(collection(db, 'weather_upstream'), { ...weatherForm, updatedAt: Date.now() });
+        showToast('Data cuaca baru ditambahkan');
+      }
+      setShowWeatherModal(false);
+      setEditingItem(null);
+    } catch (err) {
+      showToast('Gagal menyimpan cuaca hulu', 'error');
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       // Typically settings go in a singleton doc
       await updateDoc(doc(db, 'settings', 'app'), settingsForm);
@@ -598,8 +682,17 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
       setDataLoading(prev => ({ ...prev, settings: false }));
     });
 
+    const unsubRiver = onSnapshot(query(collection(db, 'river_sensors'), orderBy('updatedAt', 'desc')), (sn) => {
+      setRiverSensors(sn.docs.map(d => ({ id: d.id, ...d.data() })));
+      setDataLoading(prev => ({ ...prev, monitoring: false }));
+    });
+
+    const unsubWeather = onSnapshot(query(collection(db, 'weather_upstream'), orderBy('updatedAt', 'desc')), (sn) => {
+      setWeatherUpstream(sn.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     return () => {
-      unsubNews(); unsubUsers(); unsubLogs(); unsubGallery(); unsubEducation(); unsubProfiles(); unsubBanners(); unsubSettings();
+      unsubNews(); unsubUsers(); unsubLogs(); unsubGallery(); unsubEducation(); unsubProfiles(); unsubBanners(); unsubSettings(); unsubRiver(); unsubWeather();
     };
   }, []);
 
@@ -711,7 +804,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
       items: [
         { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-5 h-5" /> },
         { id: 'reports', name: 'Laporan Masuk', icon: <AlertTriangle className="w-5 h-5" /> },
-        { id: 'maps', name: 'Monitoring Maps', icon: <MapIcon className="w-5 h-5" /> },
+        { id: 'monitoring', name: 'Monitoring Banjir', icon: <Waves className="w-5 h-5" /> },
         { id: 'news', name: 'Warta & Berita', icon: <Newspaper className="w-5 h-5" /> },
         { id: 'gallery', name: 'Galeri Media', icon: <ImageIcon className="w-5 h-5" /> },
         { id: 'education', name: 'Edukasi Warga', icon: <Info className="w-5 h-5" /> },
@@ -1199,32 +1292,160 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
               </motion.div>
             )}
 
-            {activeTab === 'maps' && (
-              <motion.div key="maps" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                <div className="bg-slate-900 rounded-[2.5rem] border-8 border-white shadow-2xl overflow-hidden h-[650px] relative">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80')] bg-cover opacity-30 mix-blend-overlay" />
-                  <div className="relative h-full flex flex-col p-12">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-4">
-                         <div className="bg-brand-red/90 inline-block px-6 py-2 rounded-xl text-white font-black italic uppercase tracking-tighter">Live Monitor</div>
-                         <h3 className="text-5xl text-white font-black uppercase italic tracking-tighter">Kabupaten <span className="text-brand-red">Malinau</span></h3>
+            {activeTab === 'monitoring' && (
+              <motion.div key="monitoring" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+                <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                   <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/20"><Waves className="w-6 h-6 text-white" /></div>
+                      <div><h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Monitoring <span className="text-brand-red">Banjir & Sungai</span></h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Deteksi Dini & Mitigasi Bencana</p></div>
+                   </div>
+                   <div className="flex gap-4">
+                      <button className="bg-slate-900 px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:bg-brand-red transition-all" onClick={() => {
+                        setWeatherForm({ location: 'Hulu Sungai Malinau', condition: 'Cerah', rainfall: 0, overflowPotential: 'Rendah', recommendation: 'Tetap waspada.' });
+                        setEditingItem(null);
+                        setShowWeatherModal(true);
+                      }}>Update Cuaca Hulu</button>
+                      <button className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:scale-105 transition-all" onClick={() => {
+                        setRiverForm({ locationName: '', waterLevel: 0, status: 'Aman', trend: 'stable' });
+                        setEditingItem(null);
+                        setShowFloodModal(true);
+                      }}>Tambah Sensor Sungai</button>
+                   </div>
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-10">
+                   {/* River Sensors Section */}
+                   <div className="space-y-6">
+                      <div className="flex items-center gap-3 px-6">
+                         <Droplets className="w-5 h-5 text-brand-red" />
+                         <h4 className="font-black italic uppercase tracking-tighter text-slate-900">Ketinggian Air Real-time</h4>
                       </div>
-                      <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 grid grid-cols-2 gap-8 divide-x-2 divide-white/10">
-                        <div className="text-center"><p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Unit Aktif</p><p className="text-3xl text-white font-black">12</p></div>
-                        <div className="text-center pl-8"><p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Laporan</p><p className="text-3xl text-brand-red font-black">3</p></div>
+                      <div className="grid gap-6">
+                         {riverSensors.map(sensor => (
+                            <motion.div 
+                              key={sensor.id}
+                              className="bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm hover:shadow-xl hover:border-brand-red transition-all relative overflow-hidden group"
+                            >
+                               <div className={cn(
+                                 "absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-20",
+                                 sensor.status === 'Bahaya' ? 'bg-red-500' : sensor.status === 'Siaga' ? 'bg-orange-500' : 'bg-blue-500'
+                               )} />
+                               <div className="flex items-center justify-between mb-6">
+                                  <div>
+                                     <h5 className="text-xl font-black italic uppercase tracking-tighter text-brand-dark mb-1">{sensor.locationName}</h5>
+                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic leading-none">ID SENSOR: {sensor.id.slice(0, 8)}</p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                     <button className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-brand-red transition-colors" onClick={() => {
+                                        setRiverForm({ locationName: sensor.locationName, waterLevel: sensor.waterLevel, status: sensor.status, trend: sensor.trend });
+                                        setEditingItem(sensor);
+                                        setShowFloodModal(true);
+                                     }}><Edit  className="w-4 h-4" /></button>
+                                     <button className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-red-500 transition-colors" onClick={() => handleDeleteItem('river_sensors', sensor.id)}><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                               </div>
+                               <div className="grid grid-cols-2 gap-8">
+                                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">TINGGI AIR</p>
+                                     <p className="text-3xl font-black italic text-brand-dark leading-none">{sensor.waterLevel}<span className="text-sm ml-1 text-slate-400">meter</span></p>
+                                  </div>
+                                  <div className={cn(
+                                     "p-6 rounded-2xl border flex flex-col justify-center",
+                                     sensor.status === 'Bahaya' ? 'bg-red-50 border-red-100' : sensor.status === 'Siaga' ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'
+                                  )}>
+                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">STATUS</p>
+                                     <div className="flex items-center gap-2">
+                                        <div className={cn("w-2 h-2 rounded-full animate-pulse", sensor.status === 'Bahaya' ? 'bg-red-600' : sensor.status === 'Siaga' ? 'bg-orange-600' : 'bg-blue-600')} />
+                                        <p className={cn("text-lg font-black uppercase italic tracking-tighter", sensor.status === 'Bahaya' ? 'text-red-600' : sensor.status === 'Siaga' ? 'text-orange-600' : 'text-blue-600')}>{sensor.status}</p>
+                                     </div>
+                                  </div>
+                               </div>
+                               <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase italic tracking-tighter">
+                                  <span>Update: {sensor.updatedAt ? new Date(sensor.updatedAt).toLocaleString() : '-'}</span>
+                                  <span className="flex items-center gap-2">
+                                     Trend: {sensor.trend === 'rising' ? <span className="text-red-500">↑ Meningkat</span> : sensor.trend === 'falling' ? <span className="text-green-500">↓ Menurun</span> : '→ Stabil'}
+                                  </span>
+                                </div>
+                            </motion.div>
+                         ))}
+                         {riverSensors.length === 0 && (
+                            <div className="bg-white p-12 rounded-3xl border-2 border-dashed border-slate-200 text-center opacity-50">
+                               <Droplets className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Belum ada sensor terdaftar</p>
+                            </div>
+                         )}
                       </div>
-                    </div>
-                    <div className="mt-auto flex justify-between items-end">
-                       <div className="bg-slate-950/80 backdrop-blur border-2 border-white/10 p-6 rounded-2xl">
-                          <p className="text-[10px] font-black text-brand-red uppercase mb-4">LEGENDA MONITORING</p>
-                          <div className="space-y-2">
-                             <div className="flex items-center gap-3 text-xs font-bold text-white/60"><div className="w-3 h-3 bg-red-500 rounded-full animate-ping" /> Laporan Aktif</div>
-                             <div className="flex items-center gap-3 text-xs font-bold text-white/60"><div className="w-3 h-3 bg-blue-500 rounded-full" /> Armada Penyelamatan</div>
-                          </div>
-                       </div>
-                       <button className="bg-white text-slate-900 font-black italic uppercase tracking-tighter px-10 py-4 rounded-xl shadow-2xl hover:bg-brand-red hover:text-white transition-all">Segarkan Peta</button>
-                    </div>
-                  </div>
+                   </div>
+
+                   {/* Upstream Weather Section */}
+                   <div className="space-y-6">
+                      <div className="flex items-center gap-3 px-6">
+                         <CloudRain className="w-5 h-5 text-brand-red" />
+                         <h4 className="font-black italic uppercase tracking-tighter text-slate-900">Perkiraan Cuaca Hulu</h4>
+                      </div>
+                      <div className="grid gap-6">
+                         {weatherUpstream.map(weather => (
+                            <motion.div 
+                              key={weather.id}
+                              className="bg-brand-dark p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden group border-4 border-slate-900"
+                            >
+                               <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-[60px] rounded-full" />
+                               <div className="flex justify-between items-start mb-8">
+                                  <div>
+                                     <h5 className="text-xl font-black italic uppercase tracking-tighter text-white mb-1">{weather.location}</h5>
+                                     <div className="inline-block bg-brand-red/20 text-brand-red text-[8px] font-black uppercase px-3 py-1 rounded-full tracking-widest border border-brand-red/30 italic">EARLY WARNING SYSTEM</div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                     <button className="p-2 bg-white/5 text-slate-400 rounded-lg hover:text-white transition-colors" onClick={() => {
+                                        setWeatherForm({ location: weather.location, condition: weather.condition, rainfall: weather.rainfall, overflowPotential: weather.overflowPotential, recommendation: weather.recommendation });
+                                        setEditingItem(weather);
+                                        setShowWeatherModal(true);
+                                     }}><Edit  className="w-4 h-4" /></button>
+                                     <button className="p-2 bg-white/5 text-slate-400 rounded-lg hover:text-brand-red transition-colors" onClick={() => handleDeleteItem('weather_upstream', weather.id)}><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                               </div>
+
+                               <div className="grid grid-cols-2 gap-6 mb-8">
+                                  <div className="space-y-1">
+                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Kondisi</p>
+                                     <p className="text-2xl font-black uppercase italic tracking-tighter">{weather.condition}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Hujan (24h)</p>
+                                     <p className="text-2xl font-black uppercase italic tracking-tighter text-brand-red">{weather.rainfall} mm</p>
+                                  </div>
+                               </div>
+
+                               <div className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4">
+                                  <div className="flex justify-between items-center">
+                                     <p className="text-[10px] font-black uppercase italic tracking-tighter text-slate-400">Potensi Luapan</p>
+                                     <span className={cn(
+                                       "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg",
+                                       weather.overflowPotential === 'Rendah' ? 'bg-green-500/20 text-green-400' :
+                                       weather.overflowPotential === 'Sedang' ? 'bg-yellow-500/20 text-yellow-500' :
+                                       'bg-red-500 text-white shadow-lg shadow-brand-red/20'
+                                     )}>
+                                       {weather.overflowPotential}
+                                     </span>
+                                  </div>
+                                  <div>
+                                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 italic">Rekomendasi / Instruksi</p>
+                                     <p className="text-xs font-bold italic leading-relaxed text-slate-300">{weather.recommendation}</p>
+                                  </div>
+                               </div>
+                               <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase italic">
+                                  <span>Update: {weather.updatedAt ? new Date(weather.updatedAt).toLocaleString() : '-'}</span>
+                               </div>
+                            </motion.div>
+                         ))}
+                         {weatherUpstream.length === 0 && (
+                            <div className="bg-white/5 p-12 rounded-3xl border-2 border-dashed border-white/10 text-center">
+                               <CloudRain className="w-10 h-10 text-white/10 mx-auto mb-4" />
+                               <p className="text-xs font-bold text-white/20 uppercase tracking-widest">Data cuaca belum tersedia</p>
+                            </div>
+                         )}
+                      </div>
+                   </div>
                 </div>
               </motion.div>
             )}
@@ -2379,7 +2600,107 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
           </div>
         )}
 
-        {/* GALLERY MODAL */}
+        {/* FLOOD SENSOR MODAL */}
+        {showFloodModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowFloodModal(false)} className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden">
+               <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter">{editingItem ? 'Edit' : 'Tambah'} Sensor Sungai</h3>
+                  <button onClick={() => setShowFloodModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><CloseIcon className="w-6 h-6" /></button>
+               </div>
+               <form onSubmit={handleSaveRiver} className="p-8 space-y-6">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Lokasi / Area</label>
+                     <input required value={riverForm.locationName} onChange={e => setRiverForm({...riverForm, locationName: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" placeholder="Contoh: Kuala Lapang, Malinau Kota" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tinggi Air (Meter)</label>
+                       <input required type="number" step="0.1" value={riverForm.waterLevel} onChange={e => setRiverForm({...riverForm, waterLevel: parseFloat(e.target.value)})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Trend</label>
+                       <select value={riverForm.trend} onChange={e => setRiverForm({...riverForm, trend: e.target.value as any})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red">
+                          <option value="stable">STABIL (→)</option>
+                          <option value="rising">NAIK (↑)</option>
+                          <option value="falling">TURUN (↓)</option>
+                       </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status Kesiagaan</label>
+                     <select value={riverForm.status} onChange={e => setRiverForm({...riverForm, status: e.target.value as any})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red">
+                        <option value="Aman">AMAN (NORMAL)</option>
+                        <option value="Waspada">WASPADA (CUSP)</option>
+                        <option value="Siaga">SIAGA (URGENT)</option>
+                        <option value="Bahaya">BAHAYA (CRITICAL)</option>
+                     </select>
+                  </div>
+                  <button type="submit" className="w-full py-5 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl hover:scale-[1.02] transition-all">Simpan Data Sensor</button>
+               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* WEATHER UPSTREAM MODAL */}
+        {showWeatherModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWeatherModal(false)} className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden">
+               <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                     <CloudRain className="w-5 h-5 text-brand-red" />
+                     <h3 className="text-2xl font-black italic uppercase tracking-tighter">Update Cuaca Hulu</h3>
+                  </div>
+                  <button onClick={() => setShowWeatherModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><CloseIcon className="w-6 h-6" /></button>
+               </div>
+               <form onSubmit={handleSaveWeather} className="p-8 space-y-6">
+                  <div className="flex justify-center -mt-4 mb-4">
+                    <button 
+                      type="button" 
+                      onClick={handleFetchAiWeather}
+                      disabled={isFetchingAiWeather}
+                      className="bg-brand-red text-white px-6 py-2 rounded-full text-[10px] font-black uppercase italic tracking-widest shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isFetchingAiWeather ? (
+                         <><CloudLightning className="w-4 h-4 animate-spin" /> Sedang Menarik Data BMKG...</>
+                      ) : (
+                         <><Sparkles className="w-4 h-4" /> Tarik Data Otomatis (AI BMKG)</>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kondisi Cuaca</label>
+                     <input required value={weatherForm.condition} onChange={e => setWeatherForm({...weatherForm, condition: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" placeholder="Cerah / Hujan Ringan..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curah Hujan (mm)</label>
+                       <input required type="number" value={weatherForm.rainfall} onChange={e => setWeatherForm({...weatherForm, rainfall: parseInt(e.target.value)})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Potensi Luapan</label>
+                       <select value={weatherForm.overflowPotential} onChange={e => setWeatherForm({...weatherForm, overflowPotential: e.target.value as any})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red">
+                          <option>Rendah</option>
+                          <option>Sedang</option>
+                          <option>Tinggi</option>
+                          <option>Sangat Tinggi</option>
+                       </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rekomendasi (Instruksi)</label>
+                     <textarea required value={weatherForm.recommendation} onChange={e => setWeatherForm({...weatherForm, recommendation: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red h-24 resize-none" />
+                  </div>
+                  <button type="submit" className="w-full py-5 bg-slate-900 text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl hover:scale-[1.02] transition-all">Publish Update Cuaca</button>
+               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* GALLER MODAL */}
         {showGalleryModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowGalleryModal(false)} className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm" />

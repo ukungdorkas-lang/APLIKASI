@@ -84,6 +84,11 @@ export default function Login() {
         // Check in admins collection
         const adminDoc = await getDoc(doc(db, 'admins', user.uid));
         if (adminDoc.exists()) {
+          const adminData = adminDoc.data();
+          if (adminData.status === 'pending') {
+            await auth.signOut();
+            throw new Error('Akun Admin Anda sedang menunggu verifikasi dari Administrator Utama.');
+          }
           navigate('/admin');
           return;
         }
@@ -91,6 +96,11 @@ export default function Login() {
         // Check in personnel collection
         const personnelDoc = await getDoc(doc(db, 'personnel', user.uid));
         if (personnelDoc.exists()) {
+          const personnelData = personnelDoc.data();
+          if (personnelData.status === 'pending') {
+            await auth.signOut();
+            throw new Error('Akun Petugas Anda sedang menunggu verifikasi. Silakan hubungi Pimpinan Regu atau Admin.');
+          }
           navigate('/staff/ops');
           return;
         }
@@ -99,6 +109,10 @@ export default function Login() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
           const uData = userDoc.data();
+          if (uData.status === 'pending') {
+            await auth.signOut();
+            throw new Error('Akun Anda dalam antrian verifikasi.');
+          }
           if (uData.role === 'admin') navigate('/admin');
           else navigate('/staff/ops');
           return;

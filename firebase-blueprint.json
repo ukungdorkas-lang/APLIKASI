@@ -326,6 +326,35 @@
         "updatedAt": { "type": "number", "format": "timestamp" }
       },
       "required": ["reportNumber", "type", "date", "sectorId", "squadId", "officerInChargeId", "chronology", "createdAt"]
+    },
+    "RiverSensor": {
+      "title": "River Sensor",
+      "description": "Data sensor ketinggian air sungai",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "locationName": { "type": "string" },
+        "waterLevel": { "type": "number", "description": "dalam meter" },
+        "status": { "type": "string", "enum": ["Aman", "Waspada", "Siaga", "Bahaya"] },
+        "trend": { "type": "string", "enum": ["stable", "rising", "falling"] },
+        "updatedAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["locationName", "waterLevel", "status", "updatedAt"]
+    },
+    "WeatherUpstream": {
+      "title": "Weather Upstream",
+      "description": "Perkiraan cuaca di hulu sungai untuk deteksi dini banjir",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "location": { "type": "string" },
+        "condition": { "type": "string" },
+        "rainfall": { "type": "number", "description": "curah hujan dalam mm" },
+        "overflowPotential": { "type": "string", "enum": ["Rendah", "Sedang", "Tinggi", "Sangat Tinggi"] },
+        "recommendation": { "type": "string" },
+        "updatedAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["location", "condition", "rainfall", "overflowPotential", "updatedAt"]
     }
   },
   "firestore": {
@@ -392,6 +421,14 @@
     "operational_reports": {
       "schema": "OperationalReport",
       "description": "Dokumentasi laporan tugas internal"
+    },
+    "river_sensors": {
+      "schema": "RiverSensor",
+      "description": "Pemantauan ketinggian air sungai real-time"
+    },
+    "weather_upstream": {
+      "schema": "WeatherUpstream",
+      "description": "Data cuaca hulu sungai"
     }
   }
 }

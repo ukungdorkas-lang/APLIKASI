@@ -144,5 +144,17 @@ service cloud.firestore {
       allow create: if isPersonnel();
       allow update, delete: if isAdmin();
     }
+
+    // River Sensors Monitoring
+    match /river_sensors/{sensorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Weather Upstream
+    match /weather_upstream/{weatherId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
