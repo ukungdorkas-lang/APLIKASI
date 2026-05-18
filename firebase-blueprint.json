@@ -244,6 +244,88 @@
         "updatedAt": { "type": "number", "format": "timestamp" }
       },
       "required": ["title", "imageUrl", "updatedAt"]
+    },
+    "Personnel": {
+      "title": "Personnel",
+      "description": "Data personil Damkar Malinau",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "rank": { "type": "string" },
+        "squadId": { "type": "string" },
+        "sectorId": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "on_leave", "retired"] },
+        "role": { "type": "string", "enum": ["admin", "officer", "field_personnel"] }
+      },
+      "required": ["name", "rank", "squadId", "sectorId", "status", "role"]
+    },
+    "Squad": {
+      "title": "Squad",
+      "description": "Data regu personil",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "commanderId": { "type": "string" },
+        "sectorId": { "type": "string" }
+      },
+      "required": ["name", "commanderId", "sectorId"]
+    },
+    "Sector": {
+      "title": "Sector",
+      "description": "Data sektor / pos penempatan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["name", "address"]
+    },
+    "OperationalReport": {
+      "title": "Operational Report",
+      "description": "Laporan internal Si-Damkar (Piket, Api, Penyelamatan)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reportNumber": { "type": "string" },
+        "type": { "type": "string", "enum": ["daily_piket", "fire", "rescue"] },
+        "date": { "type": "number", "format": "timestamp" },
+        "sectorId": { "type": "string" },
+        "squadId": { "type": "string" },
+        "officerInChargeId": { "type": "string" },
+        "chronology": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "location": {
+          "type": "object",
+          "properties": {
+            "address": { "type": "string" },
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "shift": { "type": "string", "enum": ["pagi", "malam"] },
+        "attendance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "personnelId": { "type": "string" },
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["hadir", "sakit", "ijin", "alpha", "cuti", "terlambat", "cepat_pulang"] },
+              "arrivalTime": { "type": "string" },
+              "departureTime": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "details": { "type": "object" },
+        "createdAt": { "type": "number", "format": "timestamp" },
+        "updatedAt": { "type": "number", "format": "timestamp" }
+      },
+      "required": ["reportNumber", "type", "date", "sectorId", "squadId", "officerInChargeId", "chronology", "createdAt"]
     }
   },
   "firestore": {
@@ -294,6 +376,22 @@
     "banners": {
       "schema": "BannerConfig",
       "description": "Konfigurasi banner dinamis per halaman"
+    },
+    "personnel": {
+      "schema": "Personnel",
+      "description": "Database personil dan akun petugas"
+    },
+    "squads": {
+      "schema": "Squad",
+      "description": "Koleksi regu operasional"
+    },
+    "sectors": {
+      "schema": "Sector",
+      "description": "Daftar sektor dan pos"
+    },
+    "operational_reports": {
+      "schema": "OperationalReport",
+      "description": "Dokumentasi laporan tugas internal"
     }
   }
 }

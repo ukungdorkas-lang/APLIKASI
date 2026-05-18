@@ -213,3 +213,84 @@ export interface BannerConfig {
   stats?: { label: string; value: string; icon?: string }[];
   updatedAt: number;
 }
+
+// SI-DAMKAR Operational Types
+export interface Personnel {
+  id: string;
+  name: string;
+  rank: string;
+  squadId: string;
+  sectorId: string;
+  phoneNumber: string;
+  status: 'active' | 'on_leave' | 'retired';
+  role: 'admin' | 'officer' | 'field_personnel';
+}
+
+export interface Squad {
+  id: string;
+  name: string; // e.g., Regu A, Regu B
+  commanderId: string;
+  sectorId: string;
+}
+
+export interface Sector {
+  id: string;
+  name: string; // e.g., Sektor Malinau Kota, Sektor Malinau Seberang
+  address: string;
+}
+
+export type AttendanceStatus = 'hadir' | 'sakit' | 'ijin' | 'alpha' | 'cuti' | 'terlambat' | 'cepat_pulang';
+export type Shift = 'pagi' | 'malam';
+
+export interface AttendanceRecord {
+  personnelId: string;
+  name: string;
+  status: AttendanceStatus;
+  arrivalTime?: string; // Time string HH:mm
+  departureTime?: string; // Time string HH:mm
+  notes?: string;
+}
+
+export interface OperationalReport {
+  id: string;
+  reportNumber: string;
+  type: 'daily_piket' | 'fire' | 'rescue';
+  date: number;
+  sectorId: string;
+  squadId: string;
+  shift?: Shift;
+  piketAction?: 'datang' | 'pulang';
+  excludeFromRecap?: boolean;
+  officerInChargeId: string;
+  chronology: string;
+  photos: string[];
+  location?: {
+    address: string;
+    lat: number;
+    lng: number;
+  };
+  attendance?: AttendanceRecord[];
+  details: {
+    // For Fire
+    cause?: string;
+    objectType?: string; // e.g., Rumah, Hutan
+    ownerName?: string;
+    estimatedLoss?: number;
+    
+    // For Rescue
+    rescueType?: string; // e.g., Animal, Lockout
+    
+    // Common
+    personnelCount: number;
+    unitsUsed: string[];
+    victims: {
+      deceased: number;
+      injured: number;
+      safe: number;
+    };
+    startTime: number;
+    endTime: number;
+  };
+  createdAt: number;
+  updatedAt: number;
+}

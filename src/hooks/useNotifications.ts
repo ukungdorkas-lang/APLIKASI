@@ -15,6 +15,7 @@ export function useNotifications() {
       setRecipients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationRecipient)));
       setLoading(false);
     }, (error) => {
+      console.warn('Listener failed for collection: notification_recipients', error);
       handleFirestoreError(error, OperationType.LIST, 'notification_recipients', auth);
     });
 
@@ -22,6 +23,7 @@ export function useNotifications() {
     const unsubLogs = onSnapshot(qLogs, (snapshot) => {
       setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationLog)));
     }, (error) => {
+      console.warn('Listener failed for collection: notification_logs', error);
       handleFirestoreError(error, OperationType.LIST, 'notification_logs', auth);
     });
 

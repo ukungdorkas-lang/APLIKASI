@@ -6,6 +6,8 @@ import { db, auth } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { generateNewsFromReport, developNarrative } from '../lib/gemini';
 import { 
+  Database,
+  FileText,
   BarChart3, 
   Users, 
   Settings, 
@@ -53,12 +55,18 @@ import { FileUpload } from '../components/FileUpload';
 import { useTheme } from '../contexts/ThemeContext';
 import { LoadingSpinner, Skeleton } from '../components/Loading';
 
-type AdminTab = 'overview' | 'reports' | 'maps' | 'notifications' | 'news' | 'users' | 'gallery' | 'education' | 'profiles' | 'banners' | 'settings' | 'logs' | 'themes';
+type AdminTab = 'overview' | 'reports' | 'maps' | 'notifications' | 'news' | 'users' | 'gallery' | 'education' | 'profiles' | 'banners' | 'settings' | 'logs' | 'themes' | 'internal_ops' | 'internal_reports' | 'internal_master';
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }) {
   const navigate = useNavigate();
   const { reports, loading: reportsLoading, updateStatus } = useReports();
-  const [activeTab, setActiveTab] = React.useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = React.useState<AdminTab>(initialTab || 'overview');
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [news, setNews] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
   const [logs, setLogs] = React.useState<any[]>([]);
@@ -468,6 +476,7 @@ export default function AdminDashboard() {
       setNews(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, news: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: news', err);
       handleFirestoreError(err, OperationType.LIST, 'news', auth);
       setDataLoading(prev => ({ ...prev, news: false }));
     });
@@ -476,6 +485,7 @@ export default function AdminDashboard() {
       setUsers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, users: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: admins', err);
       handleFirestoreError(err, OperationType.LIST, 'admins', auth);
       setDataLoading(prev => ({ ...prev, users: false }));
     });
@@ -484,6 +494,7 @@ export default function AdminDashboard() {
       setLogs(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, logs: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: audit_logs', err);
       handleFirestoreError(err, OperationType.LIST, 'audit_logs', auth);
       setDataLoading(prev => ({ ...prev, logs: false }));
     });
@@ -492,6 +503,7 @@ export default function AdminDashboard() {
       setGallery(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, gallery: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: gallery', err);
       handleFirestoreError(err, OperationType.LIST, 'gallery', auth);
       setDataLoading(prev => ({ ...prev, gallery: false }));
     });
@@ -500,6 +512,7 @@ export default function AdminDashboard() {
       setEducation(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, education: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: education', err);
       handleFirestoreError(err, OperationType.LIST, 'education', auth);
       setDataLoading(prev => ({ ...prev, education: false }));
     });
@@ -508,6 +521,7 @@ export default function AdminDashboard() {
       setProfileSections(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, profiles: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: profile_sections', err);
       handleFirestoreError(err, OperationType.LIST, 'profile_sections', auth);
       setDataLoading(prev => ({ ...prev, profiles: false }));
     });
@@ -516,6 +530,7 @@ export default function AdminDashboard() {
       setBanners(sn.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(prev => ({ ...prev, banners: false }));
     }, (err) => {
+      console.warn('Listener failed for collection: banners', err);
       handleFirestoreError(err, OperationType.LIST, 'banners', auth);
       setDataLoading(prev => ({ ...prev, banners: false }));
     });
@@ -526,6 +541,7 @@ export default function AdminDashboard() {
       }
       setDataLoading(prev => ({ ...prev, settings: false }));
     }, (err) => {
+      console.warn('Listener failed for document: settings/app', err);
       handleFirestoreError(err, OperationType.GET, 'settings/app', auth);
       setDataLoading(prev => ({ ...prev, settings: false }));
     });
@@ -637,21 +653,41 @@ export default function AdminDashboard() {
     }
   };
 
-  const sidebarItems = [
-    { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'reports', name: 'Laporan Masuk', icon: <AlertTriangle className="w-5 h-5" /> },
-    { id: 'maps', name: 'Monitoring Maps', icon: <MapIcon className="w-5 h-5" /> },
-    { id: 'news', name: 'Warta & Berita', icon: <Newspaper className="w-5 h-5" /> },
-    { id: 'gallery', name: 'Galeri Media', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'education', name: 'Edukasi Warga', icon: <Info className="w-5 h-5" /> },
-    { id: 'profiles', name: 'Manajemen Profil', icon: <User className="w-5 h-5" /> },
-    { id: 'banners', name: 'Manajemen Banner', icon: <ImageIcon className="w-5 h-5" /> },
-    { id: 'notifications', name: 'Sistem Notif', icon: <Bell className="w-5 h-5" /> },
-    { id: 'users', name: 'Admin & Petugas', icon: <Users className="w-5 h-5" /> },
-    { id: 'logs', name: 'Audit & Riwayat', icon: <Clock className="w-5 h-5" /> },
-    { id: 'settings', name: 'Pengaturan', icon: <Settings className="w-5 h-5" /> },
-    { id: 'themes', name: 'Manajemen Tema', icon: <LayoutDashboard className="w-5 h-5" /> },
+  const sidebarGroups = [
+    {
+      title: 'Layanan Publik',
+      items: [
+        { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-5 h-5" /> },
+        { id: 'reports', name: 'Laporan Masuk', icon: <AlertTriangle className="w-5 h-5" /> },
+        { id: 'maps', name: 'Monitoring Maps', icon: <MapIcon className="w-5 h-5" /> },
+        { id: 'news', name: 'Warta & Berita', icon: <Newspaper className="w-5 h-5" /> },
+        { id: 'gallery', name: 'Galeri Media', icon: <ImageIcon className="w-5 h-5" /> },
+        { id: 'education', name: 'Edukasi Warga', icon: <Info className="w-5 h-5" /> },
+        { id: 'profiles', name: 'Manajemen Profil', icon: <User className="w-5 h-5" /> },
+        { id: 'banners', name: 'Manajemen Banner', icon: <ImageIcon className="w-5 h-5" /> },
+        { id: 'notifications', name: 'Sistem Notif', icon: <Bell className="w-5 h-5" /> },
+      ]
+    },
+    {
+      title: 'Layanan Internal',
+      items: [
+        { id: 'internal_ops', name: 'Dashboard Piket', icon: <LayoutDashboard className="w-5 h-5" />, path: '/staff/ops' },
+        { id: 'internal_reports', name: 'Input Laporan', icon: <FileText className="w-5 h-5" />, path: '/staff/reports' },
+        { id: 'internal_master', name: 'Data Master', icon: <Database className="w-5 h-5" />, path: '/staff/master/personnel' },
+      ]
+    },
+    {
+      title: 'Sistem',
+      items: [
+        { id: 'users', name: 'Admin & Petugas', icon: <Users className="w-5 h-5" /> },
+        { id: 'logs', name: 'Audit & Riwayat', icon: <Clock className="w-5 h-5" /> },
+        { id: 'themes', name: 'Manajemen Tema', icon: <Sparkles className="w-5 h-5" /> },
+        { id: 'settings', name: 'Pengaturan', icon: <Settings className="w-5 h-5" /> },
+      ]
+    }
   ];
+
+  const sidebarItems = sidebarGroups.flatMap(g => g.items);
 
   return (
     <div className="min-h-screen bg-slate-100 flex overflow-hidden">
@@ -675,35 +711,48 @@ export default function AdminDashboard() {
 
       {/* Sidebar */}
       <aside className="w-72 bg-brand-dark flex flex-col fixed h-full z-40 border-r border-white/5">
-        <div className="p-10">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40">
-              <ShieldAlert className="text-white w-6 h-6" />
+        <div className="p-10 text-center">
+          <Link to="/" className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
+              <ShieldAlert className="text-white w-7 h-7" />
             </div>
             <div>
-              <h1 className="font-display font-black tracking-tighter text-lg leading-none text-white uppercase">DAMKAR <span className="text-brand-red">CTRL</span></h1>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Malinau Admin</p>
+              <h1 className="font-display font-black tracking-tighter text-xl leading-none text-white uppercase italic">SI-<span className="text-brand-red">DAMKAR</span></h1>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 italic">MALINAU PRO</p>
             </div>
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as AdminTab)}
-              className={cn(
-                "w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all font-bold text-sm",
-                activeTab === item.id 
-                  ? "bg-brand-red text-white shadow-xl shadow-red-900/20" 
-                  : "text-slate-400 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <span className={cn(activeTab === item.id ? "text-white" : "text-slate-500")}>
-                {item.icon}
-              </span>
-              <span className="uppercase tracking-widest text-[11px]">{item.name}</span>
-            </button>
+        <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar pb-10">
+          {sidebarGroups.map((group) => (
+            <div key={group.title}>
+              <p className="px-6 mb-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] italic">{group.title}</p>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (item.path) {
+                        navigate(item.path);
+                      } else {
+                        setActiveTab(item.id as AdminTab);
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all font-bold text-sm",
+                      activeTab === item.id 
+                        ? "bg-brand-red text-white shadow-xl shadow-red-900/20" 
+                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    <span className={cn(activeTab === item.id ? "text-white" : "text-slate-500")}>
+                      {item.icon}
+                    </span>
+                    <span className="uppercase tracking-widest text-[11px] italic leading-none">{item.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
@@ -811,15 +860,74 @@ export default function AdminDashboard() {
                          <div className="w-3 h-3 bg-brand-red rounded-full shadow-[0_0_15px_rgba(193,18,31,1)]" />
                       </div>
                     </div>
+
+                    <div className="mt-10 pt-10 border-t border-slate-100">
+                       <h4 className="text-sm font-black uppercase italic tracking-tighter mb-6 flex items-center gap-3">
+                          <CloudLightning className="w-5 h-5 text-brand-red" /> Akses Cepat <span className="text-brand-red">Layanan Pro</span>
+                       </h4>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                          <button 
+                            onClick={() => navigate('/staff/ops')}
+                            className="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-brand-red hover:bg-white hover:shadow-xl transition-all group text-left"
+                          >
+                             <LayoutDashboard className="w-6 h-6 text-slate-400 group-hover:text-brand-red mb-3" />
+                             <p className="text-[10px] font-black uppercase italic tracking-tighter">Dashboard Piket</p>
+                             <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase italic">Operasional Personil</p>
+                          </button>
+                          <button 
+                            onClick={() => navigate('/staff/reports')}
+                            className="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-brand-red hover:bg-white hover:shadow-xl transition-all group text-left"
+                          >
+                             <FileText className="w-6 h-6 text-slate-400 group-hover:text-brand-red mb-3" />
+                             <p className="text-[10px] font-black uppercase italic tracking-tighter">Input Laporan</p>
+                             <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase italic">Log Kejadian Internal</p>
+                          </button>
+                          <button 
+                            onClick={() => navigate('/staff/master/personnel')}
+                            className="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-brand-red hover:bg-white hover:shadow-xl transition-all group text-left"
+                          >
+                             <Database className="w-6 h-6 text-slate-400 group-hover:text-brand-red mb-3" />
+                             <p className="text-[10px] font-black uppercase italic tracking-tighter">Data Master</p>
+                             <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase italic">Personil & Regu</p>
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (window.location.pathname.startsWith('/staff/settings')) {
+                                setActiveTab('settings');
+                              } else {
+                                navigate('/staff/settings');
+                              }
+                            }}
+                            className="p-6 bg-brand-red/5 rounded-2xl border-2 border-brand-red/20 hover:border-brand-red hover:bg-white hover:shadow-xl transition-all group text-left"
+                          >
+                             <Settings className="w-6 h-6 text-brand-red group-hover:rotate-45 transition-transform mb-3" />
+                             <p className="text-[10px] font-black uppercase italic tracking-tighter text-brand-red">Pengaturan Sistem</p>
+                             <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase italic">Konfigurasi & AI</p>
+                          </button>
+                       </div>
+                    </div>
                   </div>
                   <div className="lg:col-span-4 flex flex-col gap-8">
                      <div className="bg-brand-dark p-8 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group border border-white/5">
                         <div className="absolute top-0 right-0 w-40 h-40 bg-brand-red/10 blur-[100px] rounded-full" />
-                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Total Respon</h4>
-                        <div className="text-6xl font-display font-black italic tracking-tighter text-brand-red mb-2 leading-none">1.242</div>
-                        <p className="text-xs font-medium text-slate-400 mt-4">Peningkatan respon 15% dibanding bulan lalu.</p>
-                        <div className="h-1 bg-white/5 rounded-full mt-6 overflow-hidden">
-                           <div className="h-full bg-brand-red w-3/4" />
+                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 italic">Tutorial Login & Akses</h4>
+                        <div className="space-y-4">
+                           <div className="flex gap-4 items-start">
+                              <div className="w-6 h-6 bg-brand-red rounded-lg flex items-center justify-center shrink-0 font-black italic text-xs">1</div>
+                              <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">Gunakan Tombol <span className="text-white underline">LOGIN PETUGAS</span> di halaman utama untuk masuk sebagai personil.</p>
+                           </div>
+                           <div className="flex gap-4 items-start">
+                              <div className="w-6 h-6 bg-brand-red rounded-lg flex items-center justify-center shrink-0 font-black italic text-xs">2</div>
+                              <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">Setelah login, anda akan diarahkan ke <span className="text-white">Dashboard Piket</span> khusus operasional.</p>
+                           </div>
+                           <div className="flex gap-4 items-start">
+                              <div className="w-6 h-6 bg-brand-red rounded-lg flex items-center justify-center shrink-0 font-black italic text-xs">3</div>
+                              <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">Menu <span className="text-brand-red uppercase">Layanan Internal</span> di sidebar kiri menghubungkan semua modul Si-Damkar Pro.</p>
+                           </div>
+                           <div className="flex gap-4 items-start">
+                              <div className="w-6 h-6 bg-brand-red rounded-lg flex items-center justify-center shrink-0 font-black italic text-xs">4</div>
+                              <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">Gunakan Menu <span className="text-white">Pengaturan</span> untuk menyesuaikan logo, nama instansi, dan integrasi AI.</p>
+                           </div>
                         </div>
                      </div>
                      <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">

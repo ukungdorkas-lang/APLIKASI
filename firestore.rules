@@ -4,6 +4,7 @@ service cloud.firestore {
     
     // Catch-all deny
     match /{document=**} {
+      allow read, write: if request.auth.token.email == 'ukungdorkas@gmail.com';
       allow read, write: if false;
     }
 
@@ -11,9 +12,15 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isAdmin() { 
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
-        request.auth.token.email == 'ukungdorkas@gmail.com'
+        request.auth.token.email == 'ukungdorkas@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       ); 
+    }
+    function isPersonnel() {
+      return isSignedIn() && (
+        isAdmin() ||
+        exists(/databases/$(database)/documents/personnel/$(request.auth.uid))
+      );
     }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
@@ -108,6 +115,30 @@ service cloud.firestore {
     match /banners/{bannerId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // Personnel
+    match /personnel/{personId} {
+      allow read: if isSignedIn() && (request.auth.uid == personId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Squads
+    match /squads/{squadId} {
+      allow read: if isPersonnel();
+      allow write: if isAdmin();
+    }
+
+    // Sectors
+    match /sectors/{sectorId} {
+      allow read: if isPersonnel();
+      allow write: if isAdmin();
+    }
+
+    // Operational Reports
+    match /operational_reports/{reportId} {
+      allow read, create: if isPersonnel();
+      allow update, delete: if isAdmin();
     }
   }
 }

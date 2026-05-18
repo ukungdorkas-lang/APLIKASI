@@ -25,6 +25,9 @@ import Documentation from './pages/Documentation';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import OperationalDashboard from './pages/OperationalDashboard';
+import OperationalForms from './pages/OperationalForms';
+import MasterData from './pages/MasterData';
 import CheckTicket from './pages/CheckTicket';
 import Footer from './components/Footer';
 import AiAssistant from './components/AiAssistant';
@@ -100,22 +103,24 @@ function Home() {
         backgroundAttachment: 'fixed'
       }}
     >
-      {config?.homeLayout?.showAnnouncement && (
-         <div 
-           className="fixed top-24 left-1/2 -translate-x-1/2 z-[40] w-full max-w-4xl px-6"
-         >
-            <motion.div 
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="rounded-full py-4 px-8 flex items-center gap-4 shadow-2xl backdrop-blur-md border border-white/10"
-              style={{ backgroundColor: `${config.homeLayout.announcementColor}CC` || '#e11d48CC' }}
-            >
-               <div className="bg-white/20 p-2 rounded-full animate-pulse"><AlertTriangle className="w-5 h-5 text-white" /></div>
-               <p className="text-xs sm:text-sm font-black italic uppercase italic tracking-wider text-white flex-1 line-clamp-1">{config.homeLayout.announcementText}</p>
-               <div className="hidden sm:flex items-center gap-2 px-4 py-1 bg-white/20 rounded-full text-[10px] font-black text-white italic">LIVE ALERT</div>
-            </motion.div>
-         </div>
-      )}
+       {config?.homeLayout?.showAnnouncement && (
+          <div 
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-6"
+          >
+             <motion.div 
+               initial={{ y: 50, opacity: 0 }}
+               animate={{ y: 0, opacity: 1 }}
+               className="rounded-2xl py-5 px-8 flex items-center gap-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl border-2 border-white/20 bg-brand-dark/90"
+             >
+                <div className="bg-brand-red p-2.5 rounded-xl animate-pulse shadow-lg shadow-red-900/40"><AlertTriangle className="w-5 h-5 text-white" /></div>
+                <div className="flex-1 overflow-hidden">
+                   <p className="text-[10px] font-black italic uppercase tracking-widest text-slate-400 mb-1 leading-none">Pengumuman Penting</p>
+                   <p className="text-xs sm:text-sm font-bold text-white leading-tight italic truncate">{config.homeLayout.announcementText}</p>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-brand-red rounded-lg text-[9px] font-black text-white italic tracking-widest">LIVE</div>
+             </motion.div>
+          </div>
+       )}
 
       <Hero />
       
@@ -402,7 +407,7 @@ function Dashboard() {
 }
 
 // Auth Protection Wrapper
-function RequireAdmin({ children }: { children: React.ReactNode }) {
+function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'admin' | 'staff' }) {
   const [user, setUser] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const navigate = useNavigate();
@@ -410,15 +415,31 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       if (u) {
-        // Double check admin role in Firestore
-        const docRef = doc(db, 'admins', u.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
+        // Check in admins collection
+        const adminDoc = await getDoc(doc(db, 'admins', u.uid));
+        if (adminDoc.exists() || u.email === 'ukungdorkas@gmail.com') {
           setUser(u);
-        } else {
-          auth.signOut();
-          navigate('/login');
+          setLoading(false);
+          return;
         }
+
+        // Check in personnel collection
+        const personnelDoc = await getDoc(doc(db, 'personnel', u.uid));
+        if (personnelDoc.exists()) {
+          // If master data is requested but they are only personnel
+          if (role === 'admin') {
+            auth.signOut();
+            navigate('/login');
+            return;
+          }
+          setUser(u);
+          setLoading(false);
+          return;
+        }
+
+        // Neither admin nor personnel
+        auth.signOut();
+        navigate('/login');
       } else {
         navigate('/login');
       }
@@ -443,30 +464,70 @@ export default function App() {
 
 function AppContent() {
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard' || location.pathname === '/login';
+  const isAdminRoute = 
+    location.pathname.startsWith('/admin') || 
+    location.pathname.startsWith('/staff') || 
+    location.pathname === '/dashboard' || 
+    location.pathname === '/login';
 
   return (
     <div className="min-h-screen relative flex flex-col">
       {!isAdminRoute && <Navbar />}
-      <main className="flex-1">
+      <main className={cn("flex-1", !isAdminRoute && "pt-20")}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/report" element={<Report />} />
           <Route path="/login" element={<Login />} />
+          
+          {/* SI-DAMKAR Pro Routes */}
+          <Route 
+            path="/staff/ops" 
+            element={
+              <RequireAuth>
+                <OperationalDashboard />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/staff/reports" 
+            element={
+              <RequireAuth>
+                <OperationalForms />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/staff/master/*" 
+            element={
+              <RequireAuth role="admin">
+                <MasterData />
+              </RequireAuth>
+            } 
+          />
+
+          <Route 
+            path="/staff/settings" 
+            element={
+              <RequireAuth role="admin">
+                <AdminDashboard initialTab="settings" />
+              </RequireAuth>
+            } 
+          />
+
           <Route 
             path="/dashboard" 
             element={
-              <RequireAdmin>
+              <RequireAuth>
                 <AdminDashboard />
-              </RequireAdmin>
+              </RequireAuth>
             } 
           />
           <Route 
             path="/admin/*" 
             element={
-              <RequireAdmin>
+              <RequireAuth>
                 <AdminDashboard />
-              </RequireAdmin>
+              </RequireAuth>
             } 
           />
           <Route path="/news" element={<News />} />

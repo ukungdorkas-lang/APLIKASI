@@ -104,7 +104,7 @@ export default function Hero() {
               <span className="text-brand-red font-black uppercase tracking-[0.4em] text-[10px]">{config?.agencyName || 'DINAS PEMADAM KEBAKARAN'}</span>
             </div>
             
-            <h1 className="text-[12vw] lg:text-[7vw] font-display font-black leading-[0.85] text-white uppercase tracking-tighter mb-8">
+            <h1 className="text-[12vw] lg:text-[7vw] font-display font-black leading-[0.8] text-white uppercase tracking-tighter mb-10 italic">
               {banner?.title || defaultTitle}
             </h1>
             
@@ -112,17 +112,22 @@ export default function Hero() {
               {banner?.subtitle || config?.slogan || 'Kami siap melindungi masyarakat dari bahaya kebakaran dengan pelayanan cepat, akurat, dan terpercaya selama 24 jam penuh.'}
             </p>
 
-            <div className="flex flex-wrap gap-6 mb-16">
-              <Link to={banner?.ctaLink || "/report"} className="emergency-btn group flex items-center gap-4 py-5 px-10 text-xl">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 mb-20">
+              <Link to={banner?.ctaLink || "/report"} className="emergency-btn group px-12 py-6 text-2xl">
                 <span>{banner?.ctaText || "BUAT LAPORAN"}</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-brand-red transition-all">
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                </div>
               </Link>
-              <a 
-                href={`tel:${config?.emergencyNumber?.replace(/[^0-9]/g, '') || '05532021476'}`} 
-                className="bg-white/10 backdrop-blur-md border border-white/20 px-10 py-5 rounded-xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-dark transition-all flex items-center gap-4 shadow-2xl"
+              <Link 
+                to="/staff/ops" 
+                className="bg-brand-dark/80 backdrop-blur-xl border-2 border-white/10 px-12 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-4 shadow-2xl group"
               >
-                <Phone className="w-6 h-6 text-brand-red animate-pulse" /> HUBUNGI KAMI
-              </a>
+                <div className="w-10 h-10 rounded-full bg-brand-red/20 flex items-center justify-center group-hover:bg-brand-red transition-all">
+                  <Users className="w-5 h-5 text-brand-red group-hover:text-white transition-all" />
+                </div>
+                LOGIN PETUGAS
+              </Link>
             </div>
 
             <div className="flex items-center gap-10">

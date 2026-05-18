@@ -56,27 +56,27 @@ export default function Navbar() {
   return (
     <nav 
       className={cn(
-        "fixed top-0 w-full z-50 transition-all duration-500",
+        "fixed top-0 w-full z-50 transition-all duration-700",
         scrolled 
-          ? "bg-brand-dark/95 backdrop-blur-md py-4 shadow-2xl border-b border-white/5" 
-          : "bg-transparent py-8"
+          ? "bg-brand-dark/95 backdrop-blur-xl py-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)] border-b border-brand-red/20" 
+          : "bg-transparent py-6"
       )}
     >
       <div className="container mx-auto px-6 lg:px-12 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-4 group">
-          <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40 relative overflow-hidden group-hover:scale-110 transition-transform">
+          <div className="w-14 h-14 bg-brand-red rounded-2xl flex items-center justify-center shadow-emergency relative overflow-hidden group-hover:rotate-6 transition-transform duration-500">
              {config?.logoUrl ? (
-               <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain p-1 relative z-10" />
+               <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain p-2 relative z-10" />
              ) : (
-               <ShieldAlert className="text-white w-7 h-7 relative z-10" />
+               <ShieldAlert className="text-white w-8 h-8 relative z-10" />
              )}
-             <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent" />
+             <div className="absolute inset-0 bg-gradient-to-tr from-black/40 to-transparent" />
           </div>
-          <div>
-            <h1 className="text-xl font-display font-black tracking-tighter text-white uppercase leading-none">
-              {config?.agencyName?.split(' ').slice(0, 1) || 'PEMADAM'} <span className="text-brand-red">{config?.agencyName?.split(' ').slice(1).join(' ') || 'KEBAKARAN'}</span>
+          <div className="hidden sm:block">
+            <h1 className="text-2xl font-display font-black tracking-tighter text-white uppercase italic leading-none flex flex-col">
+              <span>{config?.agencyName?.split(' ').slice(0, 1) || 'PEMADAM'}</span>
+              <span className="text-brand-red -mt-1">{config?.agencyName?.split(' ').slice(1).join(' ') || 'KEBAKARAN'}</span>
             </h1>
-            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 hidden sm:block">{config?.slogan || 'KABUPATEN MALINAU'}</p>
           </div>
         </Link>
 

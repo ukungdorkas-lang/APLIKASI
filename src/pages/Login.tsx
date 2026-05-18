@@ -37,14 +37,23 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Check if user is admin/officer in Firestore
-      const userDoc = await getDoc(doc(db, 'admins', user.uid));
-      if (!userDoc.exists()) {
-        await auth.signOut();
-        throw new Error('Akun Anda tidak memiliki izin akses administrator.');
+      // Check in admins collection
+      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      if (adminDoc.exists()) {
+        navigate('/admin');
+        return;
       }
 
-      navigate('/admin');
+      // Check in personnel collection
+      const personnelDoc = await getDoc(doc(db, 'personnel', user.uid));
+      if (personnelDoc.exists()) {
+        navigate('/staff/ops');
+        return;
+      }
+
+      // If neither, sign out
+      await auth.signOut();
+      throw new Error('Akun Anda tidak memiliki izin akses sistem operasional.');
     } catch (err: any) {
       setError(err.message || 'Gagal login. Periksa email dan password Anda.');
       setCaptcha({ a: Math.floor(Math.random() * 10), b: Math.floor(Math.random() * 10) });

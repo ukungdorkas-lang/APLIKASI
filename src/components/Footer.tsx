@@ -30,25 +30,26 @@ export default function Footer() {
   ].filter(s => s.url);
 
   return (
-    <footer className="bg-brand-dark text-white relative overflow-hidden pt-32 pb-12 border-t border-white/5">
+    <footer className="bg-brand-dark text-white relative overflow-hidden pt-32 pb-16 border-t-8 border-brand-red">
       {/* Decorative elements */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-red to-transparent" />
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-red/5 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-red/10 blur-[150px] rounded-full translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-orange/5 blur-[120px] rounded-full -translate-x-1/2 translate-y-1/2" />
       
-      <div className="max-w-7xl mx-auto px-6 sm:px-10">
-        <div className="grid lg:grid-cols-12 gap-16 mb-24">
-          <div className="lg:col-span-5 space-y-10">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
+        <div className="grid lg:grid-cols-12 gap-20 mb-32">
+          <div className="lg:col-span-4 space-y-12">
             <div>
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40 overflow-hidden">
+              <div className="flex items-center gap-5 mb-8">
+                <div className="w-16 h-16 bg-brand-red rounded-2xl flex items-center justify-center shadow-emergency group transition-transform hover:rotate-6">
                   {settings?.logoUrl ? (
                     <img src={settings.logoUrl} className="w-full h-full object-contain p-2" alt="Logo" />
                   ) : (
-                    <Shield className="w-6 h-6 text-white" />
+                    <Shield className="w-8 h-8 text-white" />
                   )}
                 </div>
-                <h2 className="text-3xl font-display font-black tracking-tighter uppercase italic">
-                  {settings?.agencyName?.split(' ')[0] || 'Damkar'} <span className="text-brand-red">{settings?.agencyName?.split(' ').slice(1).join(' ') || 'Malinau'}</span>
+                <h2 className="text-4xl font-display font-black tracking-tighter uppercase italic leading-none flex flex-col">
+                  <span>{settings?.agencyName?.split(' ')[0] || 'DAMKAR'}</span>
+                  <span className="text-brand-red -mt-1">{settings?.agencyName?.split(' ').slice(1).join(' ') || 'MALINAU'}</span>
                 </h2>
               </div>
               <div className="text-slate-400 font-medium leading-relaxed max-w-sm italic prose prose-invert prose-sm">
@@ -101,28 +102,28 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="lg:col-span-3">
-             <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-lg relative group overflow-hidden">
+          <div className="lg:col-span-4">
+             <div className="bg-slate-900 p-10 rounded-[3rem] border-4 border-brand-red shadow-emergency relative group overflow-hidden">
                 <div className="relative z-10">
-                   <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Pusat Bantuan 24/7</h4>
-                   <div className="flex items-center gap-6 mb-8">
-                      <div className="w-16 h-16 bg-brand-red rounded-2xl flex items-center justify-center shadow-2xl shadow-red-900 group-hover:scale-110 transition-transform">
-                         <Phone className="w-8 h-8 text-white" />
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-8 uppercase italic">Pusat Komando 24 Jam</h4>
+                   <div className="flex items-center gap-8 mb-10">
+                      <div className="w-20 h-20 bg-brand-red rounded-3xl flex items-center justify-center shadow-2xl shadow-red-900 group-hover:rotate-12 transition-transform">
+                         <Phone className="w-10 h-10 text-white" />
                       </div>
                       <div>
                          <p className="text-4xl font-display font-black tracking-tighter text-white italic leading-none">
-                           {settings?.emergencyNumber || '0553 2021476'}
+                           {settings?.emergencyNumber || '112'}
                          </p>
-                         <p className="text-[9px] font-black text-brand-red uppercase animate-pulse mt-1">Ready for response</p>
+                         <p className="text-[10px] font-black text-brand-red uppercase animate-pulse mt-2 tracking-widest italic">Ready for response</p>
                       </div>
                    </div>
                    <a 
                     href={`https://wa.me/${settings?.contact?.replace(/[^0-9]/g, '')}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="w-full block text-center py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                    className="w-full flex items-center justify-center gap-3 py-5 bg-brand-red text-white text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-brand-dark transition-all rounded-2xl italic"
                    >
-                      Kontak via WhatsApp
+                      Hubungi Operator (WA) <ArrowRight className="w-4 h-4" />
                    </a>
                 </div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-[60px] rounded-full" />
