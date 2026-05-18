@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   LayoutDashboard,
   Info,
+  UserPlus,
   MapPin,
   Radio,
   Filter,
@@ -524,12 +525,20 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
       setDataLoading(prev => ({ ...prev, news: false }));
     });
 
-    const unsubUsers = onSnapshot(query(collection(db, 'admins')), (sn) => {
-      setUsers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
-      setDataLoading(prev => ({ ...prev, users: false }));
+    const unsubUsers = onSnapshot(query(collection(db, 'admins')), (snAdmins) => {
+      const adminUsers = snAdmins.docs.map(d => ({ id: d.id, ...d.data(), role: d.data().role || 'admin', collection: 'admins' }));
+      
+      onSnapshot(query(collection(db, 'personnel')), (snPersonnel) => {
+        const personnelUsers = snPersonnel.docs.map(d => ({ id: d.id, ...d.data(), role: d.data().role || 'field_personnel', collection: 'personnel' }));
+        setUsers([...adminUsers, ...personnelUsers]);
+        setDataLoading(prev => ({ ...prev, users: false }));
+      }, (err) => {
+        console.warn('Listener failed for collection: personnel', err);
+        setUsers(adminUsers); // Fallback to just admins
+        setDataLoading(prev => ({ ...prev, users: false }));
+      });
     }, (err) => {
       console.warn('Listener failed for collection: admins', err);
-      handleFirestoreError(err, OperationType.LIST, 'admins', auth);
       setDataLoading(prev => ({ ...prev, users: false }));
     });
 
@@ -1381,7 +1390,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                 <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                    <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center"><Users className="w-6 h-6 text-white" /></div>
-                      <div><h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Petugas & Admin</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manajemen Hak Akses</p></div>
+                      <div><h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Petugas & Admin</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manajemen Hak Akses & Verifikasi</p></div>
                    </div>
                    <button className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:scale-105 transition-all" onClick={() => {
                      setUserForm({ email: '', password: '', role: 'admin' });
@@ -1389,6 +1398,63 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                      setShowUserModal(true);
                    }}>Tambah Petugas</button>
                 </div>
+
+                {/* Pending Verification Section */}
+                {users.filter(u => u.status === 'pending').length > 0 && (
+                  <div className="bg-amber-50 rounded-[2.5rem] border-4 border-dashed border-amber-200 p-10">
+                     <div className="flex items-center gap-4 mb-8">
+                        <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center animate-pulse"><UserPlus className="w-5 h-5 text-white" /></div>
+                        <h4 className="text-lg font-black italic uppercase tracking-tighter text-amber-900">Permintaan Verifikasi Akun Baru</h4>
+                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {users.filter(u => u.status === 'pending').map(pendingUser => (
+                           <motion.div 
+                             key={pendingUser.id}
+                             initial={{ opacity: 0, scale: 0.95 }}
+                             animate={{ opacity: 1, scale: 1 }}
+                             className="bg-white p-6 rounded-2xl shadow-sm border border-amber-100 flex flex-col justify-between"
+                           >
+                              <div>
+                                 <div className="flex justify-between items-start mb-4">
+                                    <span className="bg-amber-100 text-amber-700 text-[8px] font-black uppercase px-3 py-1.5 rounded-full tracking-widest">Waiting Approval</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase">{pendingUser.role}</span>
+                                 </div>
+                                 <h5 className="font-black italic uppercase tracking-tighter text-slate-900 leading-none mb-1 truncate">{pendingUser.name || pendingUser.email?.split('@')[0]}</h5>
+                                 <p className="text-[10px] font-bold text-slate-400 truncate mb-6">{pendingUser.email}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                 <button 
+                                   onClick={async () => {
+                                     try {
+                                       const col = pendingUser.collection || (pendingUser.role === 'admin' ? 'admins' : 'personnel');
+                                       await updateDoc(doc(db, col, pendingUser.id), { status: 'active' });
+                                       showToast(`Akun ${pendingUser.name || pendingUser.email} telah diaktifkan!`);
+                                     } catch (err) { console.error(err); showToast('Gagal memverifikasi akun', 'error'); }
+                                   }}
+                                   className="flex-1 py-3 bg-green-500 text-white text-[10px] font-black uppercase rounded-xl hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20"
+                                 >
+                                   Setujui
+                                 </button>
+                                 <button 
+                                   onClick={async () => {
+                                     if (confirm('Tolak dan hapus data pendaftaran ini?')) {
+                                       try {
+                                         const col = pendingUser.collection || (pendingUser.role === 'admin' ? 'admins' : 'personnel');
+                                         await deleteDoc(doc(db, col, pendingUser.id));
+                                         showToast('Pendaftaran ditolak', 'success');
+                                       } catch (err) { console.error(err); showToast('Gagal menolak akun', 'error'); }
+                                     }
+                                   }}
+                                   className="px-4 py-3 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors"
+                                 >
+                                   Tolak
+                                 </button>
+                              </div>
+                           </motion.div>
+                        ))}
+                     </div>
+                  </div>
+                )}
 
                 {dataLoading.users ? (
                   <LoadingSpinner message="Sinkronisasi Anggota Tim..." />
@@ -1407,7 +1473,31 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                       <p className="text-xs font-bold text-slate-400 mb-10 italic">{u.email}</p>
                       <div className="flex gap-4">
                         <button className="flex-1 bg-slate-900 text-white font-black italic uppercase tracking-tighter py-4 rounded-xl text-[10px] shadow-lg hover:bg-brand-red transition-colors" onClick={() => showToast('Edit hak akses: ' + u.email)}>Konfigurasi</button>
-                        <button className="p-4 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg" onClick={() => showToast('Yakin ingin hapus?', 'error')}><Trash2 className="w-6 h-6" /></button>
+                        <button 
+                          className="p-4 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg" 
+                          onClick={async () => {
+                            if (auth.currentUser?.email !== 'ukungdorkas@gmail.com') {
+                              showToast('Akses ditolak: Hanya Admin Utama yang dapat menghapus akun.', 'error');
+                              return;
+                            }
+                            if (u.email === 'ukungdorkas@gmail.com') {
+                              showToast('Gagal: Admin Utama tidak dapat dihapus!', 'error');
+                              return;
+                            }
+                            if (confirm(`Hapus akun ${u.name || u.email} secara permanen? Semua data akses akan hilang.`)) {
+                              try {
+                                const col = u.collection || (u.role === 'admin' ? 'admins' : 'personnel');
+                                await deleteDoc(doc(db, col, u.id));
+                                showToast('Akun berhasil dihapus secara permanen.', 'success');
+                              } catch (err) {
+                                console.error(err);
+                                showToast('Gagal melakukan penghapusan.', 'error');
+                              }
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-6 h-6" />
+                        </button>
                       </div>
                     </div>
                   ))}
