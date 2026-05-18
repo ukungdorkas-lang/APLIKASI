@@ -200,6 +200,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
     condition: 'Cerah',
     rainfall: 0,
     overflowPotential: 'Rendah' as 'Rendah' | 'Sedang' | 'Tinggi' | 'Sangat Tinggi',
+    summary: '',
     recommendation: 'Tetap waspada dan pantau informasi resmi.'
   });
 
@@ -521,9 +522,10 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
           condition: data.data.condition,
           rainfall: data.data.rainfall,
           overflowPotential: data.data.overflowPotential,
+          summary: data.data.summary,
           recommendation: data.data.recommendation
         });
-        showToast('Data cuaca terbaru berhasil ditarik via AI BMKG');
+        showToast('Data cuaca hulu berhasil ditarik via AI');
       } else {
         throw new Error(data.error);
       }
@@ -2689,6 +2691,10 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                           <option>Sangat Tinggi</option>
                        </select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kesimpulan Data (AI BMKG)</label>
+                     <textarea required value={weatherForm.summary} onChange={e => setWeatherForm({...weatherForm, summary: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red h-20 resize-none" placeholder="Hasil analisa AI..." />
                   </div>
                   <div className="space-y-2">
                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rekomendasi (Instruksi)</label>

