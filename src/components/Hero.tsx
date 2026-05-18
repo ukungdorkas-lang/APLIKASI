@@ -148,26 +148,7 @@ export default function Hero() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.5, delay: 0.2 }}
             className="hidden lg:block relative"
-          >
-            <div className="relative z-10 rounded-[3rem] overflow-hidden border-[16px] border-white/5 shadow-3xl aspect-[4/5] max-w-md mx-auto">
-              <img 
-                src="https://images.unsplash.com/photo-1516562309708-05f3b2b2c238?auto=format&fit=crop&q=80&w=600"
-                alt="Firefighter Action"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-red/80 via-transparent to-transparent" />
-              <div className="absolute bottom-10 left-10 p-8 glass-dark rounded-3xl right-10">
-                 <p className="text-[11px] font-black uppercase tracking-widest text-white/50 mb-2">Kasus Terakhir</p>
-                 <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">Kebakaran Gudang Industri</h2>
-                 <p className="text-sm text-white/70 font-medium mt-2">Dapat dipadamkan dalam waktu 45 menit oleh Tim Satria.</p>
-              </div>
-            </div>
-            
-            {/* Floating decoration */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-brand-red/20 blur-[100px] rounded-full" />
-            <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-brand-orange/10 blur-[120px] rounded-full" />
-          </motion.div>
+          />
         </div>
       </div>
 
