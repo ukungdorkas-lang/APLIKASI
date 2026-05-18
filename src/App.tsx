@@ -37,10 +37,21 @@ function Home() {
   const [loading, setLoading] = React.useState(true);
   const [banner, setBanner] = React.useState<BannerConfig | null>(null);
   const [config, setConfig] = React.useState<AppConfig | null>(null);
-  const { reports } = useReports();
-  const recentReports = reports.slice(0, 3);
+  const { reports: emergencyReports } = useReports();
+  const recentReports = emergencyReports.slice(0, 3);
+
+  const [opsReports, setOpsReports] = React.useState<any[]>([]);
+  const [sectors, setSectors] = React.useState<any[]>([]);
+  const [squads, setSquads] = React.useState<any[]>([]);
 
   React.useEffect(() => {
+    // Fetch sectors and squads for "Personil Siaga"
+    const unsubSectors = onSnapshot(collection(db, 'sectors'), (s) => setSectors(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubSquads = onSnapshot(collection(db, 'squads'), (s) => setSquads(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubReports = onSnapshot(query(collection(db, 'operational_reports'), orderBy('date', 'desc'), limit(50)), (s) => {
+      setOpsReports(s.docs.map(d => ({id: d.id, ...d.data()})));
+    });
+
     const q = query(
       collection(db, 'news'),
       where('status', '==', 'Publish Otomatis'),
@@ -221,6 +232,79 @@ function Home() {
         </div>
       </section>
       )}
+
+      {/* Personil Siaga Section */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className="bg-slate-900 rounded-[4rem] p-12 sm:p-20 relative overflow-hidden border-4 border-brand-red/20 shadow-2xl">
+           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/10 blur-[120px] -mr-48 -mt-48 rounded-full" />
+           
+           <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12 mb-16">
+                 <div className="max-w-2xl">
+                    <h2 className="text-4xl sm:text-6xl font-display font-black text-white uppercase italic tracking-tighter leading-none mb-6">
+                       Personil <span className="text-brand-red">Siaga.</span>
+                    </h2>
+                    <p className="text-slate-400 font-medium italic border-l-2 border-brand-red pl-6 uppercase tracking-widest text-xs">
+                       Komandan Regu yang bertugas saat ini di setiap sektor/wilayah Kabupaten Malinau.
+                    </p>
+                 </div>
+                 <div className="px-8 py-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+                     <div className="flex items-center gap-3">
+                        <Activity className="w-5 h-5 text-green-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Status Real-Time</span>
+                     </div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                 {sectors.map(sector => {
+                    const latestReport = opsReports
+                      .filter(r => r.type === 'daily_piket' && r.sectorId === sector.id && r.piketAction === 'datang')
+                      .sort((a, b) => b.date - a.date)[0];
+                    
+                    const squad = squads.find(s => s.id === latestReport?.squadId);
+                    const commander = latestReport?.attendance?.find((a: any) => a.personnelId === squad?.commanderId && a.status === 'hadir');
+
+                    return (
+                       <div key={sector.id} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group shadow-inner">
+                          <div className="flex items-center gap-4 mb-6">
+                             <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
+                                <MapPin className="w-6 h-6 text-white" />
+                             </div>
+                             <div>
+                                <h4 className="text-white font-black uppercase italic tracking-tighter text-lg leading-none">{sector.name}</h4>
+                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sektor Wilayah</p>
+                             </div>
+                          </div>
+                          
+                          {commander ? (
+                             <div className="space-y-4">
+                                <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20 shadow-sm">
+                                   <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1 leading-none">On Duty (Danru)</p>
+                                   <p className="text-white font-black italic uppercase tracking-tighter text-sm">{commander.name}</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-[8px] font-bold text-slate-400 italic">
+                                   <Calendar className="w-3 h-3" />
+                                   <span>Piket {latestReport.shift === 'pagi' ? 'Pagi (08:00 - 20:00)' : 'Malam (20:00 - 08:00)'}</span>
+                                </div>
+                             </div>
+                          ) : (
+                             <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Belum Ada Laporan Masuk</p>
+                             </div>
+                          )}
+                       </div>
+                    );
+                 })}
+                 {sectors.length === 0 && (
+                   <div className="col-span-full py-10 text-center border border-dashed border-white/10 rounded-3xl">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Menyiapkan Data Wilayah...</p>
+                   </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      </section>
 
       {/* Recent Cases Section */}
       {(!config?.homeLayout || config.homeLayout.showGallerySection) && (

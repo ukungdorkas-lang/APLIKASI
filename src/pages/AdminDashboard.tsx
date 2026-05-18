@@ -205,6 +205,49 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
     thumbnailUrl: '' as string | undefined
   });
 
+  const THEME_PRESETS = [
+    {
+      name: 'Classic Damkar',
+      primaryColor: '#e11d48',
+      secondaryColor: '#0f172a',
+      accentColor: '#fbbf24',
+      backgroundColor: '#f1f5f9',
+      surfaceColor: '#ffffff',
+      textColor: '#0f172a',
+      isDark: false,
+    },
+    {
+      name: 'Night Rescue',
+      primaryColor: '#f43f5e',
+      secondaryColor: '#020617',
+      accentColor: '#38bdf8',
+      backgroundColor: '#020617',
+      surfaceColor: '#0f172a',
+      textColor: '#f8fafc',
+      isDark: true,
+    },
+    {
+      name: 'Forest Protection',
+      primaryColor: '#059669',
+      secondaryColor: '#064e3b',
+      accentColor: '#fbbf24',
+      backgroundColor: '#f0fdf4',
+      surfaceColor: '#ffffff',
+      textColor: '#064e3b',
+      isDark: false,
+    },
+    {
+      name: 'Steel Industrial',
+      primaryColor: '#475569',
+      secondaryColor: '#0f172a',
+      accentColor: '#fbbf24',
+      backgroundColor: '#f8fafc',
+      surfaceColor: '#ffffff',
+      textColor: '#1e293b',
+      isDark: false,
+    }
+  ];
+
   const [settingsForm, setSettingsForm] = React.useState({
     agencyName: 'DAMKAR MALINAU',
     slogan: 'Pantang Pulang Sebelum Padam',
@@ -1907,85 +1950,199 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                   <h3 className="text-2xl font-black italic uppercase tracking-tighter">{editingItem ? 'Edit Tema Visual' : 'Tambah Tema Baru'}</h3>
                   <button onClick={() => setShowThemeModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><CloseIcon className="w-6 h-6" /></button>
                </div>
-               <form onSubmit={handleSaveTheme} className="p-10 space-y-8 overflow-y-auto">
+               <form onSubmit={handleSaveTheme} className="p-10 space-y-8 overflow-y-auto w-full">
+                  {/* Color Presets */}
+                  <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 mb-8">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 text-center">🎨 Preset Tema Profesional (Akses Cepat)</p>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {THEME_PRESETS.map((preset) => (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() => setThemeForm({ ...themeForm, ...preset })}
+                          className="group p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-brand-red hover:shadow-lg transition-all text-left"
+                        >
+                          <div className="flex h-3 w-full rounded-full overflow-hidden mb-3 shadow-inner">
+                            <div style={{ backgroundColor: preset.primaryColor }} className="flex-1" title="Primary" />
+                            <div style={{ backgroundColor: preset.secondaryColor }} className="flex-1" title="Secondary" />
+                            <div style={{ backgroundColor: preset.accentColor }} className="flex-1" title="Accent" />
+                          </div>
+                          <p className="text-[10px] font-black uppercase italic tracking-tighter text-slate-600 group-hover:text-brand-red truncate">{preset.name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid md:grid-cols-2 gap-10">
+                    {/* Left Column: Form Controls */}
                     <div className="space-y-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Tema</label>
-                        <input required value={themeForm.name} onChange={e => setThemeForm({...themeForm, name: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" placeholder="Contoh: Modern Clean" />
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nama Tema Identitas</label>
+                        <input required value={themeForm.name} onChange={e => setThemeForm({...themeForm, name: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red transition-colors" placeholder="Contoh: Tactical Command" />
                       </div>
                       
                       <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Primary</label>
-                          <div className="flex gap-2">
-                            <input type="color" value={themeForm.primaryColor} onChange={e => setThemeForm({...themeForm, primaryColor: e.target.value})} className="w-12 h-12 bg-white rounded-lg border-2 border-slate-100 cursor-pointer" />
-                            <input value={themeForm.primaryColor} onChange={e => setThemeForm({...themeForm, primaryColor: e.target.value})} className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-bold text-xs" />
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Utama (Primary)</label>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2 items-center">
+                              <input type="color" value={themeForm.primaryColor} onChange={e => setThemeForm({...themeForm, primaryColor: e.target.value})} className="w-14 h-14 bg-white rounded-xl border-4 border-slate-100 cursor-pointer shadow-sm active:scale-95 transition-transform" />
+                              <div className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-mono text-[10px] uppercase font-bold text-slate-400 tabular-nums text-center">{themeForm.primaryColor}</div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                               {['#e11d48', '#ef4444', '#f97316', '#3b82f6', '#10b981', '#6366f1'].map(c => (
+                                 <button key={c} type="button" onClick={() => setThemeForm({...themeForm, primaryColor: c})} className={cn("w-6 h-6 rounded-full border-2 transition-all hover:scale-110", themeForm.primaryColor === c ? "border-brand-red" : "border-white")} style={{ backgroundColor: c }} />
+                               ))}
+                            </div>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Secondary</label>
-                          <div className="flex gap-2">
-                            <input type="color" value={themeForm.secondaryColor} onChange={e => setThemeForm({...themeForm, secondaryColor: e.target.value})} className="w-12 h-12 bg-white rounded-lg border-2 border-slate-100 cursor-pointer" />
-                            <input value={themeForm.secondaryColor} onChange={e => setThemeForm({...themeForm, secondaryColor: e.target.value})} className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-bold text-xs" />
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Sekunder</label>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2 items-center">
+                              <input type="color" value={themeForm.secondaryColor} onChange={e => setThemeForm({...themeForm, secondaryColor: e.target.value})} className="w-14 h-14 bg-white rounded-xl border-4 border-slate-100 cursor-pointer shadow-sm active:scale-95 transition-transform" />
+                              <div className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-mono text-[10px] uppercase font-bold text-slate-400 tabular-nums text-center">{themeForm.secondaryColor}</div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                               {['#0f172a', '#1e293b', '#020617', '#334155', '#475569'].map(c => (
+                                 <button key={c} type="button" onClick={() => setThemeForm({...themeForm, secondaryColor: c})} className={cn("w-6 h-6 rounded-full border-2 transition-all hover:scale-110", themeForm.secondaryColor === c ? "border-brand-red" : "border-white")} style={{ backgroundColor: c }} />
+                               ))}
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-6">
                          <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Background</label>
-                          <div className="flex gap-2">
-                            <input type="color" value={themeForm.backgroundColor} onChange={e => setThemeForm({...themeForm, backgroundColor: e.target.value})} className="w-12 h-12 bg-white rounded-lg border-2 border-slate-100 cursor-pointer" />
-                            <input value={themeForm.backgroundColor} onChange={e => setThemeForm({...themeForm, backgroundColor: e.target.value})} className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-bold text-xs" />
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Latar (BG)</label>
+                           <div className="flex flex-col gap-2">
+                            <div className="flex gap-2 items-center">
+                              <input type="color" value={themeForm.backgroundColor} onChange={e => setThemeForm({...themeForm, backgroundColor: e.target.value})} className="w-14 h-14 bg-white rounded-xl border-4 border-slate-100 cursor-pointer shadow-sm active:scale-95 transition-transform" />
+                              <div className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-mono text-[10px] uppercase font-bold text-slate-400 tabular-nums text-center">{themeForm.backgroundColor}</div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                               {['#f1f5f9', '#ffffff', '#020617', '#111827', '#000000'].map(c => (
+                                 <button key={c} type="button" onClick={() => setThemeForm({...themeForm, backgroundColor: c})} className={cn("w-6 h-6 rounded-full border-2 transition-all hover:scale-110", themeForm.backgroundColor === c ? "border-brand-red" : "border-white")} style={{ backgroundColor: c }} />
+                               ))}
+                            </div>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Teks</label>
-                          <div className="flex gap-2">
-                            <input type="color" value={themeForm.textColor} onChange={e => setThemeForm({...themeForm, textColor: e.target.value})} className="w-12 h-12 bg-white rounded-lg border-2 border-slate-100 cursor-pointer" />
-                            <input value={themeForm.textColor} onChange={e => setThemeForm({...themeForm, textColor: e.target.value})} className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-bold text-xs" />
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Teks Konten</label>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2 items-center">
+                              <input type="color" value={themeForm.textColor} onChange={e => setThemeForm({...themeForm, textColor: e.target.value})} className="w-14 h-14 bg-white rounded-xl border-4 border-slate-100 cursor-pointer shadow-sm active:scale-95 transition-transform" />
+                              <div className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-mono text-[10px] uppercase font-bold text-slate-400 tabular-nums text-center">{themeForm.textColor}</div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                               {['#0f172a', '#1e293b', '#f8fafc', '#ffffff', '#94a3b8'].map(c => (
+                                 <button key={c} type="button" onClick={() => setThemeForm({...themeForm, textColor: c})} className={cn("w-6 h-6 rounded-full border-2 transition-all hover:scale-110", themeForm.textColor === c ? "border-brand-red" : "border-white")} style={{ backgroundColor: c }} />
+                               ))}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Font Family</label>
-                        <select value={themeForm.fontFamily} onChange={e => setThemeForm({...themeForm, fontFamily: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red">
-                          <option value="Inter">Inter (Default)</option>
-                          <option value="Space Grotesk">Space Grotesk (Tech)</option>
-                          <option value="JetBrains Mono">JetBrains Mono (Mono)</option>
-                          <option value="Outfit">Outfit (Clean)</option>
-                        </select>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Warna Aksen</label>
+                           <div className="flex flex-col gap-2">
+                              <div className="flex gap-2 items-center">
+                                 <input type="color" value={themeForm.accentColor} onChange={e => setThemeForm({...themeForm, accentColor: e.target.value})} className="w-14 h-14 bg-white rounded-xl border-4 border-slate-100 cursor-pointer shadow-sm active:scale-95 transition-transform" />
+                                 <div className="flex-1 bg-slate-50 border-2 border-slate-100 p-3 rounded-lg font-mono text-[10px] uppercase font-bold text-slate-400 tabular-nums text-center">{themeForm.accentColor}</div>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 justify-center">
+                                 {['#fbbf24', '#38bdf8', '#10b981', '#f43f5e', '#ffffff'].map(c => (
+                                    <button key={c} type="button" onClick={() => setThemeForm({...themeForm, accentColor: c})} className={cn("w-6 h-6 rounded-full border-2 transition-all hover:scale-110", themeForm.accentColor === c ? "border-brand-red" : "border-white")} style={{ backgroundColor: c }} />
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Psikologi Mode</label>
+                           <div className="flex bg-slate-100 p-1.5 rounded-xl gap-1.5 h-[5.5rem] items-center">
+                              <button 
+                                type="button"
+                                onClick={() => setThemeForm({...themeForm, isDark: false})}
+                                className={cn("flex-1 h-full rounded-lg font-black text-[10px] uppercase transition-all flex flex-col items-center justify-center gap-2", !themeForm.isDark ? "bg-white text-slate-900 shadow-xl scale-100" : "text-slate-400 hover:text-slate-600 scale-95")}
+                              >
+                                 <div className="w-4 h-4 rounded-full bg-slate-100 border-2 border-slate-300" />
+                                 Terang
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => setThemeForm({...themeForm, isDark: true})}
+                                className={cn("flex-1 h-full rounded-lg font-black text-[10px] uppercase transition-all flex flex-col items-center justify-center gap-2", themeForm.isDark ? "bg-slate-900 text-white shadow-xl scale-100" : "text-slate-400 hover:text-slate-600 scale-95")}
+                              >
+                                 <div className="w-4 h-4 rounded-full bg-white animate-pulse" />
+                                 Gelap
+                              </button>
+                           </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <div className="p-8 bg-slate-900 rounded-[2rem] text-white">
-                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-red mb-6">PREVIEW REALTIME</h4>
-                         <div className="space-y-4">
-                            <div className="h-10 w-full rounded-lg" style={{ backgroundColor: themeForm.primaryColor }}></div>
-                            <div className="h-20 w-full rounded-2xl p-4 flex flex-col justify-end" style={{ backgroundColor: themeForm.backgroundColor, color: themeForm.textColor }}>
-                               <p className="text-xl font-black italic uppercase leading-none" style={{ fontFamily: themeForm.fontFamily }}>Contoh Heading</p>
-                               <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">Visual Layout System</p>
+                    {/* Right Column: Preview & Font */}
+                    <div className="space-y-8">
+                      <div className="bg-slate-900 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group border-4 border-white/5">
+                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 blur-3xl rounded-full" />
+                         <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red mb-8 italic">PREVIEW KONFIGURASI LIVE</h4>
+                         <div className="space-y-6">
+                            <div className="h-14 w-full rounded-xl shadow-lg flex items-center px-6" style={{ backgroundColor: themeForm.primaryColor }}>
+                               <div className="w-6 h-6 bg-white/20 rounded-lg animate-pulse" />
                             </div>
-                            <div className="flex gap-3">
-                               <div className="w-12 h-12 rounded-xl" style={{ backgroundColor: themeForm.accentColor }}></div>
-                               <div className="w-12 h-12 rounded-xl flex-1" style={{ backgroundColor: themeForm.surfaceColor }}></div>
+                            <div className="h-40 w-full rounded-3xl p-8 flex flex-col justify-center gap-2 border shadow-inner transition-colors duration-500" style={{ backgroundColor: themeForm.backgroundColor, color: themeForm.textColor, borderColor: themeForm.surfaceColor }}>
+                               <p className="text-3xl font-black italic uppercase leading-none tracking-tighter" style={{ fontFamily: themeForm.fontFamily }}>Sample Text</p>
+                               <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-50 italic">Sistem Informasi Damkar Malinau</p>
+                               <div className="mt-4 flex gap-2">
+                                  <div className="px-3 py-1 bg-brand-red/10 text-brand-red text-[8px] font-black uppercase rounded-full">Badge Preview</div>
+                                  <div className="px-3 py-1 bg-slate-100 text-slate-500 text-[8px] font-black uppercase rounded-full">System Tag</div>
+                               </div>
+                            </div>
+                            <div className="flex gap-4">
+                               <div className="w-16 h-16 rounded-[1.5rem] shadow-xl flex items-center justify-center transition-transform hover:rotate-12" style={{ backgroundColor: themeForm.accentColor }}>
+                                  <Sparkles className="w-8 h-8 text-white/50" />
+                                </div>
+                               <div className="flex-1 h-16 rounded-[1.5rem] border-2 border-dashed border-white/10 flex items-center justify-center font-black italic uppercase tracking-tighter text-xs opacity-30">
+                                  Module Preview Area
+                               </div>
                             </div>
                          </div>
                       </div>
 
-                      <FileUpload 
-                        label="Upload Thumbnail Tema (ZIP Package Support)"
-                        onUploadSuccess={(url) => setThemeForm({...themeForm, thumbnailUrl: url})}
-                      />
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipografi (Font Family)</label>
+                        <div className="grid grid-cols-2 gap-4">
+                           {[
+                             { id: 'Inter', name: 'Inter (UI Modern)', class: 'font-sans' },
+                             { id: 'Space Grotesk', name: 'Grotesk (Brutalist)', class: 'font-display' },
+                             { id: 'JetBrains Mono', name: 'Mono (Technical)', class: 'font-mono' },
+                             { id: 'Outfit', name: 'Outfit (Geometric)', class: 'font-sans' }
+                           ].map(f => (
+                             <button
+                               key={f.id}
+                               type="button"
+                               onClick={() => setThemeForm({...themeForm, fontFamily: f.id})}
+                               className={cn(
+                                 "p-4 rounded-xl border-2 text-left transition-all",
+                                 themeForm.fontFamily === f.id ? "border-brand-red bg-white shadow-md scale-105" : "border-slate-100 bg-slate-50 text-slate-400 grayscale"
+                               )}
+                             >
+                                <p className="text-[10px] font-black truncate">{f.name}</p>
+                                <p className="text-xl font-bold italic tracking-tighter mt-1" style={{ fontFamily: f.id }}>AaBb</p>
+                             </button>
+                           ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="pt-8 border-t-4 border-slate-50">
-                    <button type="submit" className="w-full py-6 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-4">
-                      <CheckCircle className="w-6 h-6" /> {editingItem ? 'Perbarui Tema' : 'Simpan Tema Baru'}
+                  <div className="pt-8 border-t-8 border-slate-900 mt-10">
+                    <button type="submit" className="group w-full py-6 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-3xl shadow-[0_20px_50px_rgba(225,29,72,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-6">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center group-hover:rotate-180 transition-transform">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <span className="text-xl">{editingItem ? 'INKORPORASI PERUBAHAN TEMA' : 'AKTIVASI KONTROL TEMA BARU'}</span>
                     </button>
                   </div>
                </form>
