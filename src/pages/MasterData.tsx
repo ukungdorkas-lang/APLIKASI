@@ -156,6 +156,18 @@ export default function MasterData() {
     }
   };
 
+  const resetForms = () => {
+    setPersonnelForm({
+      name: '', rank: '', squadId: '', sectorId: '', phoneNumber: '', status: 'active', role: 'field_personnel'
+    });
+    setSquadForm({
+      name: '', commanderId: '', sectorId: ''
+    });
+    setSectorForm({
+      name: '', address: ''
+    });
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -324,6 +336,7 @@ export default function MasterData() {
             <button 
               onClick={() => {
                 setEditingItem(null);
+                resetForms();
                 setShowModal(true);
               }}
               className="bg-brand-red text-white py-4 px-8 rounded-2xl font-black italic uppercase tracking-tighter shadow-xl shadow-red-900/20 hover:scale-105 transition-all flex items-center gap-3 cursor-pointer"
@@ -542,6 +555,34 @@ export default function MasterData() {
                                 .filter(s => s.sectorId === personnelForm.sectorId)
                                 .map((s, idx) => <option key={`form-sqd-${s.id}-${idx}`} value={s.id}>{s.name}</option>)}
                            </select>
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Jabatan / Role</label>
+                           <div className="flex flex-wrap gap-3">
+                              {[
+                                { id: 'field_personnel', name: 'Anggota Lapangan' },
+                                { id: 'officer', name: 'Komandan Regu (Danru)' },
+                                { id: 'admin', name: 'Staf Administrasi' }
+                              ].map(role => (
+                                <button
+                                  key={role.id}
+                                  type="button"
+                                  onClick={() => setPersonnelForm({
+                                    ...personnelForm, 
+                                    role: role.id as any,
+                                    rank: role.id === 'officer' ? 'DANRU' : personnelForm.rank
+                                  })}
+                                  className={cn(
+                                    "flex-1 py-3 px-4 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all border-2",
+                                    personnelForm.role === role.id 
+                                      ? "bg-brand-red border-brand-red text-white shadow-lg" 
+                                      : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                                  )}
+                                >
+                                  {role.name}
+                                </button>
+                              ))}
+                           </div>
                         </div>
                      </div>
                    )}

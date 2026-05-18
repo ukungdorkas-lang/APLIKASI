@@ -1,9 +1,14 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  createUserWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { ShieldAlert, Lock, Mail, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ShieldAlert, Lock, Mail, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -14,6 +19,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [fullName, setFullName] = React.useState('');
+  const [role, setRole] = React.useState<'field_personnel' | 'officer' | 'admin'>('field_personnel');
+  const [isRegister, setIsRegister] = React.useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
 
@@ -21,7 +30,7 @@ export default function Login() {
   const [captcha, setCaptcha] = React.useState({ a: Math.floor(Math.random() * 10), b: Math.floor(Math.random() * 10) });
   const [captchaInput, setCaptchaInput] = React.useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleFormAction = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -34,28 +43,73 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Check in admins collection
-      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-      if (adminDoc.exists()) {
-        navigate('/admin');
-        return;
-      }
+      if (isRegister) {
+        // Handle Registration
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        await updateProfile(user, { displayName: fullName });
 
-      // Check in personnel collection
-      const personnelDoc = await getDoc(doc(db, 'personnel', user.uid));
-      if (personnelDoc.exists()) {
-        navigate('/staff/ops');
-        return;
-      }
+        const userData = {
+          uid: user.uid,
+          email: user.email,
+          name: fullName,
+          role: role,
+          status: 'pending', // Usually requires approval
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
 
-      // If neither, sign out
-      await auth.signOut();
-      throw new Error('Akun Anda tidak memiliki izin akses sistem operasional.');
+        // If admin, also store in admins for direct access
+        if (role === 'admin') {
+          await setDoc(doc(db, 'admins', user.uid), userData);
+        } else {
+          // Store in personnel
+          await setDoc(doc(db, 'personnel', user.uid), {
+            ...userData,
+            rank: role === 'officer' ? 'DANRU' : 'ANGGOTA'
+          });
+        }
+
+        setRegistrationSuccess(true);
+        setTimeout(() => {
+          setIsRegister(false);
+          setRegistrationSuccess(false);
+        }, 3000);
+      } else {
+        // Handle Login
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Check in admins collection
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        if (adminDoc.exists()) {
+          navigate('/admin');
+          return;
+        }
+
+        // Check in personnel collection
+        const personnelDoc = await getDoc(doc(db, 'personnel', user.uid));
+        if (personnelDoc.exists()) {
+          navigate('/staff/ops');
+          return;
+        }
+
+        // Check general users collection if exists
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const uData = userDoc.data();
+          if (uData.role === 'admin') navigate('/admin');
+          else navigate('/staff/ops');
+          return;
+        }
+
+        // If neither, sign out
+        await auth.signOut();
+        throw new Error('Akun Anda belum memiliki izin akses sistem. Hubungi administrator.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Gagal login. Periksa email dan password Anda.');
+      setError(err.message || 'Gagal memproses permintaan Anda.');
       setCaptcha({ a: Math.floor(Math.random() * 10), b: Math.floor(Math.random() * 10) });
     } finally {
       setLoading(false);
@@ -97,14 +151,29 @@ export default function Login() {
               Kembali ke Beranda
             </Link>
             <div className="w-20 h-20 bg-brand-red rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-900/20">
-              <ShieldAlert className="text-white w-10 h-10" />
+              {isRegister ? <UserPlus className="text-white w-10 h-10" /> : <ShieldAlert className="text-white w-10 h-10" />}
             </div>
-            <h1 className="text-4xl heading-bold text-brand-dark mb-2 leading-none uppercase">Admin <span className="text-brand-red">Login.</span></h1>
-            <p className="tag-label text-slate-400">Control Panel Damkar Malinau</p>
+            <h1 className="text-4xl heading-bold text-brand-dark mb-2 leading-none uppercase">
+              {isRegister ? 'Daftar' : 'Admin'} <span className="text-brand-red">{isRegister ? 'Petugas.' : 'Login.'}</span>
+            </h1>
+            <p className="tag-label text-slate-400">
+              {isRegister ? 'Registrasi Personil Baru Damkar' : 'Control Panel Damkar Malinau'}
+            </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleFormAction} className="space-y-6">
             <AnimatePresence mode="wait">
+              {registrationSuccess && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-green-50 border-2 border-green-200 p-6 rounded-2xl text-center"
+                >
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                  <p className="text-sm font-black text-green-700 uppercase tracking-tight">Akun Berhasil Dibuat!</p>
+                  <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mt-1">Mengalihkan ke halaman login...</p>
+                </motion.div>
+              )}
               {error && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
@@ -127,15 +196,35 @@ export default function Login() {
             </AnimatePresence>
 
             <div className="space-y-4">
+              {isRegister && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <label className="tag-label text-slate-500 mb-2 block">Nama Lengkap Sesuai KTP/SK</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input 
+                      required
+                      type="text"
+                      className="w-full bg-slate-50 border-4 border-slate-100 rounded-xl py-4 pl-12 pr-4 focus:border-brand-red outline-none font-bold transition-all"
+                      placeholder="Masukkan nama lengkap..."
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               <div>
-                <label className="tag-label text-slate-500 mb-2 block">Email / Username</label>
+                <label className="tag-label text-slate-500 mb-2 block">Email Dinas / Pribadi</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input 
                     required
                     type="email"
                     className="w-full bg-slate-50 border-4 border-slate-100 rounded-xl py-4 pl-12 pr-4 focus:border-brand-red outline-none font-bold transition-all"
-                    placeholder="admin@malinau.go.id"
+                    placeholder="email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -143,7 +232,7 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="tag-label text-slate-500 mb-2 block">Password</label>
+                <label className="tag-label text-slate-500 mb-2 block">Password Baru</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input 
@@ -163,26 +252,58 @@ export default function Login() {
                   </button>
                 </div>
               </div>
+
+              {isRegister && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <label className="tag-label text-slate-500 mb-2 block">Pilih Jabatan Akses</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'field_personnel', label: 'Petugas' },
+                      { id: 'officer', label: 'Danru' },
+                      { id: 'admin', label: 'Admin' }
+                    ].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRole(r.id as any)}
+                        className={cn(
+                          "py-3 rounded-lg font-black text-[9px] uppercase tracking-tighter border-2 transition-all",
+                          role === r.id 
+                            ? "bg-brand-red border-brand-red text-white shadow-lg" 
+                            : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
+                        )}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input 
-                  type="checkbox" 
-                  className="w-5 h-5 rounded border-2 border-slate-200 text-brand-red focus:ring-brand-red" 
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-tighter group-hover:text-brand-dark transition-colors">Ingat Saya</span>
-              </label>
-              <button 
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-xs font-bold text-brand-red uppercase tracking-tighter hover:underline"
-              >
-                Lupa Password?
-              </button>
-            </div>
+            {!isRegister && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 rounded border-2 border-slate-200 text-brand-red focus:ring-brand-red" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tighter group-hover:text-brand-dark transition-colors">Ingat Saya</span>
+                </label>
+                <button 
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs font-bold text-brand-red uppercase tracking-tighter hover:underline"
+                >
+                  Lupa Password?
+                </button>
+              </div>
+            )}
 
             {/* Simple Security Verification */}
             <div className="pt-4 border-t-2 border-slate-50">
@@ -208,11 +329,26 @@ export default function Login() {
                 </>
               ) : (
                 <>
-                  LOGIN KE DASHBOARD <ArrowRight className="w-6 h-6" />
+                  {isRegister ? 'DAFTAR AKUN BARU' : 'LOGIN KE DASHBOARD'} <ArrowRight className="w-6 h-6" />
                 </>
               )}
             </button>
           </form>
+
+          <div className="mt-8 pt-8 border-t-4 border-slate-50 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
+              {isRegister ? 'Sudah memiliki akun?' : 'Belum memiliki akses sistem?'}
+            </p>
+            <button 
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setError(null);
+              }}
+              className="px-8 py-3 bg-slate-900 rounded-xl text-white font-black italic uppercase tracking-tighter text-[10px] hover:bg-brand-red transition-all shadow-xl shadow-slate-900/10 active:scale-95"
+            >
+              {isRegister ? 'Masuk ke Dashboard' : 'Mendaftar Sebagai Personil'}
+            </button>
+          </div>
 
           <footer className="mt-12 text-center">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-relaxed">

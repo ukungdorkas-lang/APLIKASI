@@ -1383,7 +1383,11 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                       <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center"><Users className="w-6 h-6 text-white" /></div>
                       <div><h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Petugas & Admin</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manajemen Hak Akses</p></div>
                    </div>
-                   <button className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:scale-105 transition-all" onClick={() => setShowUserModal(true)}>Tambah Petugas</button>
+                   <button className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:scale-105 transition-all" onClick={() => {
+                     setUserForm({ email: '', password: '', role: 'admin' });
+                     setEditingItem(null);
+                     setShowUserModal(true);
+                   }}>Tambah Petugas</button>
                 </div>
 
                 {dataLoading.users ? (
@@ -2271,6 +2275,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Role Akses</label>
                      <select value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red">
                         <option value="admin">ADMIN (OPERASIONAL)</option>
+                        <option value="officer">KOMANDAN REGU (DANRU)</option>
                         <option value="super">SUPER ADMIN (KONTROL PENUH)</option>
                      </select>
                   </div>

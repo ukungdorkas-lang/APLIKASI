@@ -9,7 +9,7 @@ import { useReports } from './hooks/useReports';
 import { generateNewsFromReport } from './lib/gemini';
 import { collection, addDoc, getDoc, doc, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
-import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle, Lock } from 'lucide-react';
 import { NewsArticle, BannerConfig, AppConfig } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -494,14 +494,28 @@ function Dashboard() {
 function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'admin' | 'staff' }) {
   const [user, setUser] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const navigate = useNavigate();
 
   React.useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       if (u) {
+        // Special case for root admin
+        if (u.email === 'ukungdorkas@gmail.com') {
+          setUser(u);
+          setLoading(false);
+          return;
+        }
+
         // Check in admins collection
         const adminDoc = await getDoc(doc(db, 'admins', u.uid));
-        if (adminDoc.exists() || u.email === 'ukungdorkas@gmail.com') {
+        if (adminDoc.exists()) {
+          const data = adminDoc.data();
+          if (data.status === 'pending') {
+            setError('Akun Anda sedang menunggu verifikasi administrator untuk akses penuh.');
+            setLoading(false);
+            return;
+          }
           setUser(u);
           setLoading(false);
           return;
@@ -510,10 +524,30 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
         // Check in personnel collection
         const personnelDoc = await getDoc(doc(db, 'personnel', u.uid));
         if (personnelDoc.exists()) {
-          // If master data is requested but they are only personnel
-          if (role === 'admin') {
+          const data = personnelDoc.data();
+          if (data.status === 'pending') {
+            setError('Akun personil Anda sedang menunggu verifikasi Danru/Admin.');
+            setLoading(false);
+            return;
+          }
+          
+          if (role === 'admin' && data.role !== 'admin') {
             auth.signOut();
             navigate('/login');
+            return;
+          }
+          setUser(u);
+          setLoading(false);
+          return;
+        }
+
+        // Check users collection if exists
+        const userDoc = await getDoc(doc(db, 'users', u.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data.status === 'pending') {
+            setError('Akun sedang menunggu verifikasi.');
+            setLoading(false);
             return;
           }
           setUser(u);
@@ -530,9 +564,47 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, role]);
 
   if (loading) return <LoadingSpinner fullPage message="MEMVERIFIKASI AKSES OTORITAS..." />;
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-brand-dark flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white p-12 rounded-[3.5rem] border-[12px] border-slate-900 max-w-lg w-full text-center"
+        >
+          <div className="w-24 h-24 bg-brand-red/10 rounded-full flex items-center justify-center mx-auto mb-8">
+            <Lock className="w-10 h-10 text-brand-red animate-pulse" />
+          </div>
+          <h2 className="text-3xl font-display font-black italic uppercase tracking-tighter text-brand-dark mb-4">Akses Tertunda.</h2>
+          <p className="text-slate-500 font-bold leading-relaxed mb-10 italic">
+            {error}
+          </p>
+          <div className="space-y-4">
+             <button 
+               onClick={() => {
+                 auth.signOut();
+                 navigate('/login');
+               }}
+               className="emergency-btn w-full py-4 uppercase tracking-widest text-sm"
+             >
+               Kembali ke Login
+             </button>
+             <Link 
+               to="/" 
+               className="block text-[10px] font-black text-slate-400 hover:text-brand-red uppercase tracking-[0.2em] transition-all"
+             >
+               Beranda Publik
+             </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 

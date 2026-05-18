@@ -62,7 +62,8 @@ service cloud.firestore {
     // Admins Collection
     match /admins/{adminId} {
       allow read: if isSignedIn();
-      allow write: if false; // Managed via Firebase Console only
+      allow create: if isSignedIn() && request.auth.uid == adminId && incoming().status == 'pending';
+      allow delete, update: if isAdmin();
     }
 
     // Notification Recipients
@@ -120,24 +121,27 @@ service cloud.firestore {
     // Personnel
     match /personnel/{personId} {
       allow read: if isSignedIn() && (request.auth.uid == personId || isAdmin());
-      allow write: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == personId && incoming().status == 'pending';
+      allow update: if (isAdmin() || (isSignedIn() && request.auth.uid == personId));
+      allow delete: if isAdmin();
     }
 
     // Squads
     match /squads/{squadId} {
-      allow read: if isPersonnel();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     // Sectors
     match /sectors/{sectorId} {
-      allow read: if isPersonnel();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     // Operational Reports
     match /operational_reports/{reportId} {
-      allow read, create: if isPersonnel();
+      allow read: if true;
+      allow create: if isPersonnel();
       allow update, delete: if isAdmin();
     }
   }
