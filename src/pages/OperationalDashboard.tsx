@@ -74,31 +74,30 @@ export default function OperationalDashboard() {
       return acc;
     }, { total: 0 } as Record<string, number>);
 
-  // Sync On-Duty Personnel (Personil Siaga) - Only Commanders per Sector
-  const onDutyPersonnel = sectors.map(sector => {
+  // Sync On-Duty Personnel (Personil Siaga) - All personnel present per Sector
+  const onDutyPersonnel = sectors.flatMap(sector => {
     // Find the latest 'datang' report for any squad in this sector
     const latestSectorReport = reports
       .filter(r => r.type === 'daily_piket' && r.sectorId === sector.id && r.piketAction === 'datang')
       .sort((a, b) => b.date - a.date)[0];
       
-    if (latestSectorReport) {
+    if (latestSectorReport && latestSectorReport.attendance) {
       const squad = squads.find(s => s.id === latestSectorReport.squadId);
-      if (squad) {
-        // Find the commander in the attendance list
-        const commanderAttendance = latestSectorReport.attendance?.find(a => a.personnelId === squad.commanderId && a.status === 'hadir');
-        if (commanderAttendance) {
-          return {
-            ...commanderAttendance,
-            squadName: squad.name,
-            sectorName: sector.name,
-            date: latestSectorReport.date,
-            reportId: latestSectorReport.id
-          };
-        }
-      }
+      
+      // Return all personnel who are marked as 'hadir'
+      return latestSectorReport.attendance
+        .filter(a => a.status === 'hadir')
+        .map(person => ({
+          ...person,
+          isCommander: squad?.commanderId === person.personnelId,
+          squadName: squad?.name || 'Unknown',
+          sectorName: sector.name,
+          date: latestSectorReport.date,
+          reportId: latestSectorReport.id
+        }));
     }
-    return null;
-  }).filter((p): p is any => p !== null);
+    return [];
+  });
 
   useEffect(() => {
     // Fetch Sectors and Squads for PDF grouping
@@ -654,7 +653,12 @@ export default function OperationalDashboard() {
                           <div>
                              <p className="text-xs font-black uppercase italic tracking-tighter">{person.name}</p>
                              <div className="flex gap-2 items-center mt-1">
-                                <span className="text-[7px] font-black uppercase text-brand-red italic">Danru {person.squadName}</span>
+                                <span className={cn(
+                                  "text-[7px] font-black uppercase italic",
+                                  person.isCommander ? "text-brand-red" : "text-slate-400"
+                                )}>
+                                  {person.isCommander ? "Danru" : "Anggota"} {person.squadName}
+                                </span>
                                 <span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">• {person.sectorName}</span>
                              </div>
                           </div>

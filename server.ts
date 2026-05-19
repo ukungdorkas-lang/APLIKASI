@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
@@ -21,6 +22,48 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+  // Ensure uploads directory exists
+  const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+
+  // Serve the public folder statically so uploads are accessible
+  app.use('/uploads', express.static(UPLOADS_DIR));
+
+  // Dedicated download route to force attachment header
+  app.get('/api/download/:filename', (req, res) => {
+    const fileName = req.params.filename;
+    const filePath = path.join(UPLOADS_DIR, fileName);
+    
+    if (fs.existsSync(filePath)) {
+      res.download(filePath, fileName);
+    } else {
+      res.status(404).send('File not found');
+    }
+  });
+
+  // API Route for File Upload (Prototype Storage)
+  app.post('/api/upload', (req, res) => {
+    const { fileName, fileData } = req.body;
+    if (!fileName || !fileData) {
+      return res.status(400).json({ success: false, error: 'Missing file name or data' });
+    }
+
+    try {
+      // Remove data URL prefix if present
+      const base64Data = fileData.replace(/^data:.*;base64,/, "");
+      const filePath = path.join(UPLOADS_DIR, fileName);
+      fs.writeFileSync(filePath, base64Data, 'base64');
+      
+      const fileUrl = `/uploads/${fileName}`;
+      res.json({ success: true, fileUrl });
+    } catch (err) {
+      console.error('Upload Error:', err);
+      res.status(500).json({ success: false, error: 'Failed to save file' });
+    }
+  });
 
   // API Route for AI Weather Update
   app.post('/api/ai/weather-upstream', async (req, res) => {

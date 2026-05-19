@@ -12,7 +12,30 @@ interface FileUploadProps {
 
 export const FileUpload: React.FC<FileUploadProps> = ({ 
   onUploadSuccess, 
-  allowedTypes = ['image/*', 'application/pdf', 'video/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed', 'application/vnd.rar'],
+  allowedTypes = [
+    'image/*', 
+    'application/pdf', 
+    '.pdf',
+    'video/*', 
+    'application/msword', 
+    '.doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+    '.docx',
+    'application/vnd.ms-powerpoint', 
+    '.ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', 
+    '.pptx',
+    'application/vnd.ms-excel', 
+    '.xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+    '.xlsx',
+    'application/zip', 
+    '.zip',
+    'application/x-zip-compressed', 
+    'application/x-rar-compressed', 
+    '.rar',
+    'application/vnd.rar'
+  ],
   maxSize = 5,
   label = "Unggah Dokumen / Media",
   initialUrl
@@ -84,50 +107,45 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         setProgress(100);
         setUploading(false);
         
-        // For images, we provide a compressed base64 string for actual persistence in this prototype
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const MAX_WIDTH = 800;
-              const MAX_HEIGHT = 800;
-              let width = img.width;
-              let height = img.height;
-
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height *= MAX_WIDTH / width;
-                  width = MAX_WIDTH;
-                }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width *= MAX_HEIGHT / height;
-                  height = MAX_HEIGHT;
-                }
-              }
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              ctx?.drawImage(img, 0, 0, width, height);
-              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-              onUploadSuccess(compressedBase64);
-              setProgress(100);
-              setUploading(false);
-            };
-            img.src = reader.result as string;
-          };
-          reader.readAsDataURL(file);
-        } else {
+        // Support all file types via server-side storage if it's a full-stack app
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = reader.result as string;
+          
+          try {
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileName: `${Date.now()}-${file.name}`,
+                fileData: base64
+              })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+              setPreview(file.type.startsWith('image/') ? base64 : null);
+              onUploadSuccess(result.fileUrl);
+            } else {
+              throw new Error(result.error);
+            }
+          } catch (err) {
+            console.error('Upload Error:', err);
+            // Fallback to base64 if server fails and file is small enough
+            if (file.size < 700 * 1024) {
+              onUploadSuccess(base64);
+            } else {
+              alert('Gagal mengunggah file besar. Silakan coba lagi atau gunakan file yang lebih kecil.');
+            }
+          }
           setProgress(100);
           setUploading(false);
-          onUploadSuccess('https://example.com/uploaded-file');
-        }
+        };
+        reader.readAsDataURL(file);
       } else {
         setProgress(currentProgress);
       }
-    }, 100);
+    }, 50);
   };
 
   const removeFile = () => {

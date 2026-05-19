@@ -245,7 +245,7 @@ function Home() {
                        Personil <span className="text-brand-red">Siaga.</span>
                     </h2>
                     <p className="text-slate-400 font-medium italic border-l-2 border-brand-red pl-6 uppercase tracking-widest text-xs">
-                       Komandan Regu yang bertugas saat ini di setiap sektor/wilayah Kabupaten Malinau.
+                       Daftar seluruh personil yang bertugas siaga saat ini di setiap sektor/wilayah Kabupaten Malinau.
                     </p>
                  </div>
                  <div className="px-8 py-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
@@ -262,39 +262,45 @@ function Home() {
                       .filter(r => r.type === 'daily_piket' && r.sectorId === sector.id && r.piketAction === 'datang')
                       .sort((a, b) => b.date - a.date)[0];
                     
-                    const squad = squads.find(s => s.id === latestReport?.squadId);
-                    const commander = latestReport?.attendance?.find((a: any) => a.personnelId === squad?.commanderId && a.status === 'hadir');
+                     const squad = squads.find(s => s.id === latestReport?.squadId);
+                     const presentPersonnel = latestReport?.attendance?.filter((a: any) => a.status === 'hadir') || [];
 
-                    return (
-                       <div key={sector.id} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group shadow-inner">
-                          <div className="flex items-center gap-4 mb-6">
-                             <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-                                <MapPin className="w-6 h-6 text-white" />
-                             </div>
-                             <div>
-                                <h4 className="text-white font-black uppercase italic tracking-tighter text-lg leading-none">{sector.name}</h4>
-                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sektor Wilayah</p>
-                             </div>
-                          </div>
-                          
-                          {commander ? (
-                             <div className="space-y-4">
-                                <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20 shadow-sm">
-                                   <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1 leading-none">On Duty (Danru)</p>
-                                   <p className="text-white font-black italic uppercase tracking-tighter text-sm">{commander.name}</p>
-                                </div>
-                                <div className="flex items-center gap-2 text-[8px] font-bold text-slate-400 italic">
-                                   <Calendar className="w-3 h-3" />
-                                   <span>Piket {latestReport.shift === 'pagi' ? 'Pagi (08:00 - 20:00)' : 'Malam (20:00 - 08:00)'}</span>
-                                </div>
-                             </div>
-                          ) : (
-                             <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Belum Ada Laporan Masuk</p>
-                             </div>
-                          )}
-                       </div>
-                    );
+                     return (
+                        <div key={sector.id} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group shadow-inner flex flex-col">
+                           <div className="flex items-center gap-4 mb-6">
+                              <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
+                                 <MapPin className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                 <h4 className="text-white font-black uppercase italic tracking-tighter text-base leading-none">{sector.name}</h4>
+                                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">{squad ? `REGU ${squad.name}` : 'Sektor Wilayah'}</p>
+                              </div>
+                           </div>
+                           
+                           {presentPersonnel.length > 0 ? (
+                              <div className="flex-1 flex flex-col space-y-4">
+                                 <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                                    {presentPersonnel.map((p: any, idx: number) => (
+                                       <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between hover:bg-white/10 transition-colors">
+                                          <span className="text-[10px] text-white font-black uppercase italic tracking-tight">{p.name}</span>
+                                          {p.personnelId === squad?.commanderId && (
+                                            <span className="text-[7px] font-black bg-brand-red text-white px-2 py-0.5 rounded italic shadow-lg shadow-red-900/20">DANRU</span>
+                                          )}
+                                       </div>
+                                    ))}
+                                 </div>
+                                 <div className="pt-4 border-t border-white/5 flex items-center gap-2 text-[8px] font-bold text-slate-400 italic mt-auto">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>Piket {latestReport.shift === 'pagi' ? 'Pagi (08:00 - 20:00)' : 'Malam (20:00 - 08:00)'}</span>
+                                 </div>
+                              </div>
+                           ) : (
+                              <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Belum Ada Laporan Masuk</p>
+                              </div>
+                           )}
+                        </div>
+                     );
                  })}
                  {sectors.length === 0 && (
                    <div className="col-span-full py-10 text-center border border-dashed border-white/10 rounded-3xl">

@@ -56,6 +56,7 @@ import {
   CloudRain,
   PlayCircle,
   FileDown,
+  Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, Link } from "react-router-dom";
@@ -166,6 +167,7 @@ export default function AdminDashboard({
   const [showBankDataModal, setShowBankDataModal] = React.useState(false);
   const [showWeatherModal, setShowWeatherModal] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<any>(null);
+  const [bankDataFilter, setBankDataFilter] = React.useState("SEMUA");
 
   const [reportForm, setReportForm] = React.useState({
     type: "Kebakaran",
@@ -1130,6 +1132,11 @@ export default function AdminDashboard({
   const handleSaveBankData = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!bankDataForm.fileUrl || bankDataForm.fileUrl.includes("example.com")) {
+        showToast("Harap unggah file terlebih dahulu", "error");
+        return;
+      }
+
       const data = {
         ...bankDataForm,
         updatedAt: Date.now(),
@@ -1159,6 +1166,34 @@ export default function AdminDashboard({
       });
     } catch (err) {
       showToast("Gagal menyimpan data", "error");
+    }
+  };
+
+  const handleDownloadFile = (url: string, fileName: string) => {
+    if (!url || url.includes("example.com")) {
+      showToast("Link file tidak valid atau rusak", "error");
+      return;
+    }
+
+    try {
+      // If it's one of our local uploads, use the forced download API
+      if (url.startsWith("/uploads/")) {
+        const actualFileName = url.replace("/uploads/", "");
+        window.location.href = `/api/download/${actualFileName}`;
+        showToast("Download dimulai...");
+        return;
+      }
+
+      // Fallback for base64 or other URLs
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName || "download");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Download dimulai...");
+    } catch (err) {
+      window.open(url, "_blank");
     }
   };
 
@@ -2773,38 +2808,59 @@ export default function AdminDashboard({
                   </button>
                 </div>
 
+                {/* Category Filtering Tabs */}
+                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                  {[
+                    "SEMUA",
+                    "Dokumen Internal",
+                    "Regulasi & Peraturan",
+                    "SOP & Instruksi Kerja",
+                    "Arsip Kepegawaian",
+                    "Aset & Inventaris",
+                    "Laporan Keuangan",
+                    "Lainnya",
+                  ].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setBankDataFilter(cat)}
+                      className={cn(
+                        "px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap border-2",
+                        bankDataFilter === cat
+                          ? "bg-slate-900 text-white border-slate-900 shadow-lg scale-105"
+                          : "bg-white text-slate-400 border-slate-100 hover:border-slate-300"
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="grid gap-6">
                   {dataLoading.bank_data ? (
                     <LoadingSpinner message="Menyusun Arsip Digital..." />
-                  ) : bankData.filter(
-                      (d) =>
-                        d.title
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()) ||
-                        d.category
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()) ||
-                        d.department
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()),
-                    ).length === 0 ? (
+                  ) : bankData.filter((d) => {
+                      const matchesSearch =
+                        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        d.department.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchesCategory =
+                        bankDataFilter === "SEMUA" || d.category === bankDataFilter;
+                      return matchesSearch && matchesCategory;
+                    }).length === 0 ? (
                     <div className="py-20 text-center bg-white rounded-3xl border-4 border-dashed border-slate-100 italic font-black uppercase text-slate-300 tracking-[0.4em]">
                       Data tidak ditemukan
                     </div>
                   ) : (
                     bankData
-                      .filter(
-                        (d) =>
-                          d.title
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase()) ||
-                          d.category
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase()) ||
-                          d.department
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase()),
-                      )
+                      .filter((d) => {
+                        const matchesSearch =
+                          d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          d.department.toLowerCase().includes(searchQuery.toLowerCase());
+                        const matchesCategory =
+                          bankDataFilter === "SEMUA" || d.category === bankDataFilter;
+                        return matchesSearch && matchesCategory;
+                      })
                       .map((doc) => (
                         <div
                           key={doc.id}
@@ -2842,15 +2898,31 @@ export default function AdminDashboard({
                             </div>
                           </div>
                           <div className="flex gap-3">
-                            <a
-                              href={doc.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-4 bg-slate-900 text-white rounded-xl hover:scale-110 hover:-rotate-6 transition-all"
-                              title="Download/Buka"
-                            >
-                              <FileDown className="w-5 h-5" />
-                            </a>
+                            {doc.fileUrl && !doc.fileUrl.includes("example.com") && (
+                              <>
+                                <a
+                                  href={doc.fileUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-4 bg-slate-100 text-slate-900 rounded-xl hover:scale-110 transition-all border-2 border-slate-200"
+                                  title="Lihat Dokumen"
+                                >
+                                  <Eye className="w-5 h-5" />
+                                </a>
+                                <button
+                                  onClick={() =>
+                                    handleDownloadFile(doc.fileUrl, doc.title)
+                                  }
+                                  className="px-6 py-4 bg-slate-900 text-white rounded-xl hover:scale-105 flex items-center gap-3 transition-all"
+                                  title="Download"
+                                >
+                                  <FileDown className="w-5 h-5" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
+                                    Download
+                                  </span>
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => {
                                 setEditingItem(doc);
