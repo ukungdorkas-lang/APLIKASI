@@ -566,12 +566,17 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
     return () => unsubscribe();
   }, [navigate, role]);
 
-  if (loading) return <LoadingSpinner key="auth-verification-spinner" fullPage message="MEMVERIFIKASI AKSES OTORITAS..." />;
+  if (loading) return (
+    <div key="auth-loading-wrapper" className="min-h-screen bg-brand-dark flex items-center justify-center">
+      <LoadingSpinner key="auth-verification-spinner" fullPage message="MEMVERIFIKASI AKSES OTORITAS..." />
+    </div>
+  );
 
   if (error) {
     return (
-      <div key="auth-error-container" className="min-h-screen bg-brand-dark flex items-center justify-center p-6 text-slate-100">
+      <div key="auth-error-wrapper" className="min-h-screen bg-brand-dark flex items-center justify-center p-6 text-slate-100">
         <motion.div 
+          key="auth-error-box"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white p-12 rounded-[3.5rem] border-[12px] border-slate-900 max-w-lg w-full text-center"
@@ -605,7 +610,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
     );
   }
 
-  return <React.Fragment key="authenticated-content">{children}</React.Fragment>;
+  return <div id="authenticated-site-root" key="authenticated-content-wrapper" className="min-h-screen">{children}</div>;
 }
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
@@ -654,11 +659,15 @@ function AppContent() {
 
   return (
     <div className="min-h-screen relative flex flex-col" key="app-root-container">
-      <div key="navbar-wrapper">
-        {!isAdminRoute && <Navbar key="public-navbar-component" />}
+      <div 
+         id="navbar-persistent-container" 
+         key="navbar-wrapper" 
+         className={cn(isAdminRoute ? "hidden" : "contents")}
+      >
+        <Navbar key="public-navbar-component" />
       </div>
       
-      <main className={cn("flex-1", !isAdminRoute && "pt-20")} key="app-main-content">
+      <main id="app-main-view" className={cn("flex-1", !isAdminRoute && "pt-20")} key="app-main-content">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/report" element={<Report />} />
@@ -734,8 +743,12 @@ function AppContent() {
         </Routes>
       </main>
 
-      <div key="footer-wrapper">
-        {!isAdminRoute && <Footer key="public-footer-component" />}
+      <div 
+        id="footer-persistent-container" 
+        key="footer-wrapper" 
+        className={cn(isAdminRoute ? "hidden" : "contents")}
+      >
+        <Footer key="public-footer-component" />
       </div>
       <AiAssistant />
     </div>

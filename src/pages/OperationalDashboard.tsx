@@ -201,7 +201,9 @@ export default function OperationalDashboard() {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    if (link.parentNode === document.body) {
+      document.body.removeChild(link);
+    }
   };
 
   const exportAttendancePDF = async () => {

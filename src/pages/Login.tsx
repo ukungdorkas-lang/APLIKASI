@@ -196,8 +196,8 @@ export default function Login() {
 
           <form onSubmit={handleFormAction} className="space-y-6">
             <div className="min-h-8">
-              <AnimatePresence mode="popLayout">
-                {registrationSuccess && (
+              <AnimatePresence mode="wait">
+                {registrationSuccess ? (
                   <motion.div 
                     key="registration-success-alert"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -209,31 +209,29 @@ export default function Login() {
                     <p className="text-sm font-black text-green-700 uppercase tracking-tight">Akun Berhasil Dibuat!</p>
                     <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mt-1">Mengalihkan ke halaman login...</p>
                   </motion.div>
-                )}
-                {error && (
+                ) : error ? (
                   <motion.div 
                     key="login-error-alert"
-                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
                     className="bg-red-50 border-2 border-red-200 p-4 rounded-xl flex items-center gap-3 text-red-600 font-bold text-xs uppercase overflow-hidden mb-6"
                   >
                     <AlertCircle className="w-5 h-5 shrink-0" />
                     <span className="flex-1">{error}</span>
                   </motion.div>
-                )}
-                {resetSent && (
+                ) : resetSent ? (
                   <motion.div 
                     key="reset-sent-alert"
-                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
                     className="bg-green-50 border-2 border-green-200 p-4 rounded-xl flex items-center gap-3 text-green-600 font-bold text-xs uppercase overflow-hidden mb-6"
                   >
                     <CheckCircle2 className="w-5 h-5 shrink-0" />
                     <span className="flex-1">Link reset password telah dikirim ke email Anda.</span>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
 

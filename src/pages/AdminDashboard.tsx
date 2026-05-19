@@ -843,22 +843,25 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
   return (
     <div className="min-h-screen bg-slate-100 flex overflow-hidden">
       {/* Toast Notification */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className={cn(
-              "fixed bottom-10 right-10 z-[100] px-8 py-4 rounded-2xl font-black italic uppercase tracking-tighter shadow-2xl flex items-center gap-3 border-4",
-              toast.type === 'success' ? "bg-slate-900 text-white border-brand-red" : "bg-red-500 text-white border-red-900"
-            )}
-          >
-            {toast.type === 'success' ? <CheckCircle className="w-6 h-6 text-brand-red" /> : <AlertTriangle className="w-6 h-6" />}
-            {toast.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div id="toast-container" key="toast-wrapper">
+        <AnimatePresence mode="wait">
+          {toast && (
+            <motion.div
+              key={`toast-${toast.type}`}
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className={cn(
+                "fixed bottom-10 right-10 z-[100] px-8 py-4 rounded-2xl font-black italic uppercase tracking-tighter shadow-2xl flex items-center gap-3 border-4",
+                toast.type === 'success' ? "bg-slate-900 text-white border-brand-red" : "bg-red-500 text-white border-red-900"
+              )}
+            >
+              {toast.type === 'success' ? <CheckCircle className="w-6 h-6 text-brand-red" /> : <AlertTriangle className="w-6 h-6" />}
+              {toast.message}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Sidebar */}
       <aside className="w-72 bg-brand-dark flex flex-col fixed h-full z-40 border-r border-white/5">
@@ -980,11 +983,10 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
           </div>
         </header>
 
-        {/* Dynamic Content */}
-        <div className="p-12">
-          <AnimatePresence mode="wait">
+        <div id="admin-main-content" className="p-12" key="admin-dynamic-content-wrapper">
+          <AnimatePresence mode="wait" initial={false}>
             {activeTab === 'overview' && (
-              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-12">
+              <motion.div key="overview-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-12">
                 <DashboardStats reports={reports} />
                 <div className="grid lg:grid-cols-12 gap-10 mt-10">
                   <div className="lg:col-span-8 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
