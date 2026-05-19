@@ -117,6 +117,9 @@ export default function AdminDashboard({
   const [riverSensors, setRiverSensors] = React.useState<any[]>([]);
   const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [galleryFilter, setGalleryFilter] = React.useState<
+    "SEMUA" | "OPERASIONAL" | "KEGIATAN"
+  >("SEMUA");
   const [prevReportsCount, setPrevReportsCount] = React.useState(
     reports.length,
   );
@@ -1193,7 +1196,7 @@ export default function AdminDashboard({
         },
         {
           id: "gallery",
-          name: "Galeri Media",
+          name: "Dokumentasi",
           icon: <ImageIcon className="w-5 h-5" />,
         },
         {
@@ -2470,18 +2473,25 @@ export default function AdminDashboard({
               >
                 <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex gap-4">
-                    {" "}
                     {["SEMUA", "OPERASIONAL", "KEGIATAN"].map((f) => (
                       <button
                         key={f}
-                        className="px-6 py-2 rounded-lg font-black text-xs uppercase italic tracking-tighter bg-slate-50 border-2 border-slate-100"
+                        onClick={() =>
+                          setGalleryFilter(f as "SEMUA" | "OPERASIONAL" | "KEGIATAN")
+                        }
+                        className={cn(
+                          "px-6 py-2 rounded-lg font-black text-xs uppercase italic tracking-tighter transition-all",
+                          galleryFilter === f
+                            ? "bg-brand-red text-white shadow-lg"
+                            : "bg-slate-50 border-2 border-slate-100 text-slate-400 hover:bg-slate-100"
+                        )}
                       >
                         {f}
                       </button>
-                    ))}{" "}
+                    ))}
                   </div>
                   <button
-                    className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:scale-105 transition-all"
+                    className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:scale-105 transition-all shadow-xl"
                     onClick={() => {
                       setEditingItem(null);
                       setGalleryForm({
@@ -2493,7 +2503,7 @@ export default function AdminDashboard({
                       setShowGalleryModal(true);
                     }}
                   >
-                    Unggah Dokumentasi
+                    Unggah Media Umum
                   </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -2501,78 +2511,133 @@ export default function AdminDashboard({
                     <div className="col-span-full py-20 px-4 text-center">
                       <LoadingSpinner message="Menyiapkan Galeri Digital..." />
                     </div>
-                  ) : gallery.length === 0 ? (
-                    [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                      <div
-                        key={i}
-                        className="aspect-square bg-slate-100 rounded-3xl border-4 border-slate-900 overflow-hidden relative group"
-                      >
-                        <img
-                          src={`https://picsum.photos/seed/gal_${i}/400/400`}
-                          className="w-full h-full object-cover group-hover:blur-sm transition-all"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-brand-dark/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
-                          <button className="p-3 bg-white rounded-xl hover:rotate-12 transition-transform shadow-xl">
-                            <Edit className="w-5 h-5 text-brand-dark" />
-                          </button>
-                          <button className="p-3 bg-brand-red rounded-xl hover:-rotate-12 transition-transform shadow-xl">
-                            <Trash2 className="w-5 h-5 text-white" />
-                          </button>
-                        </div>
-                        <div className="absolute bottom-4 left-4 right-4 translate-y-10 group-hover:translate-y-0 transition-all">
-                          <p className="text-[8px] text-white font-black uppercase tracking-widest bg-slate-950 p-2 rounded truncate">
-                            Dokumentasi #{i}
-                          </p>
-                        </div>
-                      </div>
-                    ))
                   ) : (
-                    gallery.map((item) => (
-                      <div
-                        key={item.id}
-                        className="aspect-square bg-white rounded-3xl border-4 border-slate-900 overflow-hidden relative group shadow-xl"
-                      >
-                        <img
-                          src={item.imageUrl}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-brand-dark/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
-                          <button
-                            onClick={() => {
-                              setEditingItem(item);
-                              setGalleryForm({
-                                title: item.title,
-                                category: item.category || "OPERASIONAL",
-                                imageUrl: item.imageUrl,
-                                description: item.description || "",
-                              });
-                              setShowGalleryModal(true);
-                            }}
-                            className="p-3 bg-white rounded-xl hover:scale-110 transition-transform"
-                          >
-                            <Edit className="w-5 h-5 text-brand-dark" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteItem("gallery", item.id)}
-                            className="p-3 bg-brand-red rounded-xl hover:scale-110 transition-transform"
-                          >
-                            <Trash2 className="w-5 h-5 text-white" />
-                          </button>
+                    (() => {
+                      const manualGallery = gallery.map((item) => ({
+                        ...item,
+                        source: "manual",
+                        type: "GALLERY",
+                      }));
+
+                      const reportDocumentation = reports
+                        .filter(
+                          (r) =>
+                            r.documentation &&
+                            r.documentation.photos &&
+                            r.documentation.photos.length > 0
+                        )
+                        .map((r) => ({
+                          id: `report-${r.id}`,
+                          title: `${r.type} - ${r.location.address || "Malinau"}`,
+                          category: "OPERASIONAL",
+                          imageUrl: r.documentation.photos[0],
+                          description: r.documentation.chronology,
+                          createdAt: r.createdAt,
+                          source: "report",
+                          reportData: r,
+                          type: "REPORT_DOC",
+                        }));
+
+                      const combined = [...manualGallery, ...reportDocumentation]
+                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                        .filter((item) => {
+                          if (galleryFilter === "SEMUA") return true;
+                          return (
+                            (item.category || "OPERASIONAL") === galleryFilter
+                          );
+                        });
+
+                      if (combined.length === 0) {
+                        return (
+                          <div className="col-span-full py-20 text-center bg-white rounded-3xl border-4 border-dashed border-slate-100">
+                            <p className="text-slate-300 font-black italic uppercase tracking-[0.4em]">
+                              Belum Ada Dokumentasi Tersedia
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return combined.map((item) => (
+                        <div
+                          key={item.id}
+                          className="aspect-square bg-white rounded-3xl border-4 border-slate-900 overflow-hidden relative group shadow-xl"
+                        >
+                          <img
+                            src={item.imageUrl}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-brand-dark/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
+                            {item.source === "report" ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedReportDetail(item.reportData);
+                                  setShowDetailModal(true);
+                                }}
+                                className="px-6 py-2 bg-white text-brand-dark font-black text-[10px] uppercase italic rounded-xl hover:bg-brand-red hover:text-white transition-all shadow-2xl"
+                              >
+                                Lihat Detail Kejadian
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingItem(item);
+                                    setGalleryForm({
+                                      title: item.title,
+                                      category: item.category || "OPERASIONAL",
+                                      imageUrl: item.imageUrl,
+                                      description: item.description || "",
+                                    });
+                                    setShowGalleryModal(true);
+                                  }}
+                                  className="p-3 bg-white rounded-xl hover:scale-110 transition-transform shadow-xl"
+                                >
+                                  <Edit className="w-5 h-5 text-brand-dark" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteItem("gallery", item.id)
+                                  }
+                                  className="p-3 bg-brand-red rounded-xl hover:scale-110 transition-transform shadow-xl"
+                                >
+                                  <Trash2 className="w-5 h-5 text-white" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          <div className="absolute top-4 left-4">
+                            <span className="bg-slate-900/80 backdrop-blur-md text-white text-[8px] font-black uppercase px-3 py-1 rounded-full border border-white/10">
+                              {item.source === "report"
+                                ? "Laporan Masuk"
+                                : "Upload Umum"}
+                            </span>
+                          </div>
+                          <div className="absolute top-4 right-4">
+                            <span
+                              className={cn(
+                                "text-white text-[8px] font-black uppercase px-3 py-1 rounded-full",
+                                item.category === "KEGIATAN"
+                                  ? "bg-blue-600"
+                                  : "bg-brand-red"
+                              )}
+                            >
+                              {item.category || "OPERASIONAL"}
+                            </span>
+                          </div>
+                          <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                            <p className="text-[10px] text-white font-bold truncate italic">
+                              {item.title}
+                            </p>
+                            <p className="text-[8px] text-slate-300 font-medium uppercase mt-1">
+                              {new Date(item.createdAt).toLocaleDateString(
+                                "id-ID"
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div className="absolute top-4 right-4">
-                          <span className="bg-brand-red text-white text-[8px] font-black uppercase px-3 py-1 rounded-full">
-                            {item.category || "MEDIA"}
-                          </span>
-                        </div>
-                        <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                          <p className="text-[10px] text-white font-bold truncate italic">
-                            {item.title}
-                          </p>
-                        </div>
-                      </div>
-                    ))
+                      ));
+                    })()
                   )}
                 </div>
               </motion.div>
