@@ -12,8 +12,8 @@ interface FileUploadProps {
 
 export const FileUpload: React.FC<FileUploadProps> = ({ 
   onUploadSuccess, 
-  allowedTypes = ['image/*', 'application/pdf', 'video/*'],
-  maxSize = 10,
+  allowedTypes = ['image/*', 'application/pdf', 'video/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed', 'application/vnd.rar'],
+  maxSize = 5,
   label = "Unggah Dokumen / Media",
   initialUrl
 }) => {

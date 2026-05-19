@@ -3332,6 +3332,7 @@ export default function AdminDashboard({
                           <div className="flex-1">
                             <FileUpload
                               label="Ganti Logo Instansi"
+                              allowedTypes={["image/*"]}
                               initialUrl={settingsForm.logoUrl}
                               onUploadSuccess={(url) =>
                                 setSettingsForm((prev) => ({
@@ -4918,6 +4919,7 @@ export default function AdminDashboard({
                   </div>
                   <FileUpload
                     label="Upload Gambar Berita"
+                    allowedTypes={["image/*"]}
                     initialUrl={newsForm.imageUrl}
                     onUploadSuccess={(url) =>
                       setNewsForm({ ...newsForm, imageUrl: url })
@@ -5383,6 +5385,7 @@ export default function AdminDashboard({
                 </div>
                 <FileUpload
                   label="Unggah Dokumentasi Media"
+                  allowedTypes={['image/*', 'video/*']}
                   initialUrl={galleryForm.imageUrl}
                   onUploadSuccess={(url) =>
                     setGalleryForm({ ...galleryForm, imageUrl: url })
@@ -5488,6 +5491,7 @@ export default function AdminDashboard({
                   </div>
                   <FileUpload
                     label="Upload Materi (PDF/IMG/VIDEO)"
+                    allowedTypes={['application/pdf', 'image/*', 'video/*']}
                     initialUrl={eduForm.imageUrl}
                     onUploadSuccess={(url) =>
                       setEduForm({ ...eduForm, imageUrl: url })
@@ -5628,6 +5632,7 @@ export default function AdminDashboard({
                     </div>
                     <FileUpload
                       label="Upload Gambar Header Profil (Opsional)"
+                      allowedTypes={["image/*"]}
                       initialUrl={profileForm.imageUrl}
                       onUploadSuccess={(url) =>
                         setProfileForm({ ...profileForm, imageUrl: url })
@@ -6394,6 +6399,7 @@ export default function AdminDashboard({
                     <div className="flex-1">
                       <FileUpload
                         label="Upload Background Halaman"
+                        allowedTypes={["image/*"]}
                         initialUrl={bannerForm.backgroundImageUrl}
                         onUploadSuccess={(url) =>
                           setBannerForm({
@@ -6537,6 +6543,7 @@ export default function AdminDashboard({
                   </div>
                   <FileUpload
                     label="Update Banner Image"
+                    allowedTypes={["image/*"]}
                     initialUrl={bannerForm.imageUrl}
                     onUploadSuccess={(url) =>
                       setBannerForm({ ...bannerForm, imageUrl: url })
