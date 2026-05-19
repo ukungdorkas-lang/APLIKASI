@@ -23,13 +23,13 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-  // Ensure uploads directory exists
-  const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
+  // Ensure uploads directory exists (Dedicated folder outside public/dist for dynamic data)
+  const UPLOADS_DIR = path.join(process.cwd(), 'uploads_store');
   if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
 
-  // Serve the public folder statically so uploads are accessible
+  // Serve the uploads folder statically
   app.use('/uploads', express.static(UPLOADS_DIR));
 
   // Dedicated download route to force attachment header
@@ -40,7 +40,7 @@ async function startServer() {
     if (fs.existsSync(filePath)) {
       res.download(filePath, fileName);
     } else {
-      res.status(404).send('File not found');
+      res.status(404).json({ success: false, error: 'File not found on server' });
     }
   });
 
