@@ -75,12 +75,20 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         setProgress(100);
         setUploading(false);
         
-        // Use URL.createObjectURL as a stable fake URL if preview isn't ready
-        const url = file.type.startsWith('image/') 
-          ? URL.createObjectURL(file) 
-          : 'https://example.com/uploaded-file';
-        
-        onUploadSuccess(url);
+        // For images, we provide the real base64 string for actual persistence in this prototype
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            onUploadSuccess(reader.result as string);
+            setProgress(100);
+            setUploading(false);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setProgress(100);
+          setUploading(false);
+          onUploadSuccess('https://example.com/uploaded-file');
+        }
       } else {
         setProgress(currentProgress);
       }

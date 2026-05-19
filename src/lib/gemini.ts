@@ -1,11 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { EmergencyReport, AppConfig } from "../types";
 
-let currentApiKey = process.env.GEMINI_API_KEY || '';
+const isServer = typeof process !== 'undefined' && process.env;
+let currentApiKey = isServer ? process.env.GEMINI_API_KEY || '' : '';
 let aiInstance = new GoogleGenAI({ apiKey: currentApiKey });
 
 export function getAiInstance(settings?: AppConfig) {
-  const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY || '';
+  const apiKey = settings?.geminiApiKey || (isServer ? process.env.GEMINI_API_KEY || '' : '');
   
   if (apiKey !== currentApiKey && apiKey !== '') {
     currentApiKey = apiKey;
@@ -16,8 +17,21 @@ export function getAiInstance(settings?: AppConfig) {
 }
 
 export async function generateNewsFromReport(report: EmergencyReport, settings?: AppConfig) {
-  const ai = getAiInstance(settings);
-  const prompt = `
+  try {
+    // If we are on client side, try calling the server API first
+    if (typeof window !== 'undefined') {
+      const resp = await fetch('/api/ai/generate-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report, settings })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success) return data.data;
+      }
+    }
+    const ai = getAiInstance(settings);
+    const prompt = `
     Anda adalah Pejabat Pengelola Informasi dan Dokumentasi (PPID) Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
     Tugas Anda adalah memproduksi rilis berita resmi pemerintah berdasarkan data kejadian yang telah ditangani oleh tim lapangan.
 
@@ -53,7 +67,6 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
     }
   `;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -75,8 +88,20 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
 }
 
 export async function developNarrative(outline: string, settings?: AppConfig) {
-  const ai = getAiInstance(settings);
-  const prompt = `
+  try {
+    if (typeof window !== 'undefined') {
+      const resp = await fetch('/api/ai/develop-narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outline })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success) return data.data;
+      }
+    }
+    const ai = getAiInstance(settings);
+    const prompt = `
     Anda adalah Asisten Penulis Berita (Pena Narasi AI) untuk Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
     Tugas Anda adalah mengembangkan draf atau kerangka berita singkat menjadi narasi berita yang lengkap, menarik, dan profesional.
 
@@ -100,7 +125,6 @@ export async function developNarrative(outline: string, settings?: AppConfig) {
     }
   `;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,

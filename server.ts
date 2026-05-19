@@ -19,7 +19,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // API Route for AI Weather Update
   app.post('/api/ai/weather-upstream', async (req, res) => {
@@ -57,6 +58,52 @@ async function startServer() {
       console.error('Gemini Error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
       res.status(500).json({ success: false, error: `AI Weather Error: ${errMsg}` });
+    }
+  });
+
+  app.post('/api/ai/generate-news', async (req, res) => {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ success: false, error: 'GEMINI_API_KEY missing' });
+    }
+    const { report } = req.body;
+    try {
+      const prompt = `
+        Anda adalah PPID Damkar Malinau. Buat rilis berita dari data ini:
+        Jenis: ${report.type}
+        Lokasi: ${report.location?.address || 'Malinau'}
+        Kronologi: ${report.documentation?.chronology || report.description}
+        Personel: ${report.documentation?.personnel || 0}
+        Unit: ${report.documentation?.units?.join(', ') || ''}
+        
+        Sajikan dalam JSON: { "title": string, "content": string, "summary": string, "personnelCount": number, "unitsUsed": string[] }
+      `;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' }
+      });
+      res.json({ success: true, data: JSON.parse(response.text) });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  app.post('/api/ai/develop-narrative', async (req, res) => {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ success: false, error: 'GEMINI_API_KEY missing' });
+    }
+    const { outline } = req.body;
+    try {
+      const prompt = `Kembangkan draf ini menjadi narasi berita Damkar formal: "${outline}". Sajikan JSON: { "title": string, "content": string, "summary": string }`;
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' }
+      });
+      res.json({ success: true, data: JSON.parse(response.text) });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
     }
   });
 

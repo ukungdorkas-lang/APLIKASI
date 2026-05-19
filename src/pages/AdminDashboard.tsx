@@ -1303,7 +1303,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                    </div>
                    <div className="flex gap-4">
                       <button className="bg-slate-900 px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:bg-brand-red transition-all" onClick={() => {
-                        setWeatherForm({ location: 'Hulu Sungai Malinau', condition: 'Cerah', rainfall: 0, overflowPotential: 'Rendah', recommendation: 'Tetap waspada.' });
+                        setWeatherForm({ location: 'Hulu Sungai Malinau', condition: 'Cerah', rainfall: 0, overflowPotential: 'Rendah', summary: '', recommendation: 'Tetap waspada.' });
                         setEditingItem(null);
                         setShowWeatherModal(true);
                       }}>Update Cuaca Hulu</button>
@@ -1399,7 +1399,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                                   </div>
                                   <div className="flex gap-2">
                                      <button className="p-2 bg-white/5 text-slate-400 rounded-lg hover:text-white transition-colors" onClick={() => {
-                                        setWeatherForm({ location: weather.location, condition: weather.condition, rainfall: weather.rainfall, overflowPotential: weather.overflowPotential, recommendation: weather.recommendation });
+                                        setWeatherForm({ location: weather.location, condition: weather.condition, rainfall: weather.rainfall, overflowPotential: weather.overflowPotential, summary: weather.summary || '', recommendation: weather.recommendation });
                                         setEditingItem(weather);
                                         setShowWeatherModal(true);
                                      }}><Edit  className="w-4 h-4" /></button>

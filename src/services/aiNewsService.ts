@@ -1,9 +1,23 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { EmergencyReport } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const isServer = typeof process !== 'undefined' && process.env;
+const ai = new GoogleGenAI({ apiKey: isServer ? process.env.GEMINI_API_KEY || '' : '' });
 
 export async function generateNewsArticle(report: EmergencyReport) {
+  try {
+    // If we are on client side, try calling the server API first
+    if (typeof window !== 'undefined') {
+      const resp = await fetch('/api/ai/generate-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success) return data.data;
+      }
+    }
   const prompt = `
     Anda adalah Pejabat Pengelola Informasi dan Dokumentasi (PPID) Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
     Tugas Anda adalah membuat berita resmi pemerintah berdasarkan data kejadian berikut.
@@ -34,7 +48,6 @@ export async function generateNewsArticle(report: EmergencyReport) {
     }
   `;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
