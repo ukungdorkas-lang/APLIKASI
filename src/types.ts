@@ -92,6 +92,7 @@ export interface NewsArticle {
   status: 'Draft' | 'Menunggu Publish' | 'Publish Otomatis';
   isAIGenerated: boolean;
   aiPrompt?: string; // Original prompt used for generation
+  imageUrl?: string;
   photos: string[];
   videos: string[];
   personnelCount: number;

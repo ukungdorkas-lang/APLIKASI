@@ -7,20 +7,29 @@ interface FileUploadProps {
   allowedTypes?: string[];
   maxSize?: number; // in MB
   label?: string;
+  initialUrl?: string;
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({ 
   onUploadSuccess, 
   allowedTypes = ['image/*', 'application/pdf', 'video/*'],
   maxSize = 10,
-  label = "Unggah Dokumen / Media"
+  label = "Unggah Dokumen / Media",
+  initialUrl
 }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(initialUrl || null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync preview with initialUrl when it changes (e.g., when editing different items)
+  React.useEffect(() => {
+    if (!file) {
+      setPreview(initialUrl || null);
+    }
+  }, [initialUrl, file]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -133,7 +142,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     <div className="space-y-4">
       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">{label}</label>
       
-      {!file ? (
+      {!file && !preview ? (
         <div 
           onClick={() => fileInputRef.current?.click()}
           className="w-full border-4 border-dashed border-slate-200 rounded-[2rem] p-10 flex flex-col items-center justify-center cursor-pointer hover:border-brand-red hover:bg-red-50/50 transition-all group"
@@ -153,27 +162,48 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         </div>
       ) : (
         <div className="bg-white border-4 border-slate-900 rounded-[2rem] p-6 relative overflow-hidden group">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept={allowedTypes.join(',')}
+          />
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 border-2 border-slate-100">
               {preview ? (
                 <img src={preview} className="w-full h-full object-cover" />
-              ) : file.type.startsWith('video/') ? (
+              ) : file?.type.startsWith('video/') ? (
                 <Video className="w-8 h-8 text-slate-400" />
               ) : (
                 <File className="w-8 h-8 text-slate-400" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-black italic uppercase tracking-tighter truncate leading-none mb-1">{file.name}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{(file.size / 1024 / 1024).toFixed(2)} MB • {file.type.split('/')[1].toUpperCase()}</p>
+              <p className="text-sm font-black italic uppercase tracking-tighter truncate leading-none mb-1">{file ? file.name : 'Media Terpilih'}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type.split('/')[1].toUpperCase()}` : 'Pratinjau Media'}
+              </p>
             </div>
             {!uploading && (
-              <button 
-                onClick={removeFile}
-                className="p-3 bg-red-50 text-brand-red rounded-xl hover:bg-brand-red hover:text-white transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"
+                  title="Ganti File"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
+                <button 
+                  type="button"
+                  onClick={removeFile}
+                  className="p-3 bg-red-50 text-brand-red rounded-xl hover:bg-brand-red hover:text-white transition-all"
+                  title="Hapus"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             )}
           </div>
 

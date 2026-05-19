@@ -199,8 +199,8 @@ function Home() {
               className="group bg-white rounded-[2.5rem] p-4 border border-slate-50 hover:border-slate-100 hover:shadow-2xl transition-all flex flex-col"
             >
               <div className="aspect-video relative overflow-hidden rounded-[2rem] bg-slate-100 mb-8">
-                {item.photos && item.photos[0] ? (
-                  <img src={item.photos[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.2] group-hover:grayscale-0" alt={item.title} />
+                {(item.imageUrl || (item.photos && item.photos[0])) ? (
+                  <img src={item.imageUrl || item.photos[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.2] group-hover:grayscale-0" alt={item.title} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-200">
                     <Newspaper className="w-16 h-16" />
@@ -218,7 +218,7 @@ function Home() {
                 </div>
                 <h3 className="text-2xl font-display font-black text-slate-900 uppercase italic tracking-tighter mb-4 group-hover:text-brand-red transition-colors leading-none line-clamp-2">{item.title}</h3>
                 <p className="text-sm font-medium text-slate-500 mb-10 leading-relaxed italic line-clamp-3">
-                  {item.summary || item.content.substring(0, 150) + '...'}
+                  {item.summary || (item.content ? (item.content.length > 150 ? item.content.substring(0, 150) + '...' : item.content) : 'Selengkapnya...')}
                 </p>
                 
                 <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
@@ -608,19 +608,22 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
   return <>{children}</>;
 }
 
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: any) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError() { return { hasError: true }; }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-8 text-center">
           <AlertTriangle className="w-20 h-20 text-brand-red mb-8 animate-bounce" />
           <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">Terjadi Gangguan Sistem</h1>
-          <p className="text-slate-400 font-bold mb-8 italic">Maaf, aplikasi mengalami kesalahan teknis. Silakan muat ulang halaman.</p>
+          <div className="max-w-xl bg-black/30 border border-white/10 p-6 rounded-2xl mb-8">
+            <p className="text-brand-red font-mono text-xs mb-4 text-left">Error: {this.state.error?.message}</p>
+            <p className="text-slate-400 font-bold italic text-sm">Maaf, aplikasi mengalami kesalahan teknis. Silakan muat ulang halaman.</p>
+          </div>
           <button onClick={() => window.location.reload()} className="emergency-btn">Muat Ulang Halaman</button>
         </div>
       );

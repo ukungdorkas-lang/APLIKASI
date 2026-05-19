@@ -133,14 +133,14 @@ export default function NewsDetail() {
         </header>
 
         {/* Featured Image */}
-        {article.photos && article.photos.length > 0 && (
+        {(article.imageUrl || (article.photos && article.photos.length > 0)) && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            onClick={() => setSelectedPhoto(article.photos[0])}
+            onClick={() => setSelectedPhoto(article.imageUrl || article.photos[0])}
             className="mb-20 rounded-[3rem] overflow-hidden shadow-2xl relative group cursor-pointer"
           >
-            <img src={article.photos[0]} className="w-full h-auto aspect-video object-cover" alt="Main" />
+            <img src={article.imageUrl || article.photos[0]} className="w-full h-auto aspect-video object-cover" alt="Main" />
             <div className="absolute inset-0 bg-brand-red/10 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl scale-50 group-hover:scale-100 transition-all duration-500">
                   <Maximize2 className="w-8 h-8 text-brand-red" />
@@ -163,7 +163,7 @@ export default function NewsDetail() {
               </div>
             )}
             <div className="news-content">
-              <Markdown>{article.content}</Markdown>
+              <Markdown>{article.content || ''}</Markdown>
             </div>
 
             {/* Photo Gallery Grid */}

@@ -85,7 +85,7 @@ export default function News() {
           >
             <div className="aspect-[4/3] relative rounded-[2rem] overflow-hidden mb-8">
               <img 
-                src={item.photos?.[0] || 'https://images.unsplash.com/photo-1544265734-7db3df75765d?auto=format&fit=crop&q=80'} 
+                src={item.imageUrl || item.photos?.[0] || 'https://images.unsplash.com/photo-1544265734-7db3df75765d?auto=format&fit=crop&q=80'} 
                 className="w-full h-full object-cover grayscale-0 group-hover:scale-110 transition-all duration-1000"
                 referrerPolicy="no-referrer"
               />
@@ -115,7 +115,7 @@ export default function News() {
               </h3>
               
               <p className="text-sm font-medium text-slate-500 line-clamp-3 mb-8 leading-relaxed italic">
-                {item.summary || (item.content.length > 150 ? item.content.substring(0, 150) + '...' : item.content)}
+                {item.summary || (item.content ? (item.content.length > 150 ? item.content.substring(0, 150) + '...' : item.content) : 'Selengkapnya...')}
               </p>
 
               <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">

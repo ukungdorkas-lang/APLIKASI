@@ -375,16 +375,20 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
   const handleSaveNews = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const newsData = {
+        ...newsForm,
+        photos: newsForm.imageUrl ? [newsForm.imageUrl] : []
+      };
+
       if (editingItem) {
-        await updateDoc(doc(db, 'news', editingItem.id), newsForm);
+        await updateDoc(doc(db, 'news', editingItem.id), newsData);
         showToast('Berita diperbarui');
       } else {
         await addDoc(collection(db, 'news'), { 
-          ...newsForm, 
+          ...newsData, 
           date: Date.now(),
           status: 'Publish Otomatis',
           isAIGenerated: false,
-          photos: [newsForm.imageUrl],
           videos: [],
           personnelCount: 0,
           unitsUsed: [],
@@ -1479,7 +1483,11 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                      news.map(article => (
                        <article key={article.id} className="bg-white p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl group flex gap-8">
                           <div className="w-48 h-48 bg-slate-50 rounded-2xl border-4 border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative">
-                            <img src={`https://picsum.photos/seed/${article.id}/400/400`} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                            {article.imageUrl ? (
+                               <img src={article.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                            ) : (
+                               <img src={`https://picsum.photos/seed/${article.id}/400/400`} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                            )}
                           </div>
                           <div className="flex-1 py-2">
                              <div className="flex justify-between items-start mb-4">
@@ -1487,7 +1495,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                                 <span className="text-[10px] font-black text-slate-300 uppercase italic">{new Date(article.date).toLocaleDateString('id-ID')}</span>
                              </div>
                              <h4 className="text-2xl font-black italic uppercase tracking-tighter mb-4 group-hover:text-brand-red transition-colors leading-none">{article.title}</h4>
-                             <div className="text-slate-500 font-bold text-sm line-clamp-3 mb-6 bg-slate-50 p-4 rounded-xl border-l-4 border-slate-200"><Markdown>{article.content}</Markdown></div>
+                             <div className="text-slate-500 font-bold text-sm line-clamp-3 mb-6 bg-slate-50 p-4 rounded-xl border-l-4 border-slate-200"><Markdown>{article.content || ''}</Markdown></div>
                              <div className="flex gap-4">
                                <button className="bg-slate-900 text-white font-black italic uppercase tracking-tighter px-6 py-2 rounded-lg text-xs hover:bg-brand-red transition-colors" onClick={() => {
                                  setEditingItem(article);
@@ -1780,6 +1788,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                             <div className="flex-1">
                                <FileUpload 
                                  label="Ganti Logo Instansi"
+                                 initialUrl={settingsForm.logoUrl}
                                  onUploadSuccess={(url) => setSettingsForm(prev => ({ ...prev, logoUrl: url }))}
                                />
                             </div>
@@ -2543,6 +2552,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                     </div>
                     <FileUpload 
                       label="Upload Gambar Berita"
+                      initialUrl={newsForm.imageUrl}
                       onUploadSuccess={(url) => setNewsForm({...newsForm, imageUrl: url})}
                     />
                   </div>
@@ -2731,6 +2741,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                   </div>
                   <FileUpload 
                     label="Unggah Dokumentasi Media"
+                    initialUrl={galleryForm.imageUrl}
                     onUploadSuccess={(url) => setGalleryForm({...galleryForm, imageUrl: url})}
                   />
                   {galleryForm.imageUrl && <div className="mt-4 rounded-xl overflow-hidden border-2 border-slate-100 aspect-video"><img src={galleryForm.imageUrl} className="w-full h-full object-cover" /></div>}
@@ -2772,6 +2783,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                     </div>
                     <FileUpload 
                       label="Upload Materi (PDF/IMG/VIDEO)"
+                      initialUrl={eduForm.imageUrl}
                       onUploadSuccess={(url) => setEduForm({...eduForm, imageUrl: url})}
                     />
                   </div>
@@ -2823,6 +2835,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                        </div>
                        <FileUpload 
                          label="Upload Gambar Header Profil (Opsional)"
+                         initialUrl={profileForm.imageUrl}
                          onUploadSuccess={(url) => setProfileForm({...profileForm, imageUrl: url})}
                        />
                     </div>
@@ -2997,6 +3010,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                         <div className="flex-1">
                            <FileUpload 
                              label="Upload Background Halaman"
+                             initialUrl={bannerForm.backgroundImageUrl}
                              onUploadSuccess={(url) => setBannerForm({...bannerForm, backgroundImageUrl: url})}
                            />
                         </div>
@@ -3084,6 +3098,7 @@ export default function AdminDashboard({ initialTab }: { initialTab?: AdminTab }
                      </div>
                      <FileUpload 
                        label="Update Banner Image"
+                       initialUrl={bannerForm.imageUrl}
                        onUploadSuccess={(url) => setBannerForm({...bannerForm, imageUrl: url})}
                      />
                   </div>
