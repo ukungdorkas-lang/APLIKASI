@@ -115,29 +115,44 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // In production, the bundled server.cjs is in the 'dist' folder
-    // So __dirname will be the 'dist' folder itself.
-    const distPath = process.env.NODE_ENV === 'production' 
-      ? path.resolve(__dirname) 
-      : path.resolve(process.cwd(), 'dist');
-
+    const distPath = path.resolve(process.cwd(), 'dist');
     console.log(`Production Mode: Serving static files from ${distPath}`);
     
     app.use(express.static(distPath));
+    
+    // Fallback for SPA routing - serve index.html for all non-API GET requests
     app.get('*', (req, res) => {
+      // Don't serve index.html for API requests that fall through
+      if (req.url.startsWith('/api/')) {
+        return res.status(404).json({ success: false, error: 'API route not found' });
+      }
+      
       const indexPath = path.join(distPath, 'index.html');
       res.sendFile(indexPath, (err) => {
         if (err) {
           console.error(`Error sending index.html from ${indexPath}:`, err);
-          res.status(500).send('Server Error: index.html not found');
+          // If in dist and __dirname works, try that as a last resort
+          const fallbackPath = path.join(__dirname, 'index.html');
+          res.sendFile(fallbackPath, (err2) => {
+            if (err2) {
+              res.status(500).send('Server Error: App entry point (index.html) not found in ' + distPath);
+            }
+          });
         }
       });
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+
+  server.on('error', (err) => {
+    console.error('Express Server Error:', err);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("CRITICAL: Failed to start server:", err);
+  process.exit(1);
+});
