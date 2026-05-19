@@ -10,9 +10,6 @@ export default defineConfig(({mode}) => {
     build: {
       cssTarget: 'chrome61', // Force transpilation of modern CSS features like oklch
     },
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

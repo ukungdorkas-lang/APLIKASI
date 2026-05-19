@@ -75,13 +75,39 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         setProgress(100);
         setUploading(false);
         
-        // For images, we provide the real base64 string for actual persistence in this prototype
+        // For images, we provide a compressed base64 string for actual persistence in this prototype
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onloadend = () => {
-            onUploadSuccess(reader.result as string);
-            setProgress(100);
-            setUploading(false);
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 800;
+              const MAX_HEIGHT = 800;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, width, height);
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+              onUploadSuccess(compressedBase64);
+              setProgress(100);
+              setUploading(false);
+            };
+            img.src = reader.result as string;
           };
           reader.readAsDataURL(file);
         } else {

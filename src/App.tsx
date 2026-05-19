@@ -608,13 +608,36 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
   return <>{children}</>;
 }
 
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-8 text-center">
+          <AlertTriangle className="w-20 h-20 text-brand-red mb-8 animate-bounce" />
+          <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">Terjadi Gangguan Sistem</h1>
+          <p className="text-slate-400 font-bold mb-8 italic">Maaf, aplikasi mengalami kesalahan teknis. Silakan muat ulang halaman.</p>
+          <button onClick={() => window.location.reload()} className="emergency-btn">Muat Ulang Halaman</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <ThemeProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -694,6 +717,14 @@ function AppContent() {
           <Route path="/education" element={<Education />} />
           <Route path="/documentation" element={<Documentation />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="*" element={
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+               <ShieldAlert className="w-20 h-20 text-brand-red mb-8" />
+               <h1 className="text-6xl font-black text-slate-900 uppercase italic tracking-tighter mb-4 leading-none">404</h1>
+               <p className="text-slate-500 font-bold mb-8 italic uppercase tracking-widest text-[10px]">Halaman Tidak Ditemukan</p>
+               <Link to="/" className="emergency-btn">Kembali ke Beranda</Link>
+            </div>
+          } />
         </Routes>
       </main>
       {!isAdminRoute && <Footer />}
