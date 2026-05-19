@@ -566,11 +566,11 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
     return () => unsubscribe();
   }, [navigate, role]);
 
-  if (loading) return <LoadingSpinner fullPage message="MEMVERIFIKASI AKSES OTORITAS..." />;
+  if (loading) return <LoadingSpinner key="auth-verification-spinner" fullPage message="MEMVERIFIKASI AKSES OTORITAS..." />;
 
   if (error) {
     return (
-      <div className="min-h-screen bg-brand-dark flex items-center justify-center p-6">
+      <div key="auth-error-container" className="min-h-screen bg-brand-dark flex items-center justify-center p-6 text-slate-100">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -605,7 +605,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
     );
   }
 
-  return <>{children}</>;
+  return <React.Fragment key="authenticated-content">{children}</React.Fragment>;
 }
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
@@ -653,9 +653,12 @@ function AppContent() {
     location.pathname === '/login';
 
   return (
-    <div className="min-h-screen relative flex flex-col">
-      {!isAdminRoute && <Navbar />}
-      <main className={cn("flex-1", !isAdminRoute && "pt-20")}>
+    <div className="min-h-screen relative flex flex-col" key="app-root-container">
+      <div key="navbar-wrapper">
+        {!isAdminRoute && <Navbar key="public-navbar-component" />}
+      </div>
+      
+      <main className={cn("flex-1", !isAdminRoute && "pt-20")} key="app-main-content">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/report" element={<Report />} />
@@ -730,7 +733,10 @@ function AppContent() {
           } />
         </Routes>
       </main>
-      {!isAdminRoute && <Footer />}
+
+      <div key="footer-wrapper">
+        {!isAdminRoute && <Footer key="public-footer-component" />}
+      </div>
       <AiAssistant />
     </div>
   );

@@ -72,6 +72,7 @@ export default function Login() {
         }
 
         setRegistrationSuccess(true);
+        setLoading(false);
         setTimeout(() => {
           setIsRegister(false);
           setRegistrationSuccess(false);
@@ -102,6 +103,7 @@ export default function Login() {
           const adminData = adminDoc.data();
           if (adminData.status === 'pending') {
             await auth.signOut();
+            setLoading(false);
             throw new Error('Akun Admin Anda sedang menunggu verifikasi dari Administrator Utama.');
           }
           navigate('/admin');
@@ -114,6 +116,7 @@ export default function Login() {
           const personnelData = personnelDoc.data();
           if (personnelData.status === 'pending') {
             await auth.signOut();
+            setLoading(false);
             throw new Error('Akun Petugas Anda sedang menunggu verifikasi. Silakan hubungi Pimpinan Regu atau Admin.');
           }
           navigate('/staff/ops');
@@ -126,6 +129,7 @@ export default function Login() {
           const uData = userDoc.data();
           if (uData.status === 'pending') {
             await auth.signOut();
+            setLoading(false);
             throw new Error('Akun Anda dalam antrian verifikasi.');
           }
           if (uData.role === 'admin') navigate('/admin');
@@ -135,12 +139,12 @@ export default function Login() {
 
         // If neither, sign out
         await auth.signOut();
+        setLoading(false);
         throw new Error('Akun Anda belum memiliki izin akses sistem. Hubungi administrator.');
       }
     } catch (err: any) {
       setError(err.message || 'Gagal memproses permintaan Anda.');
       setCaptcha({ a: Math.floor(Math.random() * 10), b: Math.floor(Math.random() * 10) });
-    } finally {
       setLoading(false);
     }
   };
@@ -191,38 +195,47 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleFormAction} className="space-y-6">
-            <AnimatePresence mode="wait">
-              {registrationSuccess && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-green-50 border-2 border-green-200 p-6 rounded-2xl text-center"
-                >
-                  <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                  <p className="text-sm font-black text-green-700 uppercase tracking-tight">Akun Berhasil Dibuat!</p>
-                  <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mt-1">Mengalihkan ke halaman login...</p>
-                </motion.div>
-              )}
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="bg-red-50 border-2 border-red-200 p-4 rounded-xl flex items-center gap-3 text-red-600 font-bold text-xs uppercase"
-                >
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  {error}
-                </motion.div>
-              )}
-              {resetSent && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="bg-green-50 border-2 border-green-200 p-4 rounded-xl flex items-center gap-3 text-green-600 font-bold text-xs uppercase"
-                >
-                  Link reset password telah dikirim ke email Anda.
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="min-h-8">
+              <AnimatePresence mode="popLayout">
+                {registrationSuccess && (
+                  <motion.div 
+                    key="registration-success-alert"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-green-50 border-2 border-green-200 p-6 rounded-2xl text-center mb-6"
+                  >
+                    <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                    <p className="text-sm font-black text-green-700 uppercase tracking-tight">Akun Berhasil Dibuat!</p>
+                    <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mt-1">Mengalihkan ke halaman login...</p>
+                  </motion.div>
+                )}
+                {error && (
+                  <motion.div 
+                    key="login-error-alert"
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    className="bg-red-50 border-2 border-red-200 p-4 rounded-xl flex items-center gap-3 text-red-600 font-bold text-xs uppercase overflow-hidden mb-6"
+                  >
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <span className="flex-1">{error}</span>
+                  </motion.div>
+                )}
+                {resetSent && (
+                  <motion.div 
+                    key="reset-sent-alert"
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    className="bg-green-50 border-2 border-green-200 p-4 rounded-xl flex items-center gap-3 text-green-600 font-bold text-xs uppercase overflow-hidden mb-6"
+                  >
+                    <CheckCircle2 className="w-5 h-5 shrink-0" />
+                    <span className="flex-1">Link reset password telah dikirim ke email Anda.</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="space-y-4">
               {isRegister && (
@@ -352,14 +365,14 @@ export default function Login() {
               className="emergency-btn w-full py-5 flex items-center justify-center gap-3 text-xl tracking-tighter mt-4"
             >
               {loading ? (
-                <>
+                <React.Fragment key="login-loading-state">
                   <Loader2 className="w-6 h-6 animate-spin" />
                   MEMPROSES...
-                </>
+                </React.Fragment>
               ) : (
-                <>
+                <React.Fragment key="login-idle-state">
                   {isRegister ? 'DAFTAR AKUN BARU' : 'LOGIN KE DASHBOARD'} <ArrowRight className="w-6 h-6" />
-                </>
+                </React.Fragment>
               )}
             </button>
           </form>
