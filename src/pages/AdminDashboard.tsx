@@ -85,6 +85,7 @@ type AdminTab =
   | "profiles"
   | "banners"
   | "settings"
+  | "bank_data"
   | "logs"
   | "themes"
   | "internal_ops"
@@ -113,6 +114,7 @@ export default function AdminDashboard({
   const [gallery, setGallery] = React.useState<any[]>([]);
   const [education, setEducation] = React.useState<any[]>([]);
   const [profileSections, setProfileSections] = React.useState<any[]>([]);
+  const [bankData, setBankData] = React.useState<any[]>([]);
   const [banners, setBanners] = React.useState<any[]>([]);
   const [riverSensors, setRiverSensors] = React.useState<any[]>([]);
   const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
@@ -132,6 +134,7 @@ export default function AdminDashboard({
     education: true,
     profiles: true,
     banners: true,
+    bank_data: true,
     settings: true,
     monitoring: true,
   });
@@ -160,6 +163,7 @@ export default function AdminDashboard({
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [showBannerModal, setShowBannerModal] = React.useState(false);
   const [showFloodModal, setShowFloodModal] = React.useState(false);
+  const [showBankDataModal, setShowBankDataModal] = React.useState(false);
   const [showWeatherModal, setShowWeatherModal] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<any>(null);
 
@@ -240,6 +244,15 @@ export default function AdminDashboard({
     backgroundImageUrl:
       "https://images.unsplash.com/photo-1516562309708-05f3b2b2c238?auto=format&fit=crop&q=80",
     stats: [] as { label: string; value: string; icon?: string }[],
+  });
+
+  const [bankDataForm, setBankDataForm] = React.useState({
+    title: "",
+    category: "Dokumen Internal",
+    fileUrl: "",
+    fileType: "PDF",
+    description: "",
+    department: "TU",
   });
 
   const [riverForm, setRiverForm] = React.useState({
@@ -1004,6 +1017,14 @@ export default function AdminDashboard({
       },
     );
 
+    const unsubBankData = onSnapshot(
+      query(collection(db, "bank_data"), orderBy("createdAt", "desc")),
+      (sn) => {
+        setBankData(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setDataLoading((prev) => ({ ...prev, bank_data: false }));
+      },
+    );
+
     return () => {
       unsubNews();
       unsubUsers();
@@ -1015,6 +1036,7 @@ export default function AdminDashboard({
       unsubSettings();
       unsubRiver();
       unsubWeather();
+      unsubBankData();
     };
   }, []);
 
@@ -1102,6 +1124,41 @@ export default function AdminDashboard({
       setShowBannerModal(false);
     } catch (err) {
       showToast("Gagal memperbarui banner", "error");
+    }
+  };
+
+  const handleSaveBankData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const data = {
+        ...bankDataForm,
+        updatedAt: Date.now(),
+      };
+
+      if (editingItem && activeTab === "bank_data") {
+        await updateDoc(doc(db, "bank_data", editingItem.id), data);
+        showToast("Data berhasil diperbarui");
+      } else {
+        await addDoc(collection(db, "bank_data"), {
+          ...data,
+          createdAt: Date.now(),
+          uploadedBy:
+            auth.currentUser?.displayName || auth.currentUser?.email || "Admin",
+        });
+        showToast("Data berhasil disimpan");
+      }
+      setShowBankDataModal(false);
+      setEditingItem(null);
+      setBankDataForm({
+        title: "",
+        category: "Dokumen Internal",
+        fileUrl: "",
+        fileType: "PDF",
+        description: "",
+        department: "TU",
+      });
+    } catch (err) {
+      showToast("Gagal menyimpan data", "error");
     }
   };
 
@@ -1259,6 +1316,11 @@ export default function AdminDashboard({
           name: "Data Master",
           icon: <Database className="w-5 h-5" />,
           path: "/staff/master/personnel",
+        },
+        {
+          id: "bank_data",
+          name: "Bank Data",
+          icon: <FileDown className="w-5 h-5" />,
         },
       ],
     },
@@ -1677,7 +1739,7 @@ export default function AdminDashboard({
                   <div className="flex flex-wrap gap-2">
                     {["SEMUA", "MENUNGGU", "PROSES", "SELESAI"].map((f) => (
                       <button
-                        key={f}
+                        key={`report-filter-${f}`}
                         onClick={() => setFilter(f as any)}
                         className={cn(
                           "px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase",
@@ -2493,12 +2555,12 @@ export default function AdminDashboard({
                   <div className="flex gap-4">
                     {["SEMUA", "OPERASIONAL", "KEGIATAN"].map((f) => (
                       <button
-                        key={f}
+                        key={`gallery-filter-${f}`}
                         onClick={() =>
                           setGalleryFilter(f as "SEMUA" | "OPERASIONAL" | "KEGIATAN")
                         }
                         className={cn(
-                          "px-6 py-2 rounded-lg font-black text-xs uppercase italic tracking-tighter transition-all",
+                          "px-6 py-2 rounded-lg font-black text-[10px] uppercase italic tracking-tighter transition-all",
                           galleryFilter === f
                             ? "bg-brand-red text-white shadow-lg"
                             : "bg-slate-50 border-2 border-slate-100 text-slate-400 hover:bg-slate-100"
@@ -2586,7 +2648,7 @@ export default function AdminDashboard({
 
                       return combined.map((item) => (
                         <div
-                          key={item.id}
+                          key={`${item.source}-${item.id}`}
                           className="aspect-square bg-white rounded-3xl border-4 border-slate-900 overflow-hidden relative group shadow-xl"
                         >
                           <img
@@ -2665,6 +2727,158 @@ export default function AdminDashboard({
                         </div>
                       ));
                     })()
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "bank_data" && (
+              <motion.div
+                key="bank_data"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-8"
+              >
+                <div className="flex justify-between items-end gap-10">
+                  <div className="flex-1">
+                    <h3 className="text-4xl font-black italic uppercase tracking-tighter mb-4">
+                      Bank <span className="text-brand-red">Data & Dokumen</span>
+                    </h3>
+                    <div className="relative group max-w-xl">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-brand-red transition-colors" />
+                      <input
+                        type="text"
+                        placeholder="Cari dokumen, surat, atau regulasi..."
+                        className="w-full bg-white border-4 border-slate-900 px-12 py-4 rounded-2xl font-bold tracking-tight focus:ring-0 focus:border-brand-red transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setBankDataForm({
+                        title: "",
+                        category: "Dokumen Internal",
+                        fileUrl: "",
+                        fileType: "PDF",
+                        description: "",
+                        department: "TU",
+                      });
+                      setShowBankDataModal(true);
+                    }}
+                    className="bg-brand-red text-white px-10 py-5 rounded-2xl font-black italic uppercase tracking-widest hover:scale-105 transition-all shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  >
+                    Tambah Data Baru
+                  </button>
+                </div>
+
+                <div className="grid gap-6">
+                  {dataLoading.bank_data ? (
+                    <LoadingSpinner message="Menyusun Arsip Digital..." />
+                  ) : bankData.filter(
+                      (d) =>
+                        d.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()) ||
+                        d.category
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()) ||
+                        d.department
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
+                    ).length === 0 ? (
+                    <div className="py-20 text-center bg-white rounded-3xl border-4 border-dashed border-slate-100 italic font-black uppercase text-slate-300 tracking-[0.4em]">
+                      Data tidak ditemukan
+                    </div>
+                  ) : (
+                    bankData
+                      .filter(
+                        (d) =>
+                          d.title
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                          d.category
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                          d.department
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()),
+                      )
+                      .map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="bg-white p-8 rounded-3xl border-4 border-slate-900 shadow-[12px_12px_0px_0px_rgba(15,23,42,0.05)] hover:shadow-[12px_12px_0px_0px_rgba(225,29,72,0.1)] transition-all flex items-center gap-8 group"
+                        >
+                          <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center border-4 border-slate-100 group-hover:border-brand-red transition-colors shrink-0">
+                            <FileDown className="w-8 h-8 text-slate-300 group-hover:text-brand-red transition-colors" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex gap-2 mb-2">
+                              <span className="bg-slate-900 text-white text-[8px] font-black uppercase px-2 py-1 rounded">
+                                {doc.category}
+                              </span>
+                              <span className="bg-brand-red text-white text-[8px] font-black uppercase px-2 py-1 rounded">
+                                {doc.department}
+                              </span>
+                              <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded">
+                                {doc.fileType}
+                              </span>
+                            </div>
+                            <h4 className="text-xl font-bold italic uppercase tracking-tighter mb-1">
+                              {doc.title}
+                            </h4>
+                            <p className="text-xs text-slate-400 font-medium italic">
+                              {doc.description || "Tidak ada deskripsi."}
+                            </p>
+                            <div className="flex gap-4 mt-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              <span>Diupload oleh: {doc.uploadedBy}</span>
+                              <span>•</span>
+                              <span>
+                                {new Date(doc.createdAt).toLocaleDateString(
+                                  "id-ID",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <a
+                              href={doc.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-4 bg-slate-900 text-white rounded-xl hover:scale-110 hover:-rotate-6 transition-all"
+                              title="Download/Buka"
+                            >
+                              <FileDown className="w-5 h-5" />
+                            </a>
+                            <button
+                              onClick={() => {
+                                setEditingItem(doc);
+                                setBankDataForm({
+                                  title: doc.title,
+                                  category: doc.category,
+                                  fileUrl: doc.fileUrl,
+                                  fileType: doc.fileType,
+                                  description: doc.description || "",
+                                  department: doc.department,
+                                });
+                                setShowBankDataModal(true);
+                              }}
+                              className="p-4 bg-white border-2 border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-all"
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteItem("bank_data", doc.id)
+                              }
+                              className="p-4 bg-red-50 text-brand-red rounded-xl hover:bg-brand-red hover:text-white transition-all shadow-sm"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
                   )}
                 </div>
               </motion.div>
@@ -6335,6 +6549,168 @@ export default function AdminDashboard({
                   className="w-full py-5 bg-brand-red text-white rounded-2xl font-black italic uppercase tracking-tighter shadow-2xl hover:bg-brand-dark transition-all mt-4"
                 >
                   Simpan Konfigurasi Visual
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* BANK DATA MODAL */}
+        {showBankDataModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBankDataModal(false)}
+              className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+                <h3 className="text-2xl font-black italic uppercase tracking-tighter">
+                  {editingItem ? "Edit Data" : "Tambah Data Bank"}
+                </h3>
+                <button
+                  onClick={() => setShowBankDataModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <CloseIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <form
+                onSubmit={handleSaveBankData}
+                className="p-10 space-y-6 overflow-y-auto"
+              >
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Judul Dokumen / Data
+                  </label>
+                  <input
+                    required
+                    value={bankDataForm.title}
+                    onChange={(e) =>
+                      setBankDataForm({
+                        ...bankDataForm,
+                        title: e.target.value,
+                      })
+                    }
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
+                    placeholder="Contoh: Peraturan Bupati No. 12 Tahun 2024"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Kategori
+                    </label>
+                    <select
+                      value={bankDataForm.category}
+                      onChange={(e) =>
+                        setBankDataForm({
+                          ...bankDataForm,
+                          category: e.target.value,
+                        })
+                      }
+                      className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
+                    >
+                      <option>Dokumen Internal</option>
+                      <option>Regulasi & Peraturan</option>
+                      <option>SOP & Instruksi Kerja</option>
+                      <option>Arsip Kepegawaian</option>
+                      <option>Aset & Inventaris</option>
+                      <option>Laporan Keuangan</option>
+                      <option>Lainnya</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Bidang / Seksi
+                    </label>
+                    <select
+                      value={bankDataForm.department}
+                      onChange={(e) =>
+                        setBankDataForm({
+                          ...bankDataForm,
+                          department: e.target.value,
+                        })
+                      }
+                      className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
+                    >
+                      <option value="TU">Tata Usaha</option>
+                      <option value="OPS">Operasional</option>
+                      <option value="SARPRAS">Sarana & Prasarana</option>
+                      <option value="PENCEGAHAN">Pencegahan</option>
+                      <option value="REDAKSI">Redaksi / Humas</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Tipe File
+                    </label>
+                    <select
+                      value={bankDataForm.fileType}
+                      onChange={(e) =>
+                        setBankDataForm({
+                          ...bankDataForm,
+                          fileType: e.target.value,
+                        })
+                      }
+                      className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
+                    >
+                      <option>PDF</option>
+                      <option>DOCX / Word</option>
+                      <option>XLSX / Excel</option>
+                      <option>PPTX / Powerpoint</option>
+                      <option>Zip / Rar</option>
+                      <option>Gambar</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      File Dokumen
+                    </label>
+                    <FileUpload
+                      label="Upload File"
+                      initialUrl={bankDataForm.fileUrl}
+                      onUploadSuccess={(url) =>
+                        setBankDataForm({ ...bankDataForm, fileUrl: url })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Keterangan Singkat
+                  </label>
+                  <textarea
+                    value={bankDataForm.description}
+                    onChange={(e) =>
+                      setBankDataForm({
+                        ...bankDataForm,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red resize-none"
+                    placeholder="Jelaskan isi dokumen..."
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-5 bg-brand-red text-white rounded-2xl font-black italic uppercase tracking-tighter shadow-2xl hover:bg-brand-dark transition-all mt-4"
+                >
+                  {editingItem ? "Update Data" : "Simpan ke Bank Data"}
                 </button>
               </form>
             </motion.div>

@@ -216,6 +216,19 @@ export interface BannerConfig {
   updatedAt: number;
 }
 
+export interface BankData {
+  id: string;
+  title: string;
+  category: string;
+  fileUrl: string;
+  fileType: string;
+  description: string;
+  department: string;
+  uploadedBy: string;
+  createdAt: number;
+  size?: number; // In bytes
+}
+
 // SI-DAMKAR Operational Types
 export interface Personnel {
   id: string;
