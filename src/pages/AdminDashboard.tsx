@@ -170,6 +170,7 @@ export default function AdminDashboard({
     reporterPhone: "",
     description: "",
     level: "normal",
+    photos: [] as string[],
   });
 
   const [showDocsModal, setShowDocsModal] = React.useState(false);
@@ -450,15 +451,32 @@ export default function AdminDashboard({
   const handleSaveReport = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, "reports"), {
+      const data = {
         ...reportForm,
         phoneNumber: reportForm.reporterPhone,
-        status: "Menunggu",
-        createdAt: Date.now(),
-        newsGenerated: false,
-      });
+        status: editingItem ? editingItem.status : "Menunggu",
+        createdAt: editingItem ? editingItem.createdAt : Date.now(),
+        newsGenerated: editingItem ? editingItem.newsGenerated : false,
+      };
+
+      if (editingItem && activeTab === "reports") {
+        await updateDoc(doc(db, "reports", editingItem.id), data);
+        showToast("Laporan Berhasil diperbarui");
+      } else {
+        await addDoc(collection(db, "reports"), data);
+        showToast("Laporan manual berhasil disimpan");
+      }
       setShowReportModal(false);
-      showToast("Laporan manual berhasil disimpan");
+      setEditingItem(null);
+      setReportForm({
+        type: "Kebakaran",
+        location: { address: "", lat: 3.58, lng: 116.63 },
+        reporterName: "",
+        reporterPhone: "",
+        description: "",
+        level: "normal",
+        photos: [],
+      });
     } catch (err) {
       showToast("Gagal menyimpan laporan", "error");
     }
@@ -2520,23 +2538,32 @@ export default function AdminDashboard({
                       }));
 
                       const reportDocumentation = reports
-                        .filter(
-                          (r) =>
+                        .flatMap((r) => {
+                          const allPhotos: string[] = [];
+                          if (r.photos && Array.isArray(r.photos)) {
+                            allPhotos.push(...r.photos);
+                          }
+                          if (
                             r.documentation &&
                             r.documentation.photos &&
-                            r.documentation.photos.length > 0
-                        )
-                        .map((r) => ({
-                          id: `report-${r.id}`,
-                          title: `${r.type} - ${r.location.address || "Malinau"}`,
-                          category: "OPERASIONAL",
-                          imageUrl: r.documentation.photos[0],
-                          description: r.documentation.chronology,
-                          createdAt: r.createdAt,
-                          source: "report",
-                          reportData: r,
-                          type: "REPORT_DOC",
-                        }));
+                            Array.isArray(r.documentation.photos)
+                          ) {
+                            allPhotos.push(...r.documentation.photos);
+                          }
+
+                          return allPhotos.map((photoUrl, index) => ({
+                            id: `report-${r.id}-p${index}`,
+                            title: `${r.type} - ${r.location?.address || "Malinau"}`,
+                            category: "OPERASIONAL",
+                            imageUrl: photoUrl,
+                            description:
+                              r.documentation?.chronology || r.description,
+                            createdAt: r.createdAt,
+                            source: "report",
+                            reportData: r,
+                            type: "REPORT_DOC",
+                          }));
+                        });
 
                       const combined = [...manualGallery, ...reportDocumentation]
                         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
@@ -4574,11 +4601,42 @@ export default function AdminDashboard({
                     placeholder="Detail kejadian..."
                   />
                 </div>
+                    <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Foto Dokumentasi Awal
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FileUpload
+                      label="Upload Foto"
+                      allowedTypes={["image/*"]}
+                      onUploadSuccess={(url) =>
+                        setReportForm({
+                          ...reportForm,
+                          photos: [...(reportForm.photos || []), url],
+                        })
+                      }
+                    />
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                       {reportForm.photos?.map((p, i) => (
+                         <div key={i} className="relative w-16 h-16 shrink-0">
+                           <img src={p} className="w-full h-full object-cover rounded-lg border-2 border-slate-100" />
+                           <button 
+                             type="button"
+                             onClick={() => setReportForm({...reportForm, photos: reportForm.photos.filter((_, idx) => idx !== i)})}
+                             className="absolute -top-1 -right-1 bg-brand-red text-white p-0.5 rounded-full"
+                           >
+                             <CloseIcon className="w-3 h-3" />
+                           </button>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                </div>
                 <button
                   type="submit"
                   className="w-full py-5 bg-brand-red text-white font-black italic uppercase tracking-tighter rounded-2xl shadow-xl hover:scale-[1.02] transition-all"
                 >
-                  Simpan Laporan
+                  {editingItem ? "Perbarui Laporan" : "Simpan Laporan"}
                 </button>
               </form>
             </motion.div>
@@ -5421,12 +5479,32 @@ export default function AdminDashboard({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <CloseIcon className="w-6 h-6" />
-                </button>
+                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingItem(selectedReportDetail);
+                        setReportForm({
+                          type: selectedReportDetail.type,
+                          location: selectedReportDetail.location || { address: "", lat: 3.58, lng: 116.63 },
+                          reporterName: selectedReportDetail.reporterName,
+                          reporterPhone: selectedReportDetail.phoneNumber || "",
+                          description: selectedReportDetail.description,
+                          level: selectedReportDetail.level || "normal",
+                          photos: selectedReportDetail.photos || [],
+                        });
+                        setShowReportModal(true);
+                      }}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors text-brand-red flex items-center gap-2 font-black italic uppercase text-[10px] tracking-widest bg-white/5 px-4"
+                    >
+                      <Edit className="w-4 h-4" /> Edit Laporan
+                    </button>
+                    <button
+                      onClick={() => setShowDetailModal(false)}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      <CloseIcon className="w-6 h-6" />
+                    </button>
+                  </div>
               </div>
 
               <div className="p-10 overflow-y-auto space-y-10">
@@ -5506,6 +5584,18 @@ export default function AdminDashboard({
                       <p className="text-sm italic leading-relaxed font-medium">
                         "{selectedReportDetail.description}"
                       </p>
+                      {selectedReportDetail.photos && selectedReportDetail.photos.length > 0 && (
+                        <div className="mt-4 grid grid-cols-3 gap-2">
+                          {selectedReportDetail.photos.map((p: string, i: number) => (
+                            <img 
+                              key={i} 
+                              src={p} 
+                              className="w-full aspect-square object-cover rounded-lg border-2 border-white/20" 
+                              referrerPolicy="no-referrer"
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <AlertTriangle className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5" />
                   </div>

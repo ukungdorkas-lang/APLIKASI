@@ -56,6 +56,7 @@ export interface EmergencyReport {
   reportNumber: string;
   createdAt: number;
   resolvedAt?: number;
+  photos?: string[];
   documentation?: {
     chronology: string;
     photos: string[];
