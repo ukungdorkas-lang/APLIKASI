@@ -1,6 +1,7 @@
-import { collection, updateDoc, doc, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { EmergencyReport, NotificationRecipient } from '../types';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import { EmergencyReport, NotificationRecipient, OperationType } from '../types';
+import { handleFirestoreError } from '../lib/errorHandler';
 
 /**
  * Service to handle automatic notifications when a new report is received.
@@ -13,7 +14,15 @@ export async function processNotifications(report: EmergencyReport) {
       where('isActive', '==', true)
     );
     
-    const snapshot = await getDocs(recipientsQuery);
+    let snapshot;
+    try {
+      snapshot = await getDocs(recipientsQuery);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'notification_recipients', auth);
+      // Gracefully exit; non-admin users (such as public submitters) are not permitted to list recipients
+      return;
+    }
+    
     const allRecipients = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NotificationRecipient));
     
     // Filter by category (IncidentType)
@@ -65,6 +74,10 @@ async function sendNotification(
       error: success ? null : 'Gateway Timeout (Simulated)'
     });
   } catch (err) {
-    console.error('Error logging notification:', err);
+    try {
+      handleFirestoreError(err, OperationType.CREATE, 'notification_logs', auth);
+    } catch (formattedErr) {
+      console.error('Logged notification database write error:', formattedErr);
+    }
   }
 }

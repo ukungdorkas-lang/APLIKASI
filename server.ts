@@ -6,6 +6,9 @@ import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
+if (fs.existsSync('.env.local')) {
+  dotenv.config({ path: '.env.local', override: true });
+}
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -147,6 +150,73 @@ async function startServer() {
       res.json({ success: true, data: JSON.parse(response.text) });
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  // NEW: API Route for Emergency Report (Gemini + Fonnte)
+  app.post('/api/laporan', async (req, res) => {
+    const { nama_pelapor, no_hp, isi_laporan } = req.body;
+    
+    if (!nama_pelapor || !no_hp || !isi_laporan) {
+      return res.status(400).json({ success: false, error: 'Data laporan tidak lengkap' });
+    }
+
+    // 1. Summarize with Gemini
+    let summaryText = "";
+    const systemPrompt = `Anda adalah Asisten AI untuk Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau. Rangkum laporan yang masuk menjadi format pesan darurat yang siap baca. HANYA hasilkan teks biasa yang rapi untuk WhatsApp tanpa format markdown, tanpa blok JSON, dan tanpa teks pembuka/penutup. Sertakan call center 0553 2021476 di akhir pesan.`;
+    
+    const geminiPrompt = `${systemPrompt}\n\nDATA LAPORAN:\nNama Pelapor: ${nama_pelapor}\nNo HP: ${no_hp}\nIsi Laporan: ${isi_laporan}`;
+
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        const response = await ai.models.generateContent({
+           model: 'gemini-2.0-flash', // Use a standard stable model
+           contents: geminiPrompt
+        });
+        summaryText = response.text;
+      }
+    } catch (err) {
+      console.error('Gemini Laporan Error:', err);
+    }
+
+    if (!summaryText || summaryText.trim() === "") {
+        summaryText = `🚨 LAPORAN DARURAT MASUK 🚨\n\nNama: ${nama_pelapor}\nNo HP: ${no_hp}\n\nDetail:\n${isi_laporan}\n\nHubungi Call Center: 0553 2021476`;
+    }
+
+    // 2. Send to Fonnte
+    const waGroupId = process.env.VITE_WA_GROUP_TARGET_ID || process.env.WA_GROUP_TARGET_ID;
+    const fonnteToken = process.env.VITE_FONNTE_TOKEN || process.env.FONNTE_TOKEN;
+
+    if (!waGroupId || !fonnteToken) {
+       console.error('Missing configuration:', { waGroupId: !!waGroupId, fonnteToken: !!fonnteToken });
+       return res.status(500).json({ success: false, error: 'Konfigurasi Fonnte di server tidak lengkap (.env)' });
+    }
+
+    try {
+      const params = new URLSearchParams();
+      params.append('target', waGroupId);
+      params.append('message', summaryText);
+      params.append('delay', '2');
+
+      const fonnteRes = await fetch("https://api.fonnte.com/send", {
+        method: 'POST',
+        headers: {
+          'Authorization': fonnteToken
+        },
+        body: params
+      });
+
+      const fonnteResult = await fonnteRes.json() as any;
+      console.log('Fonnte API response:', fonnteResult);
+
+      if (fonnteResult.status) {
+        res.json({ success: true, message: 'Laporan berhasil dikirim ke WhatsApp' });
+      } else {
+        res.status(500).json({ success: false, error: `Fonnte Error: ${fonnteResult.msg}` });
+      }
+    } catch (err) {
+      console.error('Fonnte API Error:', err);
+      res.status(500).json({ success: false, error: 'Gagal mengirim ke WhatsApp melalui API Gateway' });
     }
   });
 
