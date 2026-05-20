@@ -43,6 +43,11 @@ export default function MasterData() {
   const [filterSectorId, setFilterSectorId] = useState<string>('');
   const [filterSquadId, setFilterSquadId] = useState<string>('');
 
+  // Inline creation states
+  const [newSectorName, setNewSectorName] = useState('');
+  const [newSectorAddress, setNewSectorAddress] = useState('');
+  const [newSquadName, setNewSquadName] = useState('');
+
   // Form states
   const [personnelForm, setPersonnelForm] = useState<Partial<Personnel>>({
     name: '', rank: '', squadId: '', sectorId: '', phoneNumber: '', status: 'active', role: 'field_personnel'
@@ -166,13 +171,73 @@ export default function MasterData() {
     setSectorForm({
       name: '', address: ''
     });
+    setNewSectorName('');
+    setNewSectorAddress('');
+    setNewSquadName('');
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const col = activeTab === 'personnel' ? 'personnel' : activeTab === 'squads' ? 'squads' : 'sectors';
-      const form = activeTab === 'personnel' ? personnelForm : activeTab === 'squads' ? squadForm : sectorForm;
+      let form = activeTab === 'personnel' ? personnelForm : activeTab === 'squads' ? squadForm : sectorForm;
+
+      // Inline checks/creations
+      if (activeTab === 'personnel') {
+        let finalSectorId = personnelForm.sectorId;
+        if (personnelForm.sectorId === 'NEW_SECTOR') {
+          if (!newSectorName.trim()) {
+            alert('Nama Sektor Baru wajib diisi!');
+            return;
+          }
+          const secRef = await addDoc(collection(db, 'sectors'), {
+            name: newSectorName.toUpperCase().trim(),
+            address: newSectorAddress.trim() || 'Pos Sektor Baru',
+            createdAt: Date.now()
+          });
+          finalSectorId = secRef.id;
+        }
+
+        let finalSquadId = personnelForm.squadId;
+        if (personnelForm.squadId === 'NEW_SQUAD' || personnelForm.sectorId === 'NEW_SECTOR') {
+          if (!newSquadName.trim()) {
+            alert('Nama Regu Baru wajib diisi!');
+            return;
+          }
+          const squadRef = await addDoc(collection(db, 'squads'), {
+            name: newSquadName.toUpperCase().trim(),
+            sectorId: finalSectorId,
+            commanderId: '',
+            createdAt: Date.now()
+          });
+          finalSquadId = squadRef.id;
+        }
+
+        form = {
+          ...personnelForm,
+          sectorId: finalSectorId,
+          squadId: finalSquadId
+        };
+      } else if (activeTab === 'squads') {
+        let finalSectorId = squadForm.sectorId;
+        if (squadForm.sectorId === 'NEW_SECTOR') {
+          if (!newSectorName.trim()) {
+            alert('Nama Sektor Baru wajib diisi!');
+            return;
+          }
+          const secRef = await addDoc(collection(db, 'sectors'), {
+            name: newSectorName.toUpperCase().trim(),
+            address: newSectorAddress.trim() || 'Pos Sektor Baru',
+            createdAt: Date.now()
+          });
+          finalSectorId = secRef.id;
+        }
+
+        form = {
+          ...squadForm,
+          sectorId: finalSectorId
+        };
+      }
 
       if (editingItem) {
         await updateDoc(doc(db, col, editingItem.id), form);
@@ -181,6 +246,7 @@ export default function MasterData() {
       }
       setShowModal(false);
       setEditingItem(null);
+      resetForms();
     } catch (error) {
       console.error('Error saving data:', error);
       handleFirestoreError(error, editingItem ? OperationType.UPDATE : OperationType.CREATE, activeTab, auth);
@@ -539,24 +605,76 @@ export default function MasterData() {
                            >
                               <option value="">Pilih Sektor</option>
                               {sectors.map((s, idx) => <option key={`form-sec-${s.id}-${idx}`} value={s.id}>{s.name}</option>)}
+                               <option value="NEW_SECTOR" className="text-brand-red font-black">+ TAMBAH SEKTOR BARU...</option>
                            </select>
                         </div>
                         <div className="space-y-2">
                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Regu Penempatan</label>
                            <select 
-                             required
-                             value={personnelForm.squadId} 
+                             required={personnelForm.sectorId !== 'NEW_SECTOR'}
+                             value={personnelForm.sectorId === 'NEW_SECTOR' ? 'NEW_SQUAD' : personnelForm.squadId} 
                              onChange={e => setPersonnelForm({...personnelForm, squadId: e.target.value})} 
-                             disabled={!personnelForm.sectorId}
+                             disabled={!personnelForm.sectorId || personnelForm.sectorId === 'NEW_SECTOR'}
                              className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red disabled:opacity-50"
                            >
                               <option value="">Pilih Regu</option>
                               {squads
                                 .filter(s => s.sectorId === personnelForm.sectorId)
                                 .map((s, idx) => <option key={`form-sqd-${s.id}-${idx}`} value={s.id}>{s.name}</option>)}
+                                   <option value="NEW_SQUAD" className="text-brand-red font-black font-semibold">+ TAMBAH REGU BARU...</option>
                            </select>
                         </div>
                         <div className="col-span-2 space-y-2">
+{/* Form input tambahan jika sektor baru didefinisikan */}
+                         {personnelForm.sectorId === 'NEW_SECTOR' && (
+                           <div className="col-span-2 p-6 bg-slate-50 border-4 border-slate-900/10 rounded-[2rem] space-y-4">
+                             <div className="flex items-center gap-2 text-brand-red font-black uppercase tracking-widest text-xs italic mb-2">
+                               <MapPin className="w-4 h-4" /> Informasi Sektor / Pos Baru
+                             </div>
+                             <div className="grid grid-cols-2 gap-4">
+                               <div className="space-y-2 col-span-2 sm:col-span-1">
+                                 <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nama Sektor Baru *</label>
+                                 <input 
+                                   required 
+                                   value={newSectorName} 
+                                   onChange={e => setNewSectorName(e.target.value)} 
+                                   placeholder="Contoh: SELATAN atau MALINAU BARAT"
+                                   className="w-full bg-white border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" 
+                                 />
+                               </div>
+                               <div className="space-y-2 col-span-2 sm:col-span-1">
+                                 <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Alamat Pos Sektor *</label>
+                                 <input 
+                                   required 
+                                   value={newSectorAddress} 
+                                   onChange={e => setNewSectorAddress(e.target.value)} 
+                                   placeholder="Contoh: Jl. Poros Selatan KM 12"
+                                   className="w-full bg-white border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" 
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                         )}
+
+                         {/* Form input tambahan jika regu baru didefinisikan */}
+                         {(personnelForm.squadId === 'NEW_SQUAD' || personnelForm.sectorId === 'NEW_SECTOR') && (
+                           <div className="col-span-2 p-6 bg-slate-50 border-4 border-slate-900/10 rounded-[2rem] space-y-4">
+                             <div className="flex items-center gap-2 text-brand-red font-black uppercase tracking-widest text-xs italic mb-2">
+                               <Truck className="w-4 h-4" /> Informasi Regu Baru
+                             </div>
+                             <div className="space-y-2">
+                               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nama Regu Baru *</label>
+                               <input 
+                                 required 
+                                 value={newSquadName} 
+                                 onChange={e => setNewSquadName(e.target.value)} 
+                                 placeholder="Contoh: REGU 13"
+                                 className="w-full bg-white border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" 
+                               />
+                             </div>
+                           </div>
+                         )}
+
                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Jabatan / Role</label>
                            <div className="flex flex-wrap gap-3">
                               {[
@@ -605,8 +723,40 @@ export default function MasterData() {
                            <select value={squadForm.sectorId} onChange={e => setSquadForm({...squadForm, sectorId: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red">
                               <option value="">Pilih Sektor</option>
                               {sectors.map((s, idx) => <option key={`form-sqd-sec-${s.id}-${idx}`} value={s.id}>{s.name}</option>)}
+                               <option value="NEW_SECTOR" className="text-brand-red font-black">+ TAMBAH SEKTOR BARU...</option>
                            </select>
                         </div>
+
+                         {/* Form input tambahan jika sektor baru didefinisikan */}
+                         {squadForm.sectorId === 'NEW_SECTOR' && (
+                           <div className="col-span-2 p-6 bg-slate-50 border-4 border-slate-900/10 rounded-[2rem] space-y-4">
+                             <div className="flex items-center gap-2 text-brand-red font-black uppercase tracking-widest text-xs italic mb-2">
+                               <MapPin className="w-4 h-4" /> Informasi Sektor / Pos Baru
+                             </div>
+                             <div className="grid grid-cols-2 gap-4">
+                               <div className="space-y-2 col-span-2 sm:col-span-1">
+                                 <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nama Sektor Baru *</label>
+                                 <input 
+                                   required={activeTab === 'squads' && squadForm.sectorId === 'NEW_SECTOR'}
+                                   value={newSectorName} 
+                                   onChange={e => setNewSectorName(e.target.value)} 
+                                   placeholder="Contoh: SELATAN atau MALINAU BARAT"
+                                   className="w-full bg-white border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" 
+                                 />
+                               </div>
+                               <div className="space-y-2 col-span-2 sm:col-span-1">
+                                 <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Alamat Pos Sektor *</label>
+                                 <input 
+                                   required={activeTab === 'squads' && squadForm.sectorId === 'NEW_SECTOR'}
+                                   value={newSectorAddress} 
+                                   onChange={e => setNewSectorAddress(e.target.value)} 
+                                   placeholder="Contoh: Jl. Poros Selatan KM 12"
+                                   className="w-full bg-white border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" 
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                         )}
                      </div>
                    )}
 
