@@ -36,109 +36,53 @@ export default function FormLaporan() {
   };
 
   // Handler utama memproses pengiriman data
+ // Handler utama memproses pengiriman data ke Google Apps Script
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSuccessMessage('');
     setErrorMessage('');
 
-    // Mengambil kunci rahasia langsung dari client-side environment variables Vite
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const fonnteToken = import.meta.env.VITE_FONNTE_TOKEN;
-    const waGroupId = import.meta.env.VITE_WA_GROUP_TARGET_ID;
+    // Mengambil URL Google Apps Script dari file konfigurasi (.env)
+    const gasUrl = import.meta.env.VITE_GAS_URL; 
 
-    // Validasi kelengkapan konfigurasi kunci
-    if (!geminiKey || !fonnteToken || !waGroupId) {
-      console.warn("Konfigurasi API / Token belum lengkap di .env:", {
-        geminiKey: !!geminiKey,
-        fonnteToken: !!fonnteToken,
-        waGroupId: !!waGroupId
-      });
-      setErrorMessage("Kunci API (.env) belum lengkap! Pastikan VITE_GEMINI_API_KEY, VITE_FONNTE_TOKEN, dan VITE_WA_GROUP_TARGET_ID sudah terisi.");
+    if (!gasUrl) {
+      setErrorMessage("Konfigurasi belum lengkap! VITE_GAS_URL belum diatur di file .env Anda.");
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // 1. Simpan ke Database (Firestore) 
-      // Menyimpan data laporan asli ke dalam koleksi 'laporan_masuk'
+      // 1. Simpan ke Database Firestore seperti biasa
       const docRef = await addDoc(collection(db, 'laporan_masuk'), {
         ...formData,
         createdAt: Date.now(),
         status: 'pending'
       });
-      console.log("Berhasil menyimpan laporan ke Firestore dengan ID:", docRef.id);
+      console.log("Laporan berhasil tersimpan di Firestore dengan ID:", docRef.id);
 
-      // 2. Kirim ke Google Gemini API (Menggunakan REST API Fetch)
-      let summaryText = "";
-      const systemPrompt = `Anda adalah Asisten AI untuk Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau. Rangkum laporan yang masuk menjadi format pesan darurat yang siap baca. HANYA hasilkan teks biasa yang rapi untuk WhatsApp tanpa format markdown, tanpa blok JSON, dan tanpa teks pembuka/penutup. Sertakan call center 0553 2021476 di akhir pesan.`;
-      
-      const geminiPrompt = `${systemPrompt}\n\nDATA LAPORAN:\nNama Pelapor: ${formData.nama_pelapor}\nNo HP: ${formData.no_hp}\nIsi Laporan: ${formData.isi_laporan}`;
-
-      try {
-        console.log("Mengirim request ringkasan ke Gemini API...");
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: geminiPrompt }] }]
-          })
-        });
-
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          if (geminiData.candidates && geminiData.candidates.length > 0) {
-            summaryText = geminiData.candidates[0].content.parts[0].text;
-            console.log("Ringkasan Gemini berhasil:", summaryText);
-          }
-        } else {
-          const errBody = await geminiRes.text();
-          console.error("Gemini API mengembalikan status error:", geminiRes.status, errBody);
-        }
-      } catch (geminiError) {
-        console.error("Gagal melakukan fetch request ke Gemini:", geminiError);
-      }
-
-      // 3. Fallback teks jika Gemini bermasalah atau gagal merespons
-      if (!summaryText || summaryText.trim() === "") {
-        summaryText = `🚨 LAPORAN DARURAT MASUK 🚨\n\nNama Pelapor: ${formData.nama_pelapor}\nNo HP/WA: ${formData.no_hp}\n\nDetail Laporan:\n${formData.isi_laporan}\n\nHubungi Call Center: 0553 2021476`;
-        console.log("Menggunakan format pesan darurat fallback.");
-      }
-
-      // 4. Kirim ke WhatsApp via API Fonnte menggunakan FormData
-      console.log("Mengirim pesan darurat ke grup WhatsApp via Fonnte...");
-      const fonnteFormData = new FormData();
-      fonnteFormData.append('target', waGroupId);
-      fonnteFormData.append('message', summaryText);
-      fonnteFormData.append('delay', '2');
-
-      const fonnteRes = await fetch("https://api.fonnte.com/send", {
+      // 2. Kirim data mentah ke Google Apps Script (Backend)
+      // Biarkan Google Apps Script yang mengurus Gemini AI dan Fonnte agar tidak terkena CORS
+      console.log("Meneruskan laporan ke Backend GAS...");
+      const response = await fetch(gasUrl, {
         method: 'POST',
-        headers: {
-          'Authorization': fonnteToken
-        },
-        body: fonnteFormData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData) 
       });
 
-      if (!fonnteRes.ok) {
-        const errText = await fonnteRes.text();
-        console.error("Request HTTP Fonnte gagal:", fonnteRes.status, errText);
-        throw new Error(`HTTP Error ${fonnteRes.status}: ${errText}`);
-      }
+      const result = await response.json();
+      console.log("Respon dari Backend GAS:", result);
 
-      const fonnteResult = await fonnteRes.json() as FonnteResponse;
-      console.log("Respons Fonnte API:", fonnteResult);
-
-      if (fonnteResult.status) {
+      if (result.status) {
         setSuccessMessage("Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!");
-        setFormData({ nama_pelapor: '', no_hp: '', isi_laporan: '' }); // reset form
+        setFormData({ nama_pelapor: '', no_hp: '', isi_laporan: '' }); // Reset isi form menjadi kosong
       } else {
-        setErrorMessage(`Laporan tersimpan di database, tetapi gagal dikirim ke WhatsApp: ${fonnteResult.msg}`);
+        setErrorMessage("Laporan tersimpan di database, tetapi gagal diteruskan ke WhatsApp.");
       }
 
     } catch (error: any) {
-      console.error("Pengecualian ditangkap saat memproses pengiriman:", error);
-      setErrorMessage(`Terjadi kesalahan sistem saat memproses laporan: ${error.message || error}`);
+      console.error("Terjadi pengecualian jaringan:", error);
+      setErrorMessage(`Terjadi kesalahan sistem/jaringan: ${error.message || error}`);
     } finally {
       setIsSubmitting(false);
     }
