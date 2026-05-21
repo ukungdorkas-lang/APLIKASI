@@ -2,15 +2,26 @@ import { GoogleGenAI } from "@google/genai";
 import { EmergencyReport, AppConfig } from "../types";
 
 const isServer = typeof process !== 'undefined' && process.env;
-let currentApiKey = isServer ? process.env.GEMINI_API_KEY || '' : '';
-let aiInstance = new GoogleGenAI({ apiKey: currentApiKey });
+let currentApiKey = isServer && process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY : '';
+let aiInstance: GoogleGenAI | null = null;
 
 export function getAiInstance(settings?: AppConfig) {
   const apiKey = settings?.geminiApiKey || (isServer ? process.env.GEMINI_API_KEY || '' : '');
   
-  if (apiKey !== currentApiKey && apiKey !== '') {
+  if (apiKey && (apiKey !== currentApiKey || !aiInstance)) {
     currentApiKey = apiKey;
     aiInstance = new GoogleGenAI({ apiKey: currentApiKey });
+  }
+  
+  if (!aiInstance) {
+    // Return a dummy instance or fallback if it's strictly required but not used on client without key
+    // Actually, we can return a new instance with a dummy key just to avoid crashes if someone calls it, 
+    // or we just initialize it with a dummy key here. 
+    // Wait, if we return null, the caller will crash on ai.models.
+    // Let's create an instance with a placeholder if absolutely needed, or throw a clear error.
+    console.warn('API key should be set when using the Gemini API.');
+    // Try to init without key, it will throw when used
+    aiInstance = new GoogleGenAI({ apiKey: 'API_KEY_NOT_SET' });
   }
   
   return aiInstance;
