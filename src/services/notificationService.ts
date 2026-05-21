@@ -57,7 +57,7 @@ async function sendNotification(
   reportId: string
 ) {
   // 1. URL SUDAH DIPERBAIKI (Tidak Double Lagi)
-  const gasUrl = "https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
+  const gasUrl ="https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
 
   console.log(`[Notification Service] Meneruskan laporan ke server GAS untuk ${recipient.name}...`);
 
