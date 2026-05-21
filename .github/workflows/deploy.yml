@@ -41,6 +41,7 @@ jobs:
           VITE_FONNTE_TOKEN: ${{ secrets.VITE_FONNTE_TOKEN }}
           VITE_WA_GROUP_TARGET_ID: ${{ secrets.VITE_WA_GROUP_TARGET_ID }}
           VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_GAS_URL: ${{ secrets.VITE_GAS_URL }}
 
       # Agar routing client-side (React Router) berjalan lancar saat di-refresh 
       # di GitHub Pages, kita gandakan index.html sebagai 404.html

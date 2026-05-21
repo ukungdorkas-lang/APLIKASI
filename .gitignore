@@ -4,5 +4,6 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+# .env files are intentionally allowed per user request, but usually ignored for security
+# .env*
 !.env.example
