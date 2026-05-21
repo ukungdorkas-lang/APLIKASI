@@ -56,8 +56,8 @@ async function sendNotification(
   message: string,
   reportId: string
 ) {
-  // 1. HARDCODE URL GOOGLE APPS SCRIPT ANDA DI SINI (GANTI TULISAN DI BAWAH INI)
-  const gasUrl = "https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
+  // 1. URL SUDAH DIPERBAIKI (Tidak Double Lagi)
+  const gasUrl = "https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
 
   console.log(`[Notification Service] Meneruskan laporan ke server GAS untuk ${recipient.name}...`);
 
@@ -75,7 +75,7 @@ async function sendNotification(
       })
     });
 
-    // 3. Simpan log sukses ke database Damkar
+    // 3. Simpan log sukses ke database
     await addDoc(collection(db, 'notification_logs'), {
       reportId,
       recipientId: recipient.id,
