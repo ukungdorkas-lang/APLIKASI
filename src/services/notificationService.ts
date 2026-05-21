@@ -56,6 +56,14 @@ async function sendNotification(
   message: string,
   reportId: string
 ) {
+  // Cari fungsi sendNotification, lalu tambahkan di bawahnya:
+async function sendNotification(...) {
+  // TAMBAHKAN BARIS INI:
+  console.log("🔥 [DEBUG] Mencoba menghubungi Google Apps Script...");
+
+  const gasUrl = "..."; 
+  // ... sisa kode lainnya
+  
   // 1. URL SUDAH DIPERBAIKI (Tidak Double Lagi)
   const gasUrl ="https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
 
