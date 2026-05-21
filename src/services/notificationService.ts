@@ -62,8 +62,7 @@ async function sendNotification(...) {
   console.log("🔥 [DEBUG] Mencoba menghubungi Google Apps Script...");
 
   const gasUrl = "..."; 
-  // ... sisa kode lainnya
-  
+  // ... sisa kode lainnya  
   // 1. URL SUDAH DIPERBAIKI (Tidak Double Lagi)
   const gasUrl ="https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
 
