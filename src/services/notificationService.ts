@@ -7,8 +7,9 @@ import { handleFirestoreError } from '../lib/errorHandler';
  * Service to handle automatic notifications when a new report is received.
  */
 export async function processNotifications(report: EmergencyReport) {
+  console.log("🔥 [DEBUG] processNotifications dipanggil...");
+  
   try {
-    // 1. Fetch active recipients who care about this category
     const recipientsQuery = query(
       collection(db, 'notification_recipients'),
       where('isActive', '==', true)
@@ -19,13 +20,10 @@ export async function processNotifications(report: EmergencyReport) {
       snapshot = await getDocs(recipientsQuery);
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'notification_recipients', auth);
-      // Gracefully exit; non-admin users (such as public submitters) are not permitted to list recipients
       return;
     }
     
     const allRecipients = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NotificationRecipient));
-    
-    // Filter by category (IncidentType)
     const targetedRecipients = allRecipients.filter(r => r.categories.includes(report.type));
 
     const message = `🚨 LAPORAN DARURAT MASUK\n\n` +
@@ -44,35 +42,26 @@ export async function processNotifications(report: EmergencyReport) {
     });
 
     await Promise.all(notificationPromises);
+    console.log("🚀 [DEBUG] Semua notifikasi telah diproses.");
   } catch (error) {
     console.error('Error processing notifications:', error);
   }
 }
 
-// --- BAGIAN MESIN PENGIRIM KE GOOGLE SCRIPT ---
 async function sendNotification(
   recipient: NotificationRecipient,
   channel: string,
   message: string,
   reportId: string
 ) {
-  // Cari fungsi sendNotification, lalu tambahkan di bawahnya:
-async function sendNotification(...) {
-  // TAMBAHKAN BARIS INI:
-  console.log("🔥 [DEBUG] Mencoba menghubungi Google Apps Script...");
+  console.log("🔥 [DEBUG] Memulai sendNotification untuk:", recipient.name);
 
-  const gasUrl = "..."; 
-  // ... sisa kode lainnya  
-  // 1. URL SUDAH DIPERBAIKI (Tidak Double Lagi)
-  const gasUrl ="https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
-
-  console.log(`[Notification Service] Meneruskan laporan ke server GAS untuk ${recipient.name}...`);
+  const gasUrl = "https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
 
   try {
-    // 2. Mesin Pengirim Asli (Menghubungi Google)
     await fetch(gasUrl, {
       method: 'POST',
-      mode: 'no-cors', // Rahasia ampuh menembus blokiran CORS browser
+      mode: 'no-cors',
       headers: {
         'Content-Type': 'text/plain', 
       },
@@ -82,7 +71,6 @@ async function sendNotification(...) {
       })
     });
 
-    // 3. Simpan log sukses ke database
     await addDoc(collection(db, 'notification_logs'), {
       reportId,
       recipientId: recipient.id,
@@ -95,11 +83,10 @@ async function sendNotification(...) {
       error: null
     });
     
-    console.log(`[Notification Service] ✅ SUKSES: Laporan diteruskan ke GAS!`);
+    console.log(`[Notification Service] ✅ SUKSES: Notifikasi dikirim untuk ${recipient.name}`);
 
   } catch (err) {
-    console.error('❌ GAGAL mengirim ke GAS:', err);
-    // Simpan log gagal
+    console.error(`[Notification Service] ❌ GAGAL mengirim ke ${recipient.name}:`, err);
     try {
       await addDoc(collection(db, 'notification_logs'), {
         reportId,
