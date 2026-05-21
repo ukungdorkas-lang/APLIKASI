@@ -23,10 +23,17 @@ export async function processNotifications(report: EmergencyReport) {
       return;
     }
     
+    // ... baris sebelumnya ...
     const allRecipients = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NotificationRecipient));
+    
+    // Filter by category (IncidentType)
     const targetedRecipients = allRecipients.filter(r => r.categories.includes(report.type));
 
+    // TAMBAHKAN BARIS INI TEPAT DI SINI:
+    console.log(`🔍 [DEBUG] Jumlah penerima yang cocok dengan kategori '${report.type}':`, targetedRecipients.length);
+
     const message = `🚨 LAPORAN DARURAT MASUK\n\n` +
+    // ... baris selanjutnya ...
       `Jenis: ${report.type}\n` +
       `Lokasi: ${report.location.address || 'Malinau'}\n` +
       `Pelapor: ${report.reporterName}\n` +
