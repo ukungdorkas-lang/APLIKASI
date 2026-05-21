@@ -66,7 +66,7 @@ export default function FormLaporan() {
       console.log("Meneruskan laporan ke Backend GAS...");
       const response = await fetch(gasUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(formData) 
       });
 
