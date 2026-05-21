@@ -39,7 +39,14 @@ export function useReports() {
         newsGenerated: false
       };
       const docRef = await addDoc(collection(db, path), finalData);
+     // Cari bagian ini di useReports.ts:
+      const docRef = await addDoc(collection(db, path), finalData);
       
+      // TAMBAHKAN BARIS INI:
+      console.log("🚀 [DEBUG] Data tersimpan di Firestore, memicu notifikasi...");
+      
+      // Trigger notifications
+      await processNotifications({ id: docRef.id, ...finalData } as EmergencyReport); 
       // Trigger notifications
       await processNotifications({ id: docRef.id, ...finalData } as EmergencyReport);
       return { id: docRef.id, ...finalData };
