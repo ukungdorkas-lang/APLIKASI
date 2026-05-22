@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation 
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EmergencyForm from './components/EmergencyForm';
+import FormLaporan from './components/FormLaporan';
 import DashboardStats from './components/DashboardStats';
 import ReportList from './components/ReportList';
 import { useReports } from './hooks/useReports';
@@ -434,7 +435,6 @@ function Home() {
 }
 
 function Report() {
-  const { submitReport } = useReports();
   return (
     <div className="pb-20">
       <DynamicBanner 
@@ -445,7 +445,7 @@ function Report() {
       />
       <div className="max-w-5xl mx-auto px-8 -mt-20 relative z-20">
         <div className="bg-white p-12 rounded-[3.5rem] shadow-3xl border-8 border-slate-900">
-           <EmergencyForm onSubmit={submitReport} />
+           <FormLaporan />
         </div>
       </div>
     </div>

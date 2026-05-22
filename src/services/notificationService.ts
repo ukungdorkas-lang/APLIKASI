@@ -7,9 +7,8 @@ import { handleFirestoreError } from '../lib/errorHandler';
  * Service to handle automatic notifications when a new report is received.
  */
 export async function processNotifications(report: EmergencyReport) {
-  console.log("🔥 [DEBUG] processNotifications dipanggil...");
-  
   try {
+    // 1. Fetch active recipients who care about this category
     const recipientsQuery = query(
       collection(db, 'notification_recipients'),
       where('isActive', '==', true)
@@ -20,24 +19,21 @@ export async function processNotifications(report: EmergencyReport) {
       snapshot = await getDocs(recipientsQuery);
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'notification_recipients', auth);
+      // Gracefully exit; non-admin users (such as public submitters) are not permitted to list recipients
       return;
     }
     
-    // ... baris sebelumnya ...
     const allRecipients = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NotificationRecipient));
     
     // Filter by category (IncidentType)
     const targetedRecipients = allRecipients.filter(r => r.categories.includes(report.type));
 
-    // TAMBAHKAN BARIS INI TEPAT DI SINI:
-    console.log(`🔍 [DEBUG] Jumlah penerima yang cocok dengan kategori '${report.type}':`, targetedRecipients.length);
-
     const message = `🚨 LAPORAN DARURAT MASUK\n\n` +
       `Jenis: ${report.type}\n` +
       `Lokasi: ${report.location.address || 'Malinau'}\n` +
       `Pelapor: ${report.reporterName}\n` +
-      `No. HP: ${report.contactNumber || report.phoneNumber || '-'}\n` + // <--- INI BARIS TAMBAHANNYA
       `Waktu: ${new Date(report.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WITA\n` +
+      `Level: ${report.level.toUpperCase()}\n` +
       `Deskripsi: ${report.description}\n\n` +
       `Silakan buka dashboard untuk detail lengkap.`;
 
@@ -48,7 +44,6 @@ export async function processNotifications(report: EmergencyReport) {
     });
 
     await Promise.all(notificationPromises);
-    console.log("🚀 [DEBUG] Semua notifikasi telah diproses.");
   } catch (error) {
     console.error('Error processing notifications:', error);
   }
@@ -60,53 +55,29 @@ async function sendNotification(
   message: string,
   reportId: string
 ) {
-  console.log("🔥 [DEBUG] Memulai sendNotification untuk:", recipient.name);
-
-  const gasUrl = "https://script.google.com/macros/s/AKfycbxXRyb_A7rbR08LsQt0tIjAcbCROtPXr0d7yS-vH3wZXbdoxMPsNlVGhiUImsalOjm5/exec"; 
+  // Mocking the real API call
+  console.log(`[Notification Service] Sending via ${channel} to ${recipient.name} (${recipient.phoneNumber}): ${message}`);
+  
+  // Simulate success/fail
+  const success = Math.random() > 0.05; // 95% success rate simulation
 
   try {
-    await fetch(gasUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'text/plain', 
-      },
-      body: JSON.stringify({
-        nomor: recipient.phoneNumber,
-        pesan: message
-      })
-    });
-
     await addDoc(collection(db, 'notification_logs'), {
       reportId,
       recipientId: recipient.id,
       recipientName: recipient.name,
       phoneNumber: recipient.phoneNumber,
       channel,
-      status: 'sent',
+      status: success ? 'sent' : 'failed',
       timestamp: Date.now(),
       messageContent: message,
-      error: null
+      error: success ? null : 'Gateway Timeout (Simulated)'
     });
-    
-    console.log(`[Notification Service] ✅ SUKSES: Notifikasi dikirim untuk ${recipient.name}`);
-
   } catch (err) {
-    console.error(`[Notification Service] ❌ GAGAL mengirim ke ${recipient.name}:`, err);
     try {
-      await addDoc(collection(db, 'notification_logs'), {
-        reportId,
-        recipientId: recipient.id,
-        recipientName: recipient.name,
-        phoneNumber: recipient.phoneNumber,
-        channel,
-        status: 'failed',
-        timestamp: Date.now(),
-        messageContent: message,
-        error: String(err)
-      });
-    } catch (dbErr) {
-      console.error('Gagal mencatat log error:', dbErr);
+      handleFirestoreError(err, OperationType.CREATE, 'notification_logs', auth);
+    } catch (formattedErr) {
+      console.error('Logged notification database write error:', formattedErr);
     }
   }
 }

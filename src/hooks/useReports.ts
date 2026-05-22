@@ -38,16 +38,10 @@ export function useReports() {
         createdAt: Date.now(),
         newsGenerated: false
       };
-
-      // 1. Simpan ke Firestore HANYA SEKALI
       const docRef = await addDoc(collection(db, path), finalData);
       
-      // 2. Log Debug
-      console.log("🚀 [DEBUG] Data tersimpan di Firestore, memicu notifikasi...");
-      
-      // 3. Trigger notifications HANYA SEKALI
-      await processNotifications({ id: docRef.id, ...finalData } as EmergencyReport); 
-      
+      // Trigger notifications
+      await processNotifications({ id: docRef.id, ...finalData } as EmergencyReport);
       return { id: docRef.id, ...finalData };
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, path, auth);

@@ -1,42 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { AlertCircle, CheckCircle2, Phone, Send, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Phone, Send, Loader2, ChevronDown } from 'lucide-react';
 
 // Tipe Data untuk Form dan Hasil API
 export interface LaporanFormData {
   nama_pelapor: string;
   no_hp: string;
   isi_laporan: string;
-}
-
-export interface FonnteResponse {
-  status: boolean;
-  msg: string;
-  detail?: any;
+  jenis_laporan: string;
+  sub_jenis_laporan: string;
 }
 
 export default function FormLaporan() {
+  const locationState = useLocation();
+  const queryParams = new URLSearchParams(locationState.search);
+  const initialType = queryParams.get('type') || 'Kebakaran';
+
   const [formData, setFormData] = useState<LaporanFormData>({
     nama_pelapor: '',
     no_hp: '',
-    isi_laporan: ''
+    isi_laporan: '',
+    jenis_laporan: initialType === 'Evakuasi' || initialType === 'Penyelamatan' ? 'Penyelamatan' : 'Kebakaran',
+    sub_jenis_laporan: initialType === 'Evakuasi' ? 'Evakuasi' : (initialType === 'Kebakaran' ? 'Rumah' : 'Dan Lainnya')
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Handler untuk mengelola perubahan input text
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  // Handler untuk mengelola perubahan input text dan select
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'jenis_laporan') {
+      setFormData({
+        ...formData,
+        jenis_laporan: value,
+        sub_jenis_laporan: value === 'Kebakaran' ? 'Rumah' : 'Evakuasi' // Reset sub jenis sesuai kategori baru
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
-  // Handler utama memproses pengiriman data
- // Handler utama memproses pengiriman data ke Google Apps Script
+  // Handler utama memproses pengiriman data ke Google Apps Script
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -53,7 +65,7 @@ export default function FormLaporan() {
     }
 
     try {
-      // 1. Simpan ke Database Firestore seperti biasa
+      // 1. Simpan ke Database Firestore
       const docRef = await addDoc(collection(db, 'laporan_masuk'), {
         ...formData,
         createdAt: Date.now(),
@@ -61,28 +73,28 @@ export default function FormLaporan() {
       });
       console.log("Laporan berhasil tersimpan di Firestore dengan ID:", docRef.id);
 
-      // 2. Kirim data mentah ke Google Apps Script (Backend)
-      // Biarkan Google Apps Script yang mengurus Gemini AI dan Fonnte agar tidak terkena CORS
+      // 2. Kirim data ke Google Apps Script (Backend)
       console.log("Meneruskan laporan ke Backend GAS...");
-      const response = await fetch(gasUrl, {
+      const responGas = await fetch(gasUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(formData) 
       });
 
-      const result = await response.json();
-      console.log("Respon dari Backend GAS:", result);
+      // 3. Baca jawaban dari GAS
+      const hasilGas = await responGas.json();
+      console.log("Balasan dari sistem WA:", hasilGas);
 
-      if (result.status) {
+      if (hasilGas.status === true) {
         setSuccessMessage("Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!");
-        setFormData({ nama_pelapor: '', no_hp: '', isi_laporan: '' }); // Reset isi form menjadi kosong
+        setFormData({ nama_pelapor: '', no_hp: '', isi_laporan: '', jenis_laporan: 'Kebakaran', sub_jenis_laporan: 'Rumah' }); // Reset form
       } else {
-        setErrorMessage("Laporan tersimpan di database, tetapi gagal diteruskan ke WhatsApp.");
+        setErrorMessage("Gagal mengirim notifikasi WA: " + (hasilGas.msg || JSON.stringify(hasilGas)));
       }
 
     } catch (error: any) {
       console.error("Terjadi pengecualian jaringan:", error);
-      setErrorMessage(`Terjadi kesalahan sistem/jaringan: ${error.message || error}`);
+      setErrorMessage(`Terjadi kesalahan sistem/jaringan saat mengirim ke backend. Pastikan URL GAS benar.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -151,6 +163,63 @@ export default function FormLaporan() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="jenis_laporan" className="text-xs font-bold uppercase tracking-wider text-slate-500">Jenis Laporan</label>
+              <div className="relative">
+                <select
+                  id="jenis_laporan"
+                  name="jenis_laporan"
+                  required
+                  className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-medium outline-none focus:border-brand-red transition-colors appearance-none cursor-pointer"
+                  value={formData.jenis_laporan}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                >
+                  <option value="Kebakaran">Kebakaran</option>
+                  <option value="Penyelamatan">Penyelamatan</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <ChevronDown className="w-5 h-5 text-slate-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="sub_jenis_laporan" className="text-xs font-bold uppercase tracking-wider text-slate-500">Kategori Kejadian</label>
+              <div className="relative">
+                <select
+                  id="sub_jenis_laporan"
+                  name="sub_jenis_laporan"
+                  required
+                  className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-medium outline-none focus:border-brand-red transition-colors appearance-none cursor-pointer"
+                  value={formData.sub_jenis_laporan}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                >
+                  {formData.jenis_laporan === 'Kebakaran' ? (
+                    <>
+                      <option value="Lahan">Lahan</option>
+                      <option value="Rumah">Rumah</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Evakuasi">Evakuasi</option>
+                      <option value="Pohon Tumbang">Pohon Tumbang</option>
+                      <option value="Hewan Berbahaya">Hewan Berbahaya</option>
+                      <option value="Banjir">Banjir</option>
+                      <option value="Perbantuan">Perbantuan</option>
+                      <option value="Dan Lainnya">Dan Lainnya</option>
+                    </>
+                  )}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <ChevronDown className="w-5 h-5 text-slate-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label htmlFor="isi_laporan" className="text-xs font-bold uppercase tracking-wider text-slate-500">Isi Laporan Kejadian</label>
             <textarea
@@ -184,41 +253,6 @@ export default function FormLaporan() {
             )}
           </button>
         </form>
-      </div>
-
-      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-        <h4 className="text-xs font-black uppercase tracking-widest text-slate-600 flex items-center gap-1.5">
-          💬 Panduan Publish & Deploy GitHub Pages
-        </h4>
-        <div className="text-xs text-slate-500 space-y-2 leading-relaxed">
-          <p>
-            Ketika Anda melakukan deploy aplikasi static React (Vite) ini ke <strong>GitHub Pages</strong>, file-file JavaScript akan dijalankan sepenuhnya di browser pengguna. Agar tombol pengiriman WhatsApp via Fonnte dan Gemini AI tetap berfungsi, Anda harus menyertakan rahasia ke dalam build bundle static.
-          </p>
-          <ol className="list-decimal pl-4 space-y-1 text-slate-600 font-medium">
-            <li>
-              Masuk ke repositori GitHub Anda, buka menu <strong>Settings &gt; Secrets and variables &gt; Actions</strong>.
-            </li>
-            <li>
-              Buat <strong>Repository Secrets</strong> baru untuk masing-masing variabel berikut:
-              <ul className="list-disc pl-4 mt-1 font-mono text-[10px] text-brand-red">
-                <li>VITE_FONNTE_TOKEN</li>
-                <li>VITE_WA_GROUP_TARGET_ID</li>
-                <li>VITE_GEMINI_API_KEY</li>
-              </ul>
-            </li>
-            <li>
-              Di file workflow otomatis GitHub Actions Anda (biasanya di <code>.github/workflows/deploy.yml</code>), pastikan mengekspos rahasia tersebut ke dalam proses build:
-              <pre className="bg-slate-900 text-slate-100 p-2 rounded mt-1 font-mono text-[10px] overflow-x-auto">
-{`- name: Build App
-  run: npm run build
-  env:
-    VITE_FONNTE_TOKEN: \${{ secrets.VITE_FONNTE_TOKEN }}
-    VITE_WA_GROUP_TARGET_ID: \${{ secrets.VITE_WA_GROUP_TARGET_ID }}
-    VITE_GEMINI_API_KEY: \${{ secrets.VITE_GEMINI_API_KEY }}`}
-              </pre>
-            </li>
-          </ol>
-        </div>
       </div>
     </div>
   );
