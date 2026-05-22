@@ -29,6 +29,7 @@ export default function FormLaporan() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [ticketId, setTicketId] = useState('');
 
   // Handler untuk mengelola perubahan input text dan select
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -54,6 +55,7 @@ export default function FormLaporan() {
     setIsSubmitting(true);
     setSuccessMessage('');
     setErrorMessage('');
+    setTicketId('');
 
     // Mengambil URL Google Apps Script dari file konfigurasi (.env)
     const gasUrl = import.meta.env.VITE_GAS_URL; 
@@ -86,6 +88,7 @@ export default function FormLaporan() {
       console.log("Balasan dari sistem WA:", hasilGas);
 
       if (hasilGas.status === true) {
+        setTicketId(docRef.id);
         setSuccessMessage("Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!");
         setFormData({ nama_pelapor: '', no_hp: '', isi_laporan: '', jenis_laporan: 'Kebakaran', sub_jenis_laporan: 'Rumah' }); // Reset form
       } else {
@@ -115,8 +118,17 @@ export default function FormLaporan() {
 
         {successMessage && (
           <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start gap-3 text-emerald-800">
-            <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />
-            <p className="text-sm font-semibold">{successMessage}</p>
+            <CheckCircle2 className="w-6 h-6 mt-0.5 shrink-0" />
+            <div className="space-y-3 w-full">
+              <p className="text-sm font-semibold">{successMessage}</p>
+              {ticketId && (
+                <div className="p-4 bg-white border border-emerald-100 rounded-lg shadow-sm w-full">
+                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Tiket Laporan Anda:</p>
+                  <p className="text-2xl font-mono font-black text-emerald-900 tracking-widest">{ticketId.substring(0, 8).toUpperCase()}</p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Simpan nomor tiket ini untuk mengecek status laporan.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
