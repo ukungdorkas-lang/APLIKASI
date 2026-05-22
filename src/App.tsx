@@ -74,6 +74,9 @@ function Home() {
     });
 
     return () => {
+      unsubSectors();
+      unsubSquads();
+      unsubReports();
       unsubNews();
       unsubBanner();
       unsubConfig();

@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle2, Phone, Send, Loader2, ChevronDown } from 'lu
 export interface LaporanFormData {
   nama_pelapor: string;
   no_hp: string;
+  alamat: string;
   isi_laporan: string;
   jenis_laporan: string;
   sub_jenis_laporan: string;
@@ -21,6 +22,7 @@ export default function FormLaporan() {
   const [formData, setFormData] = useState<LaporanFormData>({
     nama_pelapor: '',
     no_hp: '',
+    alamat: '',
     isi_laporan: '',
     jenis_laporan: initialType === 'Evakuasi' || initialType === 'Penyelamatan' ? 'Penyelamatan' : 'Kebakaran',
     sub_jenis_laporan: initialType === 'Evakuasi' ? 'Evakuasi' : (initialType === 'Kebakaran' ? 'Rumah' : 'Dan Lainnya')
@@ -90,7 +92,7 @@ export default function FormLaporan() {
       if (hasilGas.status === true) {
         setTicketId(docRef.id);
         setSuccessMessage("Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!");
-        setFormData({ nama_pelapor: '', no_hp: '', isi_laporan: '', jenis_laporan: 'Kebakaran', sub_jenis_laporan: 'Rumah' }); // Reset form
+        setFormData({ nama_pelapor: '', no_hp: '', alamat: '', isi_laporan: '', jenis_laporan: 'Kebakaran', sub_jenis_laporan: 'Rumah' }); // Reset form
       } else {
         setErrorMessage("Gagal mengirim notifikasi WA: " + (hasilGas.msg || JSON.stringify(hasilGas)));
       }
@@ -173,6 +175,22 @@ export default function FormLaporan() {
                 disabled={isSubmitting}
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="alamat" className="text-xs font-bold uppercase tracking-wider text-slate-500">Alamat Kejadian</label>
+            <textarea
+              id="alamat"
+              name="alamat"
+              required
+              rows={2}
+              placeholder="Masukkan alamat lengkap lokasi kejadian..."
+              className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-medium outline-none focus:border-brand-red transition-colors resize-none"
+              value={formData.alamat}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+            <p className="text-[10px] text-brand-red font-semibold uppercase tracking-wider mt-1">* Alamat harus jelas dan detail agar memudahkan petugas dalam menuju lokasi kejadian</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
