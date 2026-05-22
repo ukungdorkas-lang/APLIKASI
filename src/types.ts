@@ -168,6 +168,7 @@ export interface AppConfig {
   backgroundColor?: string;
   backgroundImageUrl?: string;
   geminiApiKey?: string;
+  notificationsEnabled?: boolean;
   socialMedia?: {
     instagram?: string;
     facebook?: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import {
   AlertCircle,
@@ -123,22 +123,49 @@ export default function FormLaporan() {
         docRef.id,
       );
 
-      // 3. Kirim data asli ke Google Apps Script (Backend) untuk WhatsApp Fonnte
-      console.log("Meneruskan laporan ke Backend GAS...");
-      const responGas = await fetch(gasUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(formData),
-      });
+      // Cek status notifikasi aktif/tidak
+      const configDoc = await getDoc(doc(db, "settings", "app"));
+      const isNotificationEnabled = configDoc.exists()
+        ? configDoc.data()?.notificationsEnabled !== false
+        : true;
 
-      // 3. Baca jawaban dari GAS
-      const hasilGas = await responGas.json();
-      console.log("Balasan dari sistem WA:", hasilGas);
+      if (isNotificationEnabled) {
+        // 3. Kirim data asli ke Google Apps Script (Backend) untuk WhatsApp Fonnte
+        console.log("Meneruskan laporan ke Backend GAS...");
+        const responGas = await fetch(gasUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(formData),
+        });
 
-      if (hasilGas.status === true) {
+        // 3. Baca jawaban dari GAS
+        const hasilGas = await responGas.json();
+        console.log("Balasan dari sistem WA:", hasilGas);
+
+        if (hasilGas.status === true) {
+          setTicketId(docRef.id);
+          setSuccessMessage(
+            "Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!",
+          );
+          setFormData({
+            nama_pelapor: "",
+            no_hp: "",
+            alamat: "",
+            isi_laporan: "",
+            jenis_laporan: "Kebakaran",
+            sub_jenis_laporan: "Rumah",
+          }); // Reset form
+        } else {
+          setErrorMessage(
+            "Gagal mengirim notifikasi WA: " +
+              (hasilGas.msg || JSON.stringify(hasilGas)),
+          );
+        }
+      } else {
+        // Sistem notif nonaktif
         setTicketId(docRef.id);
         setSuccessMessage(
-          "Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!",
+          "Laporan berhasil dikirim! (Sistem Notifikasi WA sedang dinonaktifkan oleh Admin)",
         );
         setFormData({
           nama_pelapor: "",
@@ -148,11 +175,6 @@ export default function FormLaporan() {
           jenis_laporan: "Kebakaran",
           sub_jenis_laporan: "Rumah",
         }); // Reset form
-      } else {
-        setErrorMessage(
-          "Gagal mengirim notifikasi WA: " +
-            (hasilGas.msg || JSON.stringify(hasilGas)),
-        );
       }
     } catch (error: any) {
       console.error("Terjadi pengecualian jaringan:", error);

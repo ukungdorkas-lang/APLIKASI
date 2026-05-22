@@ -1,28 +1,36 @@
-import React from 'react';
-import { MessageSquare, X, Send, Sparkles, User, Bot, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { getChatAssistantResponse } from '../lib/gemini';
-import { AppConfig } from '../types';
-import Markdown from 'react-markdown';
-import { cn } from '../lib/utils';
+import React from "react";
+import {
+  MessageSquare,
+  X,
+  Send,
+  Sparkles,
+  User,
+  Bot,
+  Loader2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { onSnapshot, doc, collection, addDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import { getChatAssistantResponse } from "../lib/gemini";
+import { AppConfig } from "../types";
+import Markdown from "react-markdown";
+import { cn } from "../lib/utils";
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
 export default function AiAssistant() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [messages, setMessages] = React.useState<Message[]>([]);
-  const [inputValue, setInputValue] = React.useState('');
+  const [inputValue, setInputValue] = React.useState("");
   const [isTyping, setIsTyping] = React.useState(false);
   const [settings, setSettings] = React.useState<AppConfig | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    return onSnapshot(doc(db, 'settings', 'app'), (snap) => {
+    return onSnapshot(doc(db, "settings", "app"), (snap) => {
       if (snap.exists()) setSettings(snap.data() as AppConfig);
     });
   }, []);
@@ -36,21 +44,44 @@ export default function AiAssistant() {
   const handleSend = async () => {
     if (!inputValue.trim() || isTyping) return;
 
-    const userMessage: Message = { role: 'user', content: inputValue };
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+    const userMessage: Message = { role: "user", content: inputValue };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
     setIsTyping(true);
 
     try {
-      const chatHistory = messages.map(m => ({ role: m.role, text: m.content }));
-      const response = await getChatAssistantResponse(inputValue, chatHistory, settings || undefined);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      const chatHistory = messages.map((m) => ({
+        role: m.role,
+        text: m.content,
+      }));
+      const response = await getChatAssistantResponse(
+        inputValue,
+        chatHistory,
+        settings || undefined,
+      );
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response },
+      ]);
+      try {
+        await addDoc(collection(db, "ai_chats"), {
+          userMessage: inputValue,
+          assistantMessage: response,
+          timestamp: Date.now(),
+        });
+      } catch (e) {
+        console.error("Failed to save chat to firestore", e);
+      }
     } catch (error) {
-      console.error('Chat AI Error:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "Mohon maaf, saya mengalami kendala teknis saat memproses pesan Anda. Silakan coba beberapa saat lagi." 
-      }]);
+      console.error("Chat AI Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Mohon maaf, saya mengalami kendala teknis saat memproses pesan Anda. Silakan coba beberapa saat lagi.",
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
@@ -67,7 +98,7 @@ export default function AiAssistant() {
         onClick={() => setIsOpen(true)}
         className={cn(
           "fixed bottom-8 right-8 z-50 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all",
-          isOpen ? "opacity-0 pointer-events-none" : "bg-brand-red text-white"
+          isOpen ? "opacity-0 pointer-events-none" : "bg-brand-red text-white",
         )}
       >
         <MessageSquare className="w-8 h-8" />
@@ -90,14 +121,18 @@ export default function AiAssistant() {
                   <Bot className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black uppercase italic tracking-tighter">Asisten <span className="text-brand-red">Tanya Damkar</span></h3>
+                  <h3 className="text-sm font-black uppercase italic tracking-tighter">
+                    Asisten <span className="text-brand-red">Tanya Damkar</span>
+                  </h3>
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-[8px] font-bold text-slate-400 tracking-widest uppercase">AI Terintegrasi</span>
+                    <span className="text-[8px] font-bold text-slate-400 tracking-widest uppercase">
+                      AI Terintegrasi
+                    </span>
                   </div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
               >
@@ -106,7 +141,7 @@ export default function AiAssistant() {
             </div>
 
             {/* Messages */}
-            <div 
+            <div
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50 shadow-inner"
             >
@@ -116,9 +151,13 @@ export default function AiAssistant() {
                     <Sparkles className="w-10 h-10 text-brand-red animate-pulse" />
                   </div>
                   <div className="space-y-2">
-                    <h4 className="text-lg font-black italic tracking-tighter text-slate-900 uppercase">Halo, Saya Asisten Virtual Damkar Malinau</h4>
+                    <h4 className="text-lg font-black italic tracking-tighter text-slate-900 uppercase">
+                      Halo, Saya Asisten Virtual Damkar Malinau
+                    </h4>
                     <p className="text-xs font-medium text-slate-400 italic leading-relaxed">
-                      Siap membantu Anda seputar informasi pemadam kebakaran, pelaporan darurat, dan panduan keselamatan. Apa yang ingin Anda tanyakan?
+                      Siap membantu Anda seputar informasi pemadam kebakaran,
+                      pelaporan darurat, dan panduan keselamatan. Apa yang ingin
+                      Anda tanyakan?
                     </p>
                   </div>
                 </div>
@@ -127,25 +166,35 @@ export default function AiAssistant() {
               {messages.map((msg, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }}
+                  initial={{ opacity: 0, x: msg.role === "user" ? 20 : -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   className={cn(
                     "flex gap-3",
-                    msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                    msg.role === "user" ? "flex-row-reverse" : "flex-row",
                   )}
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
-                    msg.role === 'user' ? "bg-slate-900 text-white" : "bg-brand-red text-white"
-                  )}>
-                    {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
+                      msg.role === "user"
+                        ? "bg-slate-900 text-white"
+                        : "bg-brand-red text-white",
+                    )}
+                  >
+                    {msg.role === "user" ? (
+                      <User className="w-4 h-4" />
+                    ) : (
+                      <Bot className="w-4 h-4" />
+                    )}
                   </div>
-                  <div className={cn(
-                    "max-w-[80%] p-4 rounded-2xl text-sm font-medium leading-relaxed italic shadow-sm prose prose-sm",
-                    msg.role === 'user' 
-                      ? "bg-slate-900 text-white rounded-tr-none" 
-                      : "bg-white text-slate-700 rounded-tl-none border border-slate-100"
-                  )}>
+                  <div
+                    className={cn(
+                      "max-w-[80%] p-4 rounded-2xl text-sm font-medium leading-relaxed italic shadow-sm prose prose-sm",
+                      msg.role === "user"
+                        ? "bg-slate-900 text-white rounded-tr-none"
+                        : "bg-white text-slate-700 rounded-tl-none border border-slate-100",
+                    )}
+                  >
                     <Markdown>{msg.content}</Markdown>
                   </div>
                 </motion.div>
@@ -158,7 +207,9 @@ export default function AiAssistant() {
                   </div>
                   <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-brand-red animate-spin" />
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest animate-pulse">Mengetik...</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest animate-pulse">
+                      Mengetik...
+                    </span>
                   </div>
                 </div>
               )}
@@ -167,15 +218,15 @@ export default function AiAssistant() {
             {/* Input */}
             <div className="p-6 bg-white border-t border-slate-100">
               <div className="relative group">
-                <input 
+                <input
                   type="text"
                   placeholder="Ketik pesan Anda di sini..."
                   value={inputValue}
-                  onChange={e => setInputValue(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && handleSend()}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSend()}
                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pr-14 text-sm font-bold outline-none focus:border-brand-red focus:bg-white transition-all"
                 />
-                <button 
+                <button
                   onClick={handleSend}
                   disabled={!inputValue.trim() || isTyping}
                   className="absolute right-3 top-3 w-10 h-10 bg-brand-red text-white rounded-xl flex items-center justify-center hover:scale-105 disabled:opacity-50 transition-all shadow-lg shadow-red-200"
@@ -184,7 +235,8 @@ export default function AiAssistant() {
                 </button>
               </div>
               <p className="text-[8px] font-bold text-slate-400 mt-4 text-center italic tracking-widest uppercase">
-                Didukung oleh <span className="text-brand-red">Google Gemini AI</span>
+                Didukung oleh{" "}
+                <span className="text-brand-red">Google Gemini AI</span>
               </p>
             </div>
           </motion.div>

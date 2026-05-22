@@ -16,6 +16,8 @@ import {
 } from "firebase/firestore";
 import { generateNewsFromReport, developNarrative } from "../lib/gemini";
 import {
+  Bot,
+  MessageSquare,
   Database,
   FileText,
   BarChart3,
@@ -81,6 +83,7 @@ type AdminTab =
   | "notifications"
   | "news"
   | "users"
+  | "ai_chats"
   | "gallery"
   | "education"
   | "profiles"
@@ -112,6 +115,7 @@ export default function AdminDashboard({
   const [news, setNews] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
   const [logs, setLogs] = React.useState<any[]>([]);
+  const [aiChats, setAiChats] = React.useState<any[]>([]);
   const [gallery, setGallery] = React.useState<any[]>([]);
   const [education, setEducation] = React.useState<any[]>([]);
   const [profileSections, setProfileSections] = React.useState<any[]>([]);
@@ -651,26 +655,42 @@ export default function AdminDashboard({
       // Data Table
       doc.addPage();
       doc.setFontSize(16);
-      doc.text("RINCIAN LAPORAN", 14, 20);
+      doc.text("RINCIAN LAPORAN (DETAIL)", 14, 20);
 
       const tableRows = reports.map((r) => [
-        new Date(r.createdAt).toLocaleDateString("id-ID"),
+        new Date(r.createdAt).toLocaleString("id-ID"),
         r.type,
         r.location.address || "Malinau",
         r.reporterName,
         r.status,
-        r.documentation ? "Lengkap" : "Belum Ada",
+        r.documentation?.personnel
+          ? `${r.documentation.personnel} Petugas`
+          : "-",
+        r.description?.substring(0, 50) + "..." || "-",
       ]);
 
       autoTable(doc, {
         startY: 25,
         head: [
-          ["Tanggal", "Jenis", "Lokasi", "Pelapor", "Status", "Dokumentasi"],
+          [
+            "Tanggal & Waktu",
+            "Jenis",
+            "Lokasi",
+            "Pelapor",
+            "Status",
+            "Petugas",
+            "Detail Singkat",
+          ],
         ],
         body: tableRows,
         theme: "grid",
         headStyles: { fillColor: [225, 29, 72] },
-        styles: { fontSize: 8 },
+        styles: { fontSize: 7, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          2: { cellWidth: 40 },
+          6: { cellWidth: 40 },
+        },
       });
 
       doc.save(`Rekap_Laporan_Damkar_${new Date().getTime()}.pdf`);
@@ -937,6 +957,16 @@ export default function AdminDashboard({
       },
     );
 
+    const unsubAiChats = onSnapshot(
+      query(collection(db, "ai_chats"), orderBy("timestamp", "desc")),
+      (sn) => {
+        setAiChats(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+      (err) => {
+        console.warn("Listener failed for collection: ai_chats", err);
+      },
+    );
+
     const unsubGallery = onSnapshot(
       query(collection(db, "gallery"), orderBy("createdAt", "desc")),
       (sn) => {
@@ -1031,6 +1061,7 @@ export default function AdminDashboard({
       unsubNews();
       unsubUsers();
       unsubLogs();
+      unsubAiChats();
       unsubGallery();
       unsubEducation();
       unsubProfiles();
@@ -1376,6 +1407,11 @@ export default function AdminDashboard({
           icon: <Clock className="w-5 h-5" />,
         },
         {
+          id: "ai_chats",
+          name: "Riwayat Chat AI",
+          icon: <Bot className="w-5 h-5" />,
+        },
+        {
           id: "themes",
           name: "Manajemen Tema",
           icon: <Sparkles className="w-5 h-5" />,
@@ -1590,9 +1626,17 @@ export default function AdminDashboard({
                         Live Monitor{" "}
                         <span className="text-brand-red">Realtime</span>
                       </h3>
-                      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-500 uppercase">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
-                        Updated 2m ago
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={exportReportsPDF}
+                          className="flex items-center gap-2 bg-brand-red text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-brand-dark transition-all shadow-md"
+                        >
+                          <FileDown className="w-3 h-3" /> Unduh Rekap Laporan
+                        </button>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-500 uppercase">
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+                          Updated 2m ago
+                        </div>
                       </div>
                     </div>
                     <div className="aspect-[16/9] bg-slate-100 rounded-3xl overflow-hidden relative border border-slate-50">
@@ -2748,6 +2792,60 @@ export default function AdminDashboard({
                                 >
                                   <Edit className="w-5 h-5 text-white" />
                                 </button>
+                                <button
+                                  onClick={async () => {
+                                    if (
+                                      !confirm(
+                                        "Yakin ingin menghapus foto ini dari dokumentasi laporan?",
+                                      )
+                                    )
+                                      return;
+                                    try {
+                                      const photos = (
+                                        item.reportData.documentation?.photos ||
+                                        item.reportData.photos ||
+                                        []
+                                      ).filter(
+                                        (p: string) => p !== item.imageUrl,
+                                      );
+                                      if (item.reportData.documentation) {
+                                        await updateDoc(
+                                          doc(
+                                            db,
+                                            "reports",
+                                            item.reportData.id,
+                                          ),
+                                          {
+                                            "documentation.photos": photos,
+                                          },
+                                        );
+                                      } else {
+                                        await updateDoc(
+                                          doc(
+                                            db,
+                                            "reports",
+                                            item.reportData.id,
+                                          ),
+                                          {
+                                            photos: photos,
+                                          },
+                                        );
+                                      }
+                                      showToast(
+                                        "Foto dokumentasi berhasil dihapus",
+                                      );
+                                    } catch (err) {
+                                      showToast(
+                                        "Gagal menghapus foto",
+                                        "error",
+                                      );
+                                    }
+                                  }}
+                                  className="p-3 bg-brand-dark rounded-xl hover:scale-110 transition-transform shadow-xl"
+                                  title="Hapus Foto Dokumentasi"
+                                >
+                                  <Trash2 className="w-5 h-5 text-white" />
+                                </button>
                               </div>
                             ) : (
                               <>
@@ -3364,6 +3462,95 @@ export default function AdminDashboard({
                     )}
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {activeTab === "ai_chats" && (
+              <motion.div
+                key="ai_chats"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-8"
+              >
+                <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
+                      <Bot className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-black italic uppercase tracking-tighter">
+                        Riwayat Chat AI
+                      </h2>
+                      <p className="text-slate-500 font-medium">
+                        Histori percakapan Asisten AI dengan pengguna.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                  <div className="p-8 border-b-4 border-slate-50">
+                    <h3 className="font-black italic uppercase tracking-widest text-slate-400">
+                      Daftar Percakapan
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {aiChats.length === 0 ? (
+                      <div className="p-20 text-center">
+                        <MessageSquare className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                        <p className="text-slate-400 font-bold uppercase tracking-widest">
+                          Belum ada history percakapan.
+                        </p>
+                      </div>
+                    ) : (
+                      aiChats.map((chat) => (
+                        <div
+                          key={chat.id}
+                          className="p-8 hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                              {new Date(chat.timestamp).toLocaleString("id-ID")}
+                            </div>
+                            <button
+                              onClick={() =>
+                                handleDeleteItem("ai_chats", chat.id)
+                              }
+                              className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                              title="Hapus Percakapan"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="flex gap-4">
+                              <div className="w-10 h-10 bg-slate-200 rounded-xl flex-shrink-0 flex items-center justify-center">
+                                <User className="w-5 h-5 text-slate-500" />
+                              </div>
+                              <div className="flex-1 bg-slate-100 p-4 rounded-2xl rounded-tl-none">
+                                <p className="text-slate-700 font-medium">
+                                  {chat.userMessage}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-4 flex-row-reverse">
+                              <div className="w-10 h-10 bg-brand-red rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg">
+                                <Sparkles className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1 bg-brand-red/10 border border-brand-red/20 p-4 rounded-2xl rounded-tr-none">
+                                <div className="prose prose-sm max-w-none text-slate-700">
+                                  <Markdown>{chat.assistantMessage}</Markdown>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </motion.div>
             )}
 
