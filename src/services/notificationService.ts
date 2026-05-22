@@ -33,12 +33,11 @@ export async function processNotifications(report: EmergencyReport) {
     console.log(`🔍 [DEBUG] Jumlah penerima yang cocok dengan kategori '${report.type}':`, targetedRecipients.length);
 
     const message = `🚨 LAPORAN DARURAT MASUK\n\n` +
-    // ... baris selanjutnya ...
       `Jenis: ${report.type}\n` +
       `Lokasi: ${report.location.address || 'Malinau'}\n` +
       `Pelapor: ${report.reporterName}\n` +
+      `No. HP: ${report.contactNumber || report.phoneNumber || '-'}\n` + // <--- INI BARIS TAMBAHANNYA
       `Waktu: ${new Date(report.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WITA\n` +
-      `Level: ${report.level.toUpperCase()}\n` +
       `Deskripsi: ${report.description}\n\n` +
       `Silakan buka dashboard untuk detail lengkap.`;
 
