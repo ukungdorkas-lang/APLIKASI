@@ -113,7 +113,7 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 mb-20">
-              <Link to={banner?.ctaLink || "/report"} className="emergency-btn group px-12 py-6 text-2xl">
+              <Link to={banner?.ctaLink || "/report"} className="emergency-btn group px-8 md:px-12 py-6 text-2xl">
                 <span>{banner?.ctaText || "BUAT LAPORAN"}</span>
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-brand-red transition-all">
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
@@ -121,7 +121,7 @@ export default function Hero() {
               </Link>
               <Link 
                 to="/staff/ops" 
-                className="bg-brand-dark/80 backdrop-blur-xl border-2 border-white/10 px-12 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-4 shadow-2xl group"
+                className="bg-brand-dark/80 backdrop-blur-xl border-2 border-white/10 px-8 md:px-12 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-4 shadow-2xl group"
               >
                 <div className="w-10 h-10 rounded-full bg-brand-red/20 flex items-center justify-center group-hover:bg-brand-red transition-all">
                   <Users className="w-5 h-5 text-brand-red group-hover:text-white transition-all" />

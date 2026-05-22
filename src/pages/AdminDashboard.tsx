@@ -2,6 +2,7 @@ import React from "react";
 import { useReports } from "../hooks/useReports";
 import DashboardStats from "../components/DashboardStats";
 import ReportList from "../components/ReportList";
+import ReportChart from "../components/ReportChart";
 import { db, auth } from "../lib/firebase";
 import {
   collection,
@@ -59,6 +60,7 @@ import {
   PlayCircle,
   FileDown,
   Eye,
+  Menu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, Link } from "react-router-dom";
@@ -69,6 +71,7 @@ import { logAudit } from "../lib/auditLogger";
 import NotificationManagement from "../components/NotificationManagement";
 import { handleFirestoreError } from "../lib/errorHandler";
 import { OperationType } from "../types";
+import WeatherWidget from "../components/WeatherWidget";
 
 import { FileUpload } from "../components/FileUpload";
 import { useTheme } from "../contexts/ThemeContext";
@@ -417,6 +420,7 @@ export default function AdminDashboard({
   });
 
   const [isAiDeveloping, setIsAiDeveloping] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleDevelopNarrative = async () => {
     if (!newsForm.content || newsForm.content.length < 20) {
@@ -550,7 +554,6 @@ export default function AdminDashboard({
   };
 
   const handleDeleteItem = async (col: string, id: string) => {
-    if (!confirm("Yakin ingin menghapus data ini?")) return;
     try {
       await deleteDoc(doc(db, col, id));
       showToast("Data berhasil dihapus");
@@ -787,26 +790,106 @@ export default function AdminDashboard({
   const handleFetchAiWeather = async () => {
     setIsFetchingAiWeather(true);
     try {
-      const response = await fetch("/api/ai/weather-upstream", {
-        method: "POST",
-      });
-      const data = await response.json();
-      if (data.success) {
-        setWeatherForm({
-          location: "Hulu Sungai Malinau",
-          condition: data.data.condition,
-          rainfall: data.data.rainfall,
-          overflowPotential: data.data.overflowPotential,
-          summary: data.data.summary,
-          recommendation: data.data.recommendation,
-        });
-        showToast("Data cuaca hulu berhasil ditarik via AI");
-      } else {
-        throw new Error(data.error);
+      let lat = 3.073;
+      let lon = 116.461; // Default Hulu Sungai Malinau
+      const locLower = weatherForm.location.toLowerCase();
+      if (locLower.includes("kota") || locLower.includes("hilir")) {
+        lat = 3.588; lon = 116.623;
+      } else if (locLower.includes("mentarang")) {
+        lat = 3.780; lon = 116.150;
       }
+
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code&timezone=Asia%2FJakarta`);
+      const data = await response.json();
+      
+      let conditionText = 'Cerah';
+      const code = data.current.weather_code || 0;
+      if (code <= 3) conditionText = 'Berawan';
+      else if (code <= 48) conditionText = 'Berkabut';
+      else if (code <= 57) conditionText = 'Gerimis';
+      else if (code <= 67) conditionText = 'Hujan';
+      else if (code <= 82) conditionText = 'Hujan Deras';
+      else if (code >= 95) conditionText = 'Badai Petir';
+      
+      const rainfall = data.current.precipitation || 0;
+      let overflow = "Rendah";
+      let recommendationText = "Tetap waspada dan pantau kondisi secara berkala.";
+      if (rainfall > 50) {
+        overflow = "Sangat Tinggi";
+        recommendationText = "Segera siapkan tim evakuasi dan peringatkan warga bantaran sungai.";
+      } else if (rainfall > 20) {
+        overflow = "Tinggi";
+        recommendationText = "Siagakan personel dan pantau debit air sungai secara intensif.";
+      } else if (rainfall > 5) {
+        overflow = "Sedang";
+      }
+
+      setWeatherForm({
+        ...weatherForm,
+        condition: `${conditionText} (${data.current.temperature_2m}°C, Angin: ${data.current.wind_speed_10m}km/j)`,
+        rainfall: rainfall,
+        overflowPotential: overflow as any,
+        summary: `Cuaca saat ini ${conditionText.toLowerCase()} berdasarkan data satelit Open-Meteo pada koordinat ${lat}, ${lon}. Suhu tercatat ${data.current.temperature_2m}°C dengan kecepatan angin ${data.current.wind_speed_10m} km/jam.`,
+        recommendation: recommendationText,
+      });
+      showToast("Data cuaca hulu berhasil ditarik via Open-Meteo (Satelit)");
     } catch (err) {
       console.error(err);
-      showToast("Gagal memantau cuaca hulu via AI", "error");
+      showToast("Gagal memantau cuaca hulu via Satelit", "error");
+    } finally {
+      setIsFetchingAiWeather(false);
+    }
+  };
+
+  const handleUpdateWeatherInline = async (id: string, locationName: string) => {
+    setIsFetchingAiWeather(true);
+    try {
+      let lat = 3.073;
+      let lon = 116.461;
+      const locLower = locationName.toLowerCase();
+      if (locLower.includes("kota") || locLower.includes("hilir")) {
+        lat = 3.588; lon = 116.623;
+      } else if (locLower.includes("mentarang")) {
+        lat = 3.780; lon = 116.150;
+      }
+
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code&timezone=Asia%2FJakarta`);
+      const data = await response.json();
+      
+      let conditionText = 'Cerah';
+      const code = data.current.weather_code || 0;
+      if (code <= 3) conditionText = 'Berawan';
+      else if (code <= 48) conditionText = 'Berkabut';
+      else if (code <= 57) conditionText = 'Gerimis';
+      else if (code <= 67) conditionText = 'Hujan';
+      else if (code <= 82) conditionText = 'Hujan Deras';
+      else if (code >= 95) conditionText = 'Badai Petir';
+      
+      const rainfall = data.current.precipitation || 0;
+      let overflow = "Rendah";
+      let recommendationText = "Tetap waspada dan pantau kondisi secara berkala.";
+      if (rainfall > 50) {
+        overflow = "Sangat Tinggi";
+        recommendationText = "Segera siapkan tim evakuasi dan peringatkan warga bantaran sungai.";
+      } else if (rainfall > 20) {
+        overflow = "Tinggi";
+        recommendationText = "Siagakan personel dan pantau debit air sungai secara intensif.";
+      } else if (rainfall > 5) {
+        overflow = "Sedang";
+      }
+
+      await updateDoc(doc(db, "weather_upstream", id), {
+        condition: `${conditionText} (${data.current.temperature_2m}°C, Angin: ${data.current.wind_speed_10m}km/j)`,
+        rainfall: rainfall,
+        overflowPotential: overflow,
+        summary: `Cuaca saat ini ${conditionText.toLowerCase()} berdasarkan data satelit Open-Meteo pada koordinat ${lat}, ${lon}. Suhu tercatat ${data.current.temperature_2m}°C dengan kecepatan angin ${data.current.wind_speed_10m} km/jam.`,
+        recommendation: recommendationText,
+        updatedAt: Date.now()
+      });
+      showToast(`Data cuaca ${locationName} berhasil diperbarui`);
+    } catch (err) {
+      console.error(err);
+      showToast(`Gagal update cuaca ${locationName}`, "error");
     } finally {
       setIsFetchingAiWeather(false);
     }
@@ -1456,8 +1539,17 @@ export default function AdminDashboard({
         </AnimatePresence>
       </div>
 
-      {/* Sidebar */}
-      <aside className="w-72 bg-brand-dark flex flex-col fixed h-full z-40 border-r border-white/5">
+      {/* Sidebar Desktop & Mobile */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+      <aside className={cn(
+        "w-72 bg-brand-dark flex flex-col fixed h-full z-50 border-r border-white/5 transition-transform duration-300",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
         <div className="p-10 text-center">
           <Link to="/" className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
@@ -1489,6 +1581,7 @@ export default function AdminDashboard({
                         navigate(item.path);
                       } else {
                         setActiveTab(item.id as AdminTab);
+                        setIsMobileMenuOpen(false);
                       }
                     }}
                     className={cn(
@@ -1540,11 +1633,17 @@ export default function AdminDashboard({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 ml-72 overflow-y-auto min-h-screen">
+      <main className="flex-1 lg:ml-72 overflow-y-auto min-h-screen">
         {/* Header Bar */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 h-20 flex items-center justify-between px-10 sticky top-0 z-30">
-          <div className="flex items-center gap-10 flex-1">
-            <div className="flex items-baseline gap-2">
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 h-20 flex items-center justify-between px-6 md:px-10 sticky top-0 z-30">
+          <div className="flex items-center gap-4 md:gap-10 flex-1">
+            <button
+              className="lg:hidden p-2 text-slate-500 hover:text-brand-red bg-slate-100 rounded-xl transition-all"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+               <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-baseline gap-2 hidden md:flex">
               <h2 className="text-xl font-display font-black text-slate-900 uppercase tracking-tighter">
                 {sidebarItems.find((i) => i.id === activeTab)?.name}
               </h2>
@@ -1620,7 +1719,7 @@ export default function AdminDashboard({
               >
                 <DashboardStats reports={reports} />
                 <div className="grid lg:grid-cols-12 gap-10 mt-10">
-                  <div className="lg:col-span-8 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+                  <div className="lg:col-span-8 bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-10">
                       <h3 className="text-lg font-display font-black text-slate-900 uppercase tracking-tighter italic">
                         Live Monitor{" "}
@@ -1639,23 +1738,8 @@ export default function AdminDashboard({
                         </div>
                       </div>
                     </div>
-                    <div className="aspect-[16/9] bg-slate-100 rounded-3xl overflow-hidden relative border border-slate-50">
-                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80')] bg-cover opacity-20 grayscale" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center p-12">
-                          <MapPin className="w-12 h-12 text-brand-red mx-auto mb-4 opacity-50" />
-                          <p className="text-slate-400 font-bold italic uppercase tracking-[0.3em] text-xs">
-                            Interactive Maps Interface <br />
-                            <span className="text-[10px] opacity-70 mt-4 block">
-                              Visualisasi area rawan kejadian
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      {/* Floating marker simulation */}
-                      <div className="absolute top-1/4 left-1/3 w-10 h-10 bg-brand-red/20 rounded-full flex items-center justify-center">
-                        <div className="w-3 h-3 bg-brand-red rounded-full shadow-[0_0_15px_rgba(193,18,31,1)]" />
-                      </div>
+                    <div className="aspect-[16/9] w-full min-h-[400px] h-full sm:min-h-0 bg-slate-50 rounded-3xl overflow-hidden relative border border-slate-100 p-2 md:p-6 pb-0">
+                      <ReportChart reports={reports} />
                     </div>
 
                     <div className="mt-10 pt-10 border-t border-slate-100">
@@ -1727,7 +1811,7 @@ export default function AdminDashboard({
                     </div>
                   </div>
                   <div className="lg:col-span-4 flex flex-col gap-8">
-                    <div className="bg-brand-dark p-8 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group border border-white/5">
+                    <div className="bg-brand-dark p-5 md:p-8 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group border border-white/5">
                       <div className="absolute top-0 right-0 w-40 h-40 bg-brand-red/10 blur-[100px] rounded-full" />
                       <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 italic">
                         Tutorial Login & Akses
@@ -1780,7 +1864,7 @@ export default function AdminDashboard({
                         </div>
                       </div>
                     </div>
-                    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="bg-white p-5 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm">
                       <div className="flex items-center gap-3 mb-8">
                         <div className="w-10 h-10 bg-brand-red/10 rounded-xl flex items-center justify-center">
                           <Radio className="w-5 h-5 text-brand-red" />
@@ -1817,7 +1901,7 @@ export default function AdminDashboard({
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-10"
               >
-                <div className="flex flex-wrap justify-between items-center gap-6 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex flex-wrap justify-between items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
                   <div className="flex flex-wrap gap-2">
                     {["SEMUA", "MENUNGGU", "PROSES", "SELESAI"].map((f) => (
                       <button
@@ -1850,7 +1934,7 @@ export default function AdminDashboard({
 
                 <div className="grid gap-6">
                   {filteredReports.length === 0 ? (
-                    <div className="bg-white/50 backdrop-blur-sm p-24 rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
+                    <div className="bg-white/50 backdrop-blur-sm p-12 md:p-24 rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
                       <ShieldAlert className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                       <p className="text-slate-400 font-bold italic uppercase tracking-[0.4em] text-xs">
                         No reports found in this category
@@ -1861,7 +1945,7 @@ export default function AdminDashboard({
                       <motion.div
                         layout
                         key={report.id}
-                        className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all relative group overflow-hidden"
+                        className="bg-white p-5 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all relative group overflow-hidden"
                       >
                         <div className="flex flex-wrap justify-between items-start gap-8">
                           <div className="flex items-start gap-6 flex-1 min-w-[300px]">
@@ -2031,9 +2115,9 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-12"
               >
-                <div className="bg-brand-dark p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
+                <div className="bg-brand-dark p-6 lg:p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
                   <div className="relative z-10">
-                    <h3 className="text-5xl text-white font-black uppercase italic tracking-tighter mb-4">
+                    <h3 className="text-3xl md:text-5xl text-white font-black uppercase italic tracking-tighter mb-4">
                       Profil &{" "}
                       <span className="text-brand-red">Informasi Instansi</span>
                     </h3>
@@ -2086,7 +2170,7 @@ export default function AdminDashboard({
                     profileSections.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl flex gap-8 items-center"
+                        className="bg-white p-5 md:p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl flex gap-8 items-center"
                       >
                         <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0 border-4 border-slate-100 overflow-hidden">
                           {item.imageUrl ? (
@@ -2172,7 +2256,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-12"
               >
-                <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/20">
                       <Waves className="w-6 h-6 text-white" />
@@ -2223,6 +2307,11 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
+                {/* Open-Meteo Satellite Data */}
+                <div className="-mx-10 scale-[0.98] origin-top">
+                  <WeatherWidget />
+                </div>
+
                 <div className="grid lg:grid-cols-2 gap-10">
                   {/* River Sensors Section */}
                   <div className="space-y-6">
@@ -2236,7 +2325,7 @@ export default function AdminDashboard({
                       {riverSensors.map((sensor) => (
                         <motion.div
                           key={sensor.id}
-                          className="bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm hover:shadow-xl hover:border-brand-red transition-all relative overflow-hidden group"
+                          className="bg-white p-5 md:p-8 rounded-3xl border-2 border-slate-100 shadow-sm hover:shadow-xl hover:border-brand-red transition-all relative overflow-hidden group"
                         >
                           <div
                             className={cn(
@@ -2283,7 +2372,7 @@ export default function AdminDashboard({
                               </button>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-8">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
                                 TINGGI AIR
@@ -2359,7 +2448,7 @@ export default function AdminDashboard({
                         </motion.div>
                       ))}
                       {riverSensors.length === 0 && (
-                        <div className="bg-white p-12 rounded-3xl border-2 border-dashed border-slate-200 text-center opacity-50">
+                        <div className="bg-white p-6 lg:p-12 rounded-3xl border-2 border-dashed border-slate-200 text-center opacity-50">
                           <Droplets className="w-10 h-10 text-slate-300 mx-auto mb-4" />
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                             Belum ada sensor terdaftar
@@ -2381,7 +2470,7 @@ export default function AdminDashboard({
                       {weatherUpstream.map((weather) => (
                         <motion.div
                           key={weather.id}
-                          className="bg-brand-dark p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden group border-4 border-slate-900"
+                          className="bg-brand-dark p-5 md:p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden group border-4 border-slate-900"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-[60px] rounded-full" />
                           <div className="flex justify-between items-start mb-8">
@@ -2393,7 +2482,14 @@ export default function AdminDashboard({
                                 EARLY WARNING SYSTEM
                               </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                className="px-3 py-2 bg-brand-red text-white text-[10px] font-black uppercase italic tracking-widest rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+                                onClick={() => handleUpdateWeatherInline(weather.id, weather.location)}
+                                disabled={isFetchingAiWeather}
+                              >
+                                <CloudRain className="w-3 h-3" /> Update Satelit
+                              </button>
                               <button
                                 className="p-2 bg-white/5 text-slate-400 rounded-lg hover:text-white transition-colors"
                                 onClick={() => {
@@ -2426,7 +2522,7 @@ export default function AdminDashboard({
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-6 mb-8">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                             <div className="space-y-1">
                               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">
                                 Kondisi
@@ -2483,7 +2579,7 @@ export default function AdminDashboard({
                         </motion.div>
                       ))}
                       {weatherUpstream.length === 0 && (
-                        <div className="bg-white/5 p-12 rounded-3xl border-2 border-dashed border-white/10 text-center">
+                        <div className="bg-white/5 p-6 lg:p-12 rounded-3xl border-2 border-dashed border-white/10 text-center">
                           <CloudRain className="w-10 h-10 text-white/10 mx-auto mb-4" />
                           <p className="text-xs font-bold text-white/20 uppercase tracking-widest">
                             Data cuaca belum tersedia
@@ -2503,7 +2599,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center">
                       <Newspaper className="w-6 h-6 text-white" />
@@ -2546,7 +2642,7 @@ export default function AdminDashboard({
                   {dataLoading.news ? (
                     <LoadingSpinner message="Sinkronisasi Data Berita..." />
                   ) : news.length === 0 ? (
-                    <div className="bg-white p-20 rounded-[2.5rem] border-4 border-dashed border-slate-200 text-center">
+                    <div className="bg-white p-10 md:p-20 rounded-[2.5rem] border-4 border-dashed border-slate-200 text-center">
                       <p className="text-slate-300 font-black italic uppercase tracking-[0.4em]">
                         Belum Ada Berita Terbit
                       </p>
@@ -2555,7 +2651,7 @@ export default function AdminDashboard({
                     news.map((article) => (
                       <article
                         key={article.id}
-                        className="bg-white p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl group flex gap-8"
+                        className="bg-white p-5 md:p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl group flex gap-8"
                       >
                         <div className="w-48 h-48 bg-slate-50 rounded-2xl border-4 border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative">
                           {article.imageUrl ? (
@@ -2633,7 +2729,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex gap-4">
                     {["SEMUA", "OPERASIONAL", "KEGIATAN"].map((f) => (
                       <button
@@ -2670,9 +2766,9 @@ export default function AdminDashboard({
                     Unggah Media Umum
                   </button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                   {dataLoading.gallery ? (
-                    <div className="col-span-full py-20 px-4 text-center">
+                    <div className="col-span-full py-12 md:py-20 px-4 text-center">
                       <LoadingSpinner message="Menyiapkan Galeri Digital..." />
                     </div>
                   ) : (
@@ -2724,7 +2820,7 @@ export default function AdminDashboard({
 
                       if (combined.length === 0) {
                         return (
-                          <div className="col-span-full py-20 text-center bg-white rounded-3xl border-4 border-dashed border-slate-100">
+                          <div className="col-span-full py-12 md:py-20 text-center bg-white rounded-3xl border-4 border-dashed border-slate-100">
                             <p className="text-slate-300 font-black italic uppercase tracking-[0.4em]">
                               Belum Ada Dokumentasi Tersedia
                             </p>
@@ -3024,7 +3120,7 @@ export default function AdminDashboard({
                       .map((doc) => (
                         <div
                           key={doc.id}
-                          className="bg-white p-8 rounded-3xl border-4 border-slate-900 shadow-[12px_12px_0px_0px_rgba(15,23,42,0.05)] hover:shadow-[12px_12px_0px_0px_rgba(225,29,72,0.1)] transition-all flex items-center gap-8 group"
+                          className="bg-white p-5 md:p-8 rounded-3xl border-4 border-slate-900 shadow-[12px_12px_0px_0px_rgba(15,23,42,0.05)] hover:shadow-[12px_12px_0px_0px_rgba(225,29,72,0.1)] transition-all flex items-center gap-8 group"
                         >
                           <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center border-4 border-slate-100 group-hover:border-brand-red transition-colors shrink-0">
                             <FileDown className="w-8 h-8 text-slate-300 group-hover:text-brand-red transition-colors" />
@@ -3124,7 +3220,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-12"
               >
-                <div className="bg-brand-dark p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
+                <div className="bg-brand-dark p-6 lg:p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
                   <div className="relative z-10">
                     <h3 className="text-5xl text-white font-black uppercase italic tracking-tighter mb-4">
                       Edukasi &{" "}
@@ -3170,7 +3266,7 @@ export default function AdminDashboard({
                     education.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl flex gap-8 items-center"
+                        className="bg-white p-5 md:p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl flex gap-8 items-center"
                       >
                         <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0 border-4 border-slate-100 overflow-hidden">
                           {item.imageUrl ? (
@@ -3239,7 +3335,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center">
                       <Users className="w-6 h-6 text-white" />
@@ -3373,14 +3469,14 @@ export default function AdminDashboard({
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {users.length === 0 ? (
-                      <div className="col-span-full p-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200 font-black italic text-slate-300 uppercase tracking-[0.4em]">
+                      <div className="col-span-full p-10 md:p-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200 font-black italic text-slate-300 uppercase tracking-[0.4em]">
                         Belum Ada Pengguna...
                       </div>
                     ) : (
                       users.map((u) => (
                         <div
                           key={u.id}
-                          className="bg-white p-10 rounded-[2.5rem] border-4 border-slate-900 relative shadow-2xl overflow-hidden group"
+                          className="bg-white p-6 md:p-10 rounded-[2.5rem] border-4 border-slate-900 relative shadow-2xl overflow-hidden group"
                         >
                           <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[3rem] border-l-4 border-b-4 border-slate-900 flex flex-col items-center justify-center font-black italic text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all">
                             <span className="text-[8px] uppercase tracking-widest mb-1">
@@ -3472,7 +3568,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl shadow-sm border border-slate-100">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
                       <Bot className="w-8 h-8 text-white" />
@@ -3578,8 +3674,9 @@ export default function AdminDashboard({
                       <LoadingSpinner message="Mengambil Catatan Aktivitas..." />
                     </div>
                   ) : (
-                    <table className="w-full text-left">
-                      <tbody className="divide-y-4 divide-slate-50">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left whitespace-nowrap">
+                        <tbody className="divide-y-4 divide-slate-50">
                         {logs.length === 0 ? (
                           <tr>
                             <td
@@ -3618,6 +3715,7 @@ export default function AdminDashboard({
                         )}
                       </tbody>
                     </table>
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -3634,7 +3732,7 @@ export default function AdminDashboard({
                   <LoadingSpinner message="Sinkronisasi Konfigurasi Sistem..." />
                 ) : (
                   <div className="grid md:grid-cols-2 gap-12">
-                    <div className="bg-white p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl space-y-10 overflow-y-auto max-h-[80vh]">
+                    <div className="bg-white p-6 lg:p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl space-y-10 overflow-y-auto max-h-[80vh]">
                       <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 border-b-8 border-brand-red pb-4 inline-block">
                         Ekosistem{" "}
                         <span className="text-brand-red">Digital</span>
@@ -3695,7 +3793,7 @@ export default function AdminDashboard({
                             className="w-full bg-slate-50 border-4 border-slate-100 rounded-2xl p-5 font-black italic outline-none focus:border-brand-red"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
                               Kontak Utama
@@ -3763,7 +3861,7 @@ export default function AdminDashboard({
                             <Radio className="w-4 h-4 text-brand-red" /> Media
                             Sosial
                           </h4>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="relative font-bold">
                               <Instagram className="absolute left-4 top-4 w-5 h-5 text-slate-300" />
                               <input
@@ -4055,7 +4153,7 @@ export default function AdminDashboard({
                                       className="flex flex-col sm:flex-row gap-4 p-6 bg-slate-50 rounded-2xl border-2 border-slate-100"
                                     >
                                       <div className="flex-1 space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                           <div className="space-y-1">
                                             <label className="text-[8px] font-black text-slate-400 uppercase">
                                               Judul Tombol
@@ -4155,7 +4253,7 @@ export default function AdminDashboard({
                     </div>
 
                     <div className="space-y-12">
-                      <div className="bg-white p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl">
+                      <div className="bg-white p-6 lg:p-12 rounded-[3.5rem] border-4 border-slate-900 shadow-2xl">
                         <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-10 pb-4 border-b-8 border-slate-900 inline-block">
                           Sistem <span className="text-brand-red">API</span>
                         </h3>
@@ -4191,7 +4289,7 @@ export default function AdminDashboard({
                           </div>
                         </div>
                       </div>
-                      <div className="bg-brand-dark p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
+                      <div className="bg-brand-dark p-6 md:p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
                         <div className="relative z-10">
                           <h4 className="text-xl font-black uppercase italic italic mb-4">
                             Update Versi App
@@ -4219,7 +4317,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-12"
               >
-                <div className="flex justify-between items-center bg-white p-8 rounded-3xl border-4 border-slate-900 shadow-2xl">
+                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-slate-900 shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg">
                       <LayoutDashboard className="w-6 h-6 text-white" />
@@ -4258,7 +4356,7 @@ export default function AdminDashboard({
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {themes.length === 0 ? (
-                    <div className="col-span-full p-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200">
+                    <div className="col-span-full p-10 md:p-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200">
                       <p className="text-slate-300 font-black italic uppercase tracking-[0.4em] mb-8">
                         Belum ada katalog tema
                       </p>
@@ -4274,7 +4372,7 @@ export default function AdminDashboard({
                       <div
                         key={theme.id}
                         className={cn(
-                          "bg-white rounded-[2.5rem] border-4 p-8 relative shadow-2xl transition-all group overflow-hidden",
+                          "bg-white rounded-[2.5rem] border-4 p-5 md:p-8 relative shadow-2xl transition-all group overflow-hidden",
                           theme.isActive
                             ? "border-brand-red scale-[1.02]"
                             : "border-slate-900 hover:border-brand-red opacity-80 hover:opacity-100",
@@ -4362,7 +4460,7 @@ export default function AdminDashboard({
                 </div>
 
                 {/* Default Preset Themes Tip */}
-                <div className="bg-brand-dark p-12 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden border-8 border-brand-red">
+                <div className="bg-brand-dark p-6 lg:p-12 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden border-8 border-brand-red">
                   <div className="relative z-10 flex flex-col lg:flex-row items-center gap-12">
                     <div className="w-40 h-40 bg-brand-red rounded-full flex items-center justify-center shrink-0 shadow-2xl shadow-red-900/50">
                       <Settings className="w-20 h-20 text-white animate-spin-slow" />
@@ -4399,7 +4497,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-12"
               >
-                <div className="bg-brand-dark p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
+                <div className="bg-brand-dark p-6 lg:p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
                   <div className="relative z-10">
                     <h3 className="text-5xl text-white font-black uppercase italic tracking-tighter mb-4">
                       Manajemen{" "}
@@ -4427,11 +4525,11 @@ export default function AdminDashboard({
 
                 <div className="grid md:grid-cols-2 gap-8">
                   {dataLoading.banners ? (
-                    <div className="col-span-full py-20 px-4 text-center">
+                    <div className="col-span-full py-12 md:py-20 px-4 text-center">
                       <LoadingSpinner message="Sinkronisasi Elemen Visual..." />
                     </div>
                   ) : banners.length === 0 ? (
-                    <div className="col-span-full p-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200 font-black italic text-slate-300 uppercase tracking-[0.4em]">
+                    <div className="col-span-full p-10 md:p-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200 font-black italic text-slate-300 uppercase tracking-[0.4em]">
                       Belum Ada Konfigurasi Banner...
                     </div>
                   ) : (
@@ -4511,7 +4609,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-4xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit Tema Visual" : "Tambah Tema Baru"}
                 </h3>
@@ -4531,7 +4629,7 @@ export default function AdminDashboard({
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 text-center">
                     🎨 Preset Tema Profesional (Akses Cepat)
                   </p>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {THEME_PRESETS.map((preset) => (
                       <button
                         key={preset.name}
@@ -4584,7 +4682,7 @@ export default function AdminDashboard({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Warna Utama (Primary)
@@ -4688,7 +4786,7 @@ export default function AdminDashboard({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Warna Latar (BG)
@@ -4788,7 +4886,7 @@ export default function AdminDashboard({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Warna Aksen
@@ -4878,7 +4976,7 @@ export default function AdminDashboard({
 
                   {/* Right Column: Preview & Font */}
                   <div className="space-y-8">
-                    <div className="bg-slate-900 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group border-4 border-white/5">
+                    <div className="bg-slate-900 p-6 md:p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group border-4 border-white/5">
                       <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 blur-3xl rounded-full" />
                       <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red mb-8 italic">
                         PREVIEW KONFIGURASI LIVE
@@ -4891,7 +4989,7 @@ export default function AdminDashboard({
                           <div className="w-6 h-6 bg-white/20 rounded-lg animate-pulse" />
                         </div>
                         <div
-                          className="h-40 w-full rounded-3xl p-8 flex flex-col justify-center gap-2 border shadow-inner transition-colors duration-500"
+                          className="h-40 w-full rounded-3xl p-5 md:p-8 flex flex-col justify-center gap-2 border shadow-inner transition-colors duration-500"
                           style={{
                             backgroundColor: themeForm.backgroundColor,
                             color: themeForm.textColor,
@@ -4934,7 +5032,7 @@ export default function AdminDashboard({
                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Tipografi (Font Family)
                       </label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {[
                           {
                             id: "Inter",
@@ -5020,7 +5118,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Tambah Laporan Manual
                 </h3>
@@ -5032,7 +5130,7 @@ export default function AdminDashboard({
                 </button>
               </div>
               <form onSubmit={handleSaveReport} className="p-8 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Jenis Kejadian
@@ -5086,7 +5184,7 @@ export default function AdminDashboard({
                     placeholder="Alamat lengkap kejadian..."
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Nama Pelapor
@@ -5142,7 +5240,7 @@ export default function AdminDashboard({
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Foto Dokumentasi Awal
                   </label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FileUpload
                       label="Upload Foto"
                       allowedTypes={["image/*"]}
@@ -5206,7 +5304,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-3xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit Warta Berita" : "Tambah Warta Baru"}
                 </h3>
@@ -5231,7 +5329,7 @@ export default function AdminDashboard({
                     className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Kategori
@@ -5318,7 +5416,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Tambah Akses Petugas
                 </h3>
@@ -5402,7 +5500,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit" : "Tambah"} Sensor Sungai
                 </h3>
@@ -5431,7 +5529,7 @@ export default function AdminDashboard({
                     placeholder="Contoh: Kuala Lapang, Malinau Kota"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Tinggi Air (Meter)
@@ -5517,7 +5615,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <CloudRain className="w-5 h-5 text-brand-red" />
                   <h3 className="text-2xl font-black italic uppercase tracking-tighter">
@@ -5542,12 +5640,11 @@ export default function AdminDashboard({
                     {isFetchingAiWeather ? (
                       <>
                         <CloudLightning className="w-4 h-4 animate-spin" />{" "}
-                        Sedang Menarik Data BMKG...
+                        Sedang Menarik Data Satelit...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4" /> Tarik Data Otomatis (AI
-                        BMKG)
+                        <Sparkles className="w-4 h-4" /> Tarik Data Otomatis (Satelit Open-Meteo)
                       </>
                     )}
                   </button>
@@ -5570,7 +5667,7 @@ export default function AdminDashboard({
                     placeholder="Cerah / Hujan Ringan..."
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Curah Hujan (mm)
@@ -5611,7 +5708,7 @@ export default function AdminDashboard({
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Kesimpulan Data (AI BMKG)
+                    Kesimpulan Data (Satelit Open-Meteo)
                   </label>
                   <textarea
                     required
@@ -5669,7 +5766,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Unggah Media Baru
                 </h3>
@@ -5774,7 +5871,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden text-slate-900"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem
                     ? "Edit Materi Edukasi"
@@ -5801,7 +5898,7 @@ export default function AdminDashboard({
                     className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Kategori
@@ -5870,7 +5967,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-4xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] text-slate-900"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit Konten Profil" : "Tambah Konten Profil"}
                 </h3>
@@ -5926,7 +6023,7 @@ export default function AdminDashboard({
                         placeholder="visi-misi"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Urutan Tampil
@@ -6016,7 +6113,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-slate-50 w-full max-w-5xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg">
                     <FileText className="w-6 h-6 text-white" />
@@ -6064,7 +6161,7 @@ export default function AdminDashboard({
 
               <div className="p-10 overflow-y-auto space-y-10">
                 <div className="grid md:grid-cols-3 gap-8">
-                  <div className="bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm">
+                  <div className="bg-white p-5 md:p-8 rounded-3xl border-2 border-slate-100 shadow-sm">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                       Informasi Dasar
                     </p>
@@ -6098,7 +6195,7 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  <div className="bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm">
+                  <div className="bg-white p-5 md:p-8 rounded-3xl border-2 border-slate-100 shadow-sm">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                       Pelapor & Lokasi
                     </p>
@@ -6131,7 +6228,7 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  <div className="bg-brand-dark p-8 rounded-3xl text-white shadow-xl relative overflow-hidden">
+                  <div className="bg-brand-dark p-5 md:p-8 rounded-3xl text-white shadow-xl relative overflow-hidden">
                     <div className="relative z-10">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                         Uraian Awal
@@ -6171,7 +6268,7 @@ export default function AdminDashboard({
                     </div>
 
                     <div className="grid md:grid-cols-12 gap-10">
-                      <div className="md:col-span-12 bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm space-y-4">
+                      <div className="md:col-span-12 bg-white p-5 md:p-8 rounded-3xl border-2 border-slate-100 shadow-sm space-y-4">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           Kronologi & Tindakan
                         </p>
@@ -6192,7 +6289,7 @@ export default function AdminDashboard({
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           Dokumentasi Foto & Video
                         </p>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {selectedReportDetail.documentation.photos?.map(
                             (p: string, i: number) => (
                               <img
@@ -6228,7 +6325,7 @@ export default function AdminDashboard({
                       </div>
 
                       <div className="md:col-span-4 space-y-6">
-                        <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl space-y-6">
+                        <div className="bg-slate-900 text-white p-5 md:p-8 rounded-3xl shadow-xl space-y-6">
                           <p className="text-[10px] font-black text-brand-red uppercase tracking-widest">
                             Statistik Penanganan
                           </p>
@@ -6306,7 +6403,7 @@ export default function AdminDashboard({
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white p-20 rounded-[3rem] border-4 border-dashed border-slate-200 text-center space-y-6">
+                  <div className="bg-white p-10 md:p-20 rounded-[3rem] border-4 border-dashed border-slate-200 text-center space-y-6">
                     <Clock className="w-16 h-16 text-slate-200 mx-auto" />
                     <div>
                       <h4 className="text-2xl font-black italic uppercase tracking-tighter text-slate-400">
@@ -6360,7 +6457,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-5xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg">
                     <CheckCircle className="w-6 h-6 text-white" />
@@ -6405,7 +6502,7 @@ export default function AdminDashboard({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Jumlah Personel
@@ -6463,7 +6560,7 @@ export default function AdminDashboard({
                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 underline decoration-brand-red decoration-2">
                         Dokumentasi Media (Foto & Video)
                       </label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FileUpload
                           label="Tambahkan Foto"
                           allowedTypes={["image/*"]}
@@ -6487,7 +6584,7 @@ export default function AdminDashboard({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Unit Terlibat
@@ -6576,7 +6673,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Manajemen Banner
                 </h3>
@@ -6629,7 +6726,7 @@ export default function AdminDashboard({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Teks Tombol (Opsional)
@@ -6662,7 +6759,7 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Warna Latar (Banner)
@@ -6917,7 +7014,7 @@ export default function AdminDashboard({
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit Data" : "Tambah Data Bank"}
                 </h3>
@@ -6950,7 +7047,7 @@ export default function AdminDashboard({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Kategori
@@ -6997,7 +7094,7 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Tipe File

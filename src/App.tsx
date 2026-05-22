@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LoadingSpinner, Skeleton } from './components/Loading';
 import DynamicBanner from './components/DynamicBanner';
+import WeatherWidget from './components/WeatherWidget';
 import { cn } from './lib/utils';
 
 import News from './pages/News';
@@ -142,12 +143,12 @@ function Home() {
       {/* Quick Action Navigation */}
       {(!config?.homeLayout || config.homeLayout.quickActions?.length > 0) && (
         <section className="max-w-7xl mx-auto px-6 sm:px-10 -mt-24 relative z-20">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
             {activeActions.map((action, i) => (
               <Link 
                 key={i} 
                 to={`/report?type=${action.title}`}
-                className="group bg-white rounded-[2rem] p-8 sm:p-10 border border-slate-50 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col items-center text-center overflow-hidden relative"
+                className="group bg-white rounded-[2rem] p-5 md:p-8 sm:p-10 border border-slate-50 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col items-center text-center overflow-hidden relative"
               >
                 <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 transition-transform group-hover:scale-110 duration-500", action.color)}>
                    {iconMap[action.icon] || <Info className="w-8 h-8" />}
@@ -160,6 +161,9 @@ function Home() {
           </div>
         </section>
       )}
+
+      {/* Weather Widget */}
+      <WeatherWidget />
 
       {/* Latest News Section */}
       {(!config?.homeLayout || config.homeLayout.showNewsSection) && (
@@ -239,7 +243,7 @@ function Home() {
 
       {/* Personil Siaga Section */}
       <section className="max-w-7xl mx-auto px-6 sm:px-10">
-        <div className="bg-slate-900 rounded-[4rem] p-12 sm:p-20 relative overflow-hidden border-4 border-brand-red/20 shadow-2xl">
+        <div className="bg-slate-900 rounded-[4rem] p-6 lg:p-12 sm:p-20 relative overflow-hidden border-4 border-brand-red/20 shadow-2xl">
            <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/10 blur-[120px] -mr-48 -mt-48 rounded-full" />
            
            <div className="relative z-10">
@@ -270,7 +274,7 @@ function Home() {
                      const presentPersonnel = latestReport?.attendance?.filter((a: any) => a.status === 'hadir') || [];
 
                      return (
-                        <div key={sector.id} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group shadow-inner flex flex-col">
+                        <div key={sector.id} className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group shadow-inner flex flex-col">
                            <div className="flex items-center gap-4 mb-6">
                               <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
                                  <MapPin className="w-6 h-6 text-white" />
@@ -349,7 +353,7 @@ function Home() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-brand-dark p-10 rounded-[3.5rem] text-white border-4 border-slate-900 shadow-2xl relative overflow-hidden group"
+                className="bg-brand-dark p-6 md:p-10 rounded-[3.5rem] text-white border-4 border-slate-900 shadow-2xl relative overflow-hidden group"
               >
                 <div className="absolute top-0 right-0 p-8">
                   <ShieldAlert className="w-10 h-10 text-brand-red opacity-20 group-hover:opacity-100 transition-opacity" />
@@ -406,7 +410,7 @@ function Home() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-red/5 rounded-full blur-3xl -z-10" />
         
         <div className="lg:col-span-4">
-          <h2 className="text-6xl font-display font-black italic uppercase tracking-tighter mb-8 leading-[0.85]">Kesiapan <br /> <span className="text-brand-red">Warga.</span></h2>
+          <h2 className="text-5xl md:text-6xl font-display font-black italic uppercase tracking-tighter mb-8 leading-[0.85]">Kesiapan <br /> <span className="text-brand-red">Warga.</span></h2>
           <p className="text-slate-500 font-bold mb-8 leading-relaxed max-w-xs">
             Kecepatan penanganan dimulai dari ketepatan pelaporan. Lindungi Kabupaten Malinau bersama tim kami.
           </p>
@@ -416,14 +420,14 @@ function Home() {
         </div>
 
         <div className="lg:col-span-8 grid md:grid-cols-2 gap-8">
-          <div className="bg-slate-50 p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group">
+          <div className="bg-slate-50 p-6 md:p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group">
             <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-8 group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:rotate-6">
               <ShieldAlert className="w-8 h-8" />
             </div>
             <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-4 text-brand-dark">Respon Kilat</h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Sistem pelaporan real-time yang terhubung langsung ke unit taktis lapangan.</p>
           </div>
-          <div className="bg-slate-50 p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group">
+          <div className="bg-slate-50 p-6 md:p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group">
             <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-8 group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:-rotate-6">
               <Newspaper className="w-8 h-8" />
             </div>
@@ -446,8 +450,8 @@ function Report() {
         defaultSubtitle="Respon Anda Menentukan Keselamatan Kita Bersama. Laporkan segera setiap kejadian darurat untuk penanganan kilat."
         defaultImage="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=2069"
       />
-      <div className="max-w-5xl mx-auto px-8 -mt-20 relative z-20">
-        <div className="bg-white p-12 rounded-[3.5rem] shadow-3xl border-8 border-slate-900">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-20 relative z-20">
+        <div className="bg-white p-6 sm:p-12 rounded-[2.5rem] sm:rounded-[3.5rem] shadow-3xl border-8 border-slate-900">
            <FormLaporan />
         </div>
       </div>
@@ -475,7 +479,7 @@ function Dashboard() {
     <div className="pt-48 pb-20 max-w-7xl mx-auto px-8">
       <div className="flex items-end justify-between mb-16 border-b-[12px] border-brand-dark pb-10">
         <div>
-          <h2 className="text-7xl font-display font-black italic uppercase tracking-tighter text-brand-dark">Dashboard <span className="text-brand-red">Pusat.</span></h2>
+          <h2 className="text-5xl md:text-7xl font-display font-black italic uppercase tracking-tighter text-brand-dark">Dashboard <span className="text-brand-red">Pusat.</span></h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">PUSAT KOMANDO SATUAN TUGAS MALINAU</p>
         </div>
         <div className="hidden lg:flex gap-4">
@@ -588,7 +592,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
           key="auth-error-box"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-12 rounded-[3.5rem] border-[12px] border-slate-900 max-w-lg w-full text-center"
+          className="bg-white p-6 lg:p-12 rounded-[3.5rem] border-[12px] border-slate-900 max-w-lg w-full text-center"
         >
           <div className="w-24 h-24 bg-brand-red/10 rounded-full flex items-center justify-center mx-auto mb-8">
             <Lock className="w-10 h-10 text-brand-red animate-pulse" />
@@ -631,7 +635,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-8 text-center">
+        <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-5 md:p-8 text-center">
           <AlertTriangle className="w-20 h-20 text-brand-red mb-8 animate-bounce" />
           <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">Terjadi Gangguan Sistem</h1>
           <div className="max-w-xl bg-black/30 border border-white/10 p-6 rounded-2xl mb-8">
@@ -742,7 +746,7 @@ function AppContent() {
           <Route path="/documentation" element={<Documentation />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="*" element={
-            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-5 md:p-8 text-center">
                <ShieldAlert className="w-20 h-20 text-brand-red mb-8" />
                <h1 className="text-6xl font-black text-slate-900 uppercase italic tracking-tighter mb-4 leading-none">404</h1>
                <p className="text-slate-500 font-bold mb-8 italic uppercase tracking-widest text-[10px]">Halaman Tidak Ditemukan</p>

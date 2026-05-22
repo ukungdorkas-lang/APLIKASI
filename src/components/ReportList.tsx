@@ -29,7 +29,7 @@ export default function ReportList({ reports, onUpdateStatus, onGenerateNews }: 
       {reports.map((report) => (
         <div 
           key={report.id}
-          className="bg-white rounded-[2rem] border-4 border-slate-900 p-8 hover:shadow-2xl transition-all relative overflow-hidden group"
+          className="bg-white rounded-[2rem] border-4 border-slate-900 p-5 md:p-8 hover:shadow-2xl transition-all relative overflow-hidden group"
         >
           <div className="absolute top-0 right-0 w-2 h-full bg-brand-red opacity-0 group-hover:opacity-100 transition-opacity" />
           
@@ -94,7 +94,7 @@ export default function ReportList({ reports, onUpdateStatus, onGenerateNews }: 
             </div>
             
             <div className="md:col-span-4 flex flex-col gap-6">
-              <div className="bg-slate-50 rounded-2xl p-8 border-4 border-slate-100 flex-1 relative overflow-hidden">
+              <div className="bg-slate-50 rounded-2xl p-5 md:p-8 border-4 border-slate-100 flex-1 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-16 h-16 bg-slate-200 rotate-45 transform translate-x-8 -translate-y-8" />
                 <p className="tag-label text-slate-400 mb-4 tracking-[0.2em]">Prioritas Satuan</p>
                 <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ export default function ReportList({ reports, onUpdateStatus, onGenerateNews }: 
                   </div>
                   <div className="space-y-6">
                     <h4 className="heading-bold text-xl uppercase italic">Data Geospasial</h4>
-                    <div className="bg-brand-dark p-8 rounded-3xl border-4 border-slate-800 shadow-2xl">
+                    <div className="bg-brand-dark p-5 md:p-8 rounded-3xl border-4 border-slate-800 shadow-2xl">
                       <pre className="text-brand-red text-sm font-mono leading-relaxed">
                         {JSON.stringify(report.location, null, 2)}
                       </pre>

@@ -356,7 +356,7 @@ export default function OperationalDashboard() {
 
         {/* Recap Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          <div className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative group">
+          <div className="bg-white p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[4rem] -mr-12 -mt-12 group-hover:scale-110 transition-transform" />
             <div className="flex justify-between items-start mb-2 relative z-10">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Kehadiran: PIKET PAGI</p>
@@ -380,7 +380,7 @@ export default function OperationalDashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative group">
+          <div className="bg-white p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-[4rem] -mr-12 -mt-12 group-hover:scale-110 transition-transform" />
             <div className="flex justify-between items-start mb-2 relative z-10">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Kehadiran: PIKET MALAM</p>
@@ -404,7 +404,7 @@ export default function OperationalDashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative group">
+          <div className="bg-white p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-[4rem] -mr-12 -mt-12 group-hover:scale-110 transition-transform" />
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 italic">Giat Operasional</p>
             <div className="flex items-baseline gap-2">
@@ -417,7 +417,7 @@ export default function OperationalDashboard() {
             </div>
           </div>
 
-          <div className="bg-slate-900 p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative">
+          <div className="bg-slate-900 p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl overflow-hidden relative">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 italic">Laporan Today</p>
             <h3 className="text-5xl font-black text-white italic tracking-tighter">{stats.daily}</h3>
             <div className="mt-6 p-4 bg-brand-red/20 rounded-2xl border border-brand-red/30">
@@ -427,8 +427,8 @@ export default function OperationalDashboard() {
         </div>
 
         {/* Global Absenteeism Recap */}
-        <div className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-2xl mb-16 relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-8 flex gap-3">
+        <div className="bg-white p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-2xl mb-16 relative overflow-hidden">
+           <div className="absolute top-0 right-0 p-5 md:p-8 flex gap-3">
               <button 
                 onClick={() => exportAttendanceRecap()}
                 className="flex items-center gap-2 bg-slate-100 text-slate-900 px-4 py-3 rounded-xl font-black italic uppercase tracking-tighter text-[10px] hover:bg-slate-200 transition-all border-2 border-slate-900 shadow-lg"
@@ -509,7 +509,7 @@ export default function OperationalDashboard() {
                   <motion.div 
                     key={`rep-${report.id}`}
                     id={`report-${report.id}`}
-                    className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl group hover:-translate-y-1 transition-all"
+                    className="bg-white p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-xl group hover:-translate-y-1 transition-all"
                   >
                     <div className="flex flex-wrap justify-between items-start gap-6">
                       <div className="flex gap-6">
@@ -634,7 +634,7 @@ export default function OperationalDashboard() {
 
           {/* Sidebar Info */}
           <div className="lg:col-span-4 space-y-8">
-             <div className="bg-brand-dark p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden border-4 border-slate-800">
+             <div className="bg-brand-dark p-5 md:p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden border-4 border-slate-800">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-brand-red/10 blur-[60px] rounded-full" />
                 <h3 className="text-lg font-black uppercase italic tracking-tighter mb-8 flex items-center gap-3">
                    <Users className="w-6 h-6 text-brand-red" /> Personil Siaga <span className="text-[8px] bg-brand-red px-2 py-0.5 rounded ml-auto">LIVE</span>
@@ -674,7 +674,7 @@ export default function OperationalDashboard() {
                 </button>
              </div>
 
-             <div className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-2xl">
+             <div className="bg-white p-5 md:p-8 rounded-[2.5rem] border-4 border-slate-900 shadow-2xl">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter mb-8 flex items-center gap-3">
                    <Clock className="w-6 h-6 text-brand-red" /> Quick Actions
                 </h3>

@@ -34,7 +34,7 @@ export default function DashboardStats({ reports }: { reports: EmergencyReport[]
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group"
+            className="bg-white p-5 md:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group"
           >
             <div className={cn("absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20 transition-opacity group-hover:opacity-40", s.bg)} />
             <div className="flex items-center justify-between mb-4">
@@ -60,7 +60,7 @@ export default function DashboardStats({ reports }: { reports: EmergencyReport[]
       </div>
 
       <div className="grid lg:grid-cols-2 gap-10">
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex justify-between items-center mb-10">
             <h3 className="text-lg font-display font-black text-slate-900 uppercase tracking-tighter">Sebaran <span className="text-brand-red">Insiden</span></h3>
             <select className="bg-slate-50 border-none rounded-lg px-4 py-2 text-[10px] font-bold uppercase text-slate-500 outline-none">
@@ -105,7 +105,7 @@ export default function DashboardStats({ reports }: { reports: EmergencyReport[]
           </div>
         </div>
 
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex justify-between items-center mb-10">
             <h3 className="text-lg font-display font-black text-slate-900 uppercase tracking-tighter">Analisis <span className="text-brand-red">Respon</span></h3>
             <div className="flex gap-2">
