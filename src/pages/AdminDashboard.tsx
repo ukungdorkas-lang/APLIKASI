@@ -1132,7 +1132,10 @@ export default function AdminDashboard({
   const handleSaveBankData = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!bankDataForm.fileUrl || bankDataForm.fileUrl.includes("example.com")) {
+      if (
+        !bankDataForm.fileUrl ||
+        bankDataForm.fileUrl.includes("example.com")
+      ) {
         showToast("Harap unggah file terlebih dahulu", "error");
         return;
       }
@@ -1958,18 +1961,18 @@ export default function AdminDashboard({
                                     <Newspaper className="w-5 h-5" />
                                   </button>
                                 )}
-                                <button
-                                  onClick={() =>
-                                    handleDeleteItem("reports", report.id)
-                                  }
-                                  className="p-4 text-slate-300 hover:text-red-500 transition-colors"
-                                  title="Delete Report"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
+                              <button
+                                onClick={() =>
+                                  handleDeleteItem("reports", report.id)
+                                }
+                                className="p-4 text-slate-300 hover:text-red-500 transition-colors"
+                                title="Delete Report"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
                             </div>
                           </div>
+                        </div>
                       </motion.div>
                     ))
                   )}
@@ -2592,13 +2595,15 @@ export default function AdminDashboard({
                       <button
                         key={`gallery-filter-${f}`}
                         onClick={() =>
-                          setGalleryFilter(f as "SEMUA" | "OPERASIONAL" | "KEGIATAN")
+                          setGalleryFilter(
+                            f as "SEMUA" | "OPERASIONAL" | "KEGIATAN",
+                          )
                         }
                         className={cn(
                           "px-6 py-2 rounded-lg font-black text-[10px] uppercase italic tracking-tighter transition-all",
                           galleryFilter === f
                             ? "bg-brand-red text-white shadow-lg"
-                            : "bg-slate-50 border-2 border-slate-100 text-slate-400 hover:bg-slate-100"
+                            : "bg-slate-50 border-2 border-slate-100 text-slate-400 hover:bg-slate-100",
                         )}
                       >
                         {f}
@@ -2634,35 +2639,37 @@ export default function AdminDashboard({
                         type: "GALLERY",
                       }));
 
-                      const reportDocumentation = reports
-                        .flatMap((r) => {
-                          const allPhotos: string[] = [];
-                          if (r.photos && Array.isArray(r.photos)) {
-                            allPhotos.push(...r.photos);
-                          }
-                          if (
-                            r.documentation &&
-                            r.documentation.photos &&
-                            Array.isArray(r.documentation.photos)
-                          ) {
-                            allPhotos.push(...r.documentation.photos);
-                          }
+                      const reportDocumentation = reports.flatMap((r) => {
+                        const allPhotos: string[] = [];
+                        if (r.photos && Array.isArray(r.photos)) {
+                          allPhotos.push(...r.photos);
+                        }
+                        if (
+                          r.documentation &&
+                          r.documentation.photos &&
+                          Array.isArray(r.documentation.photos)
+                        ) {
+                          allPhotos.push(...r.documentation.photos);
+                        }
 
-                          return allPhotos.map((photoUrl, index) => ({
-                            id: `report-${r.id}-p${index}`,
-                            title: `${r.type} - ${r.location?.address || "Malinau"}`,
-                            category: "OPERASIONAL",
-                            imageUrl: photoUrl,
-                            description:
-                              r.documentation?.chronology || r.description,
-                            createdAt: r.createdAt,
-                            source: "report",
-                            reportData: r,
-                            type: "REPORT_DOC",
-                          }));
-                        });
+                        return allPhotos.map((photoUrl, index) => ({
+                          id: `report-${r.id}-p${index}`,
+                          title: `${r.type} - ${r.location?.address || "Malinau"}`,
+                          category: "OPERASIONAL",
+                          imageUrl: photoUrl,
+                          description:
+                            r.documentation?.chronology || r.description,
+                          createdAt: r.createdAt,
+                          source: "report",
+                          reportData: r,
+                          type: "REPORT_DOC",
+                        }));
+                      });
 
-                      const combined = [...manualGallery, ...reportDocumentation]
+                      const combined = [
+                        ...manualGallery,
+                        ...reportDocumentation,
+                      ]
                         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
                         .filter((item) => {
                           if (galleryFilter === "SEMUA") return true;
@@ -2693,15 +2700,55 @@ export default function AdminDashboard({
                           />
                           <div className="absolute inset-0 bg-brand-dark/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
                             {item.source === "report" ? (
-                              <button
-                                onClick={() => {
-                                  setSelectedReportDetail(item.reportData);
-                                  setShowDetailModal(true);
-                                }}
-                                className="px-6 py-2 bg-white text-brand-dark font-black text-[10px] uppercase italic rounded-xl hover:bg-brand-red hover:text-white transition-all shadow-2xl"
-                              >
-                                Lihat Detail Kejadian
-                              </button>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setSelectedReportDetail(item.reportData);
+                                    setShowDetailModal(true);
+                                  }}
+                                  className="px-6 py-2 bg-white text-brand-dark font-black text-[10px] uppercase italic rounded-xl hover:bg-brand-red hover:text-white transition-all shadow-2xl"
+                                >
+                                  Lihat Detail
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedReport(item.reportData);
+                                    setDocsForm({
+                                      chronology:
+                                        item.reportData.documentation
+                                          ?.chronology ||
+                                        item.reportData.description ||
+                                        "",
+                                      photos:
+                                        item.reportData.documentation?.photos ||
+                                        item.reportData.photos ||
+                                        [],
+                                      videos:
+                                        item.reportData.documentation?.videos ||
+                                        [],
+                                      personnel:
+                                        item.reportData.documentation
+                                          ?.personnel || 5,
+                                      units: item.reportData.documentation
+                                        ?.units || ["Unit Gajah 01"],
+                                      duration:
+                                        item.reportData.documentation
+                                          ?.duration || "1 Jam",
+                                      victims:
+                                        item.reportData.documentation
+                                          ?.victims || "Nihil",
+                                      actions:
+                                        item.reportData.documentation
+                                          ?.actions || "",
+                                    });
+                                    setShowDocsModal(true);
+                                  }}
+                                  className="p-3 bg-brand-red rounded-xl hover:scale-110 transition-transform shadow-xl"
+                                  title="Edit Dokumentasi Laporan"
+                                >
+                                  <Edit className="w-5 h-5 text-white" />
+                                </button>
+                              </div>
                             ) : (
                               <>
                                 <button
@@ -2743,7 +2790,7 @@ export default function AdminDashboard({
                                 "text-white text-[8px] font-black uppercase px-3 py-1 rounded-full",
                                 item.category === "KEGIATAN"
                                   ? "bg-blue-600"
-                                  : "bg-brand-red"
+                                  : "bg-brand-red",
                               )}
                             >
                               {item.category || "OPERASIONAL"}
@@ -2755,7 +2802,7 @@ export default function AdminDashboard({
                             </p>
                             <p className="text-[8px] text-slate-300 font-medium uppercase mt-1">
                               {new Date(item.createdAt).toLocaleDateString(
-                                "id-ID"
+                                "id-ID",
                               )}
                             </p>
                           </div>
@@ -2777,7 +2824,8 @@ export default function AdminDashboard({
                 <div className="flex justify-between items-end gap-10">
                   <div className="flex-1">
                     <h3 className="text-4xl font-black italic uppercase tracking-tighter mb-4">
-                      Bank <span className="text-brand-red">Data & Dokumen</span>
+                      Bank{" "}
+                      <span className="text-brand-red">Data & Dokumen</span>
                     </h3>
                     <div className="relative group max-w-xl">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-brand-red transition-colors" />
@@ -2827,7 +2875,7 @@ export default function AdminDashboard({
                         "px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap border-2",
                         bankDataFilter === cat
                           ? "bg-slate-900 text-white border-slate-900 shadow-lg scale-105"
-                          : "bg-white text-slate-400 border-slate-100 hover:border-slate-300"
+                          : "bg-white text-slate-400 border-slate-100 hover:border-slate-300",
                       )}
                     >
                       {cat}
@@ -2840,11 +2888,18 @@ export default function AdminDashboard({
                     <LoadingSpinner message="Menyusun Arsip Digital..." />
                   ) : bankData.filter((d) => {
                       const matchesSearch =
-                        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        d.department.toLowerCase().includes(searchQuery.toLowerCase());
+                        d.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()) ||
+                        d.category
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()) ||
+                        d.department
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase());
                       const matchesCategory =
-                        bankDataFilter === "SEMUA" || d.category === bankDataFilter;
+                        bankDataFilter === "SEMUA" ||
+                        d.category === bankDataFilter;
                       return matchesSearch && matchesCategory;
                     }).length === 0 ? (
                     <div className="py-20 text-center bg-white rounded-3xl border-4 border-dashed border-slate-100 italic font-black uppercase text-slate-300 tracking-[0.4em]">
@@ -2854,11 +2909,18 @@ export default function AdminDashboard({
                     bankData
                       .filter((d) => {
                         const matchesSearch =
-                          d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.department.toLowerCase().includes(searchQuery.toLowerCase());
+                          d.title
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                          d.category
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                          d.department
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase());
                         const matchesCategory =
-                          bankDataFilter === "SEMUA" || d.category === bankDataFilter;
+                          bankDataFilter === "SEMUA" ||
+                          d.category === bankDataFilter;
                         return matchesSearch && matchesCategory;
                       })
                       .map((doc) => (
@@ -2898,31 +2960,32 @@ export default function AdminDashboard({
                             </div>
                           </div>
                           <div className="flex gap-3">
-                            {doc.fileUrl && !doc.fileUrl.includes("example.com") && (
-                              <>
-                                <a
-                                  href={doc.fileUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="p-4 bg-slate-100 text-slate-900 rounded-xl hover:scale-110 transition-all border-2 border-slate-200"
-                                  title="Lihat Dokumen"
-                                >
-                                  <Eye className="w-5 h-5" />
-                                </a>
-                                <button
-                                  onClick={() =>
-                                    handleDownloadFile(doc.fileUrl, doc.title)
-                                  }
-                                  className="px-6 py-4 bg-slate-900 text-white rounded-xl hover:scale-105 flex items-center gap-3 transition-all"
-                                  title="Download"
-                                >
-                                  <FileDown className="w-5 h-5" />
-                                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
-                                    Download
-                                  </span>
-                                </button>
-                              </>
-                            )}
+                            {doc.fileUrl &&
+                              !doc.fileUrl.includes("example.com") && (
+                                <>
+                                  <a
+                                    href={doc.fileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-4 bg-slate-100 text-slate-900 rounded-xl hover:scale-110 transition-all border-2 border-slate-200"
+                                    title="Lihat Dokumen"
+                                  >
+                                    <Eye className="w-5 h-5" />
+                                  </a>
+                                  <button
+                                    onClick={() =>
+                                      handleDownloadFile(doc.fileUrl, doc.title)
+                                    }
+                                    className="px-6 py-4 bg-slate-900 text-white rounded-xl hover:scale-105 flex items-center gap-3 transition-all"
+                                    title="Download"
+                                  >
+                                    <FileDown className="w-5 h-5" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
+                                      Download
+                                    </span>
+                                  </button>
+                                </>
+                              )}
                             <button
                               onClick={() => {
                                 setEditingItem(doc);
@@ -4888,7 +4951,7 @@ export default function AdminDashboard({
                     placeholder="Detail kejadian..."
                   />
                 </div>
-                    <div className="space-y-2">
+                <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Foto Dokumentasi Awal
                   </label>
@@ -4904,18 +4967,28 @@ export default function AdminDashboard({
                       }
                     />
                     <div className="flex gap-2 overflow-x-auto pb-2">
-                       {reportForm.photos?.map((p, i) => (
-                         <div key={i} className="relative w-16 h-16 shrink-0">
-                           <img src={p} className="w-full h-full object-cover rounded-lg border-2 border-slate-100" />
-                           <button 
-                             type="button"
-                             onClick={() => setReportForm({...reportForm, photos: reportForm.photos.filter((_, idx) => idx !== i)})}
-                             className="absolute -top-1 -right-1 bg-brand-red text-white p-0.5 rounded-full"
-                           >
-                             <CloseIcon className="w-3 h-3" />
-                           </button>
-                         </div>
-                       ))}
+                      {reportForm.photos?.map((p, i) => (
+                        <div key={i} className="relative w-16 h-16 shrink-0">
+                          <img
+                            src={p}
+                            className="w-full h-full object-cover rounded-lg border-2 border-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReportForm({
+                                ...reportForm,
+                                photos: reportForm.photos.filter(
+                                  (_, idx) => idx !== i,
+                                ),
+                              })
+                            }
+                            className="absolute -top-1 -right-1 bg-brand-red text-white p-0.5 rounded-full"
+                          >
+                            <CloseIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -5457,7 +5530,7 @@ export default function AdminDashboard({
                 </div>
                 <FileUpload
                   label="Unggah Dokumentasi Media"
-                  allowedTypes={['image/*', 'video/*']}
+                  allowedTypes={["image/*", "video/*"]}
                   initialUrl={galleryForm.imageUrl}
                   onUploadSuccess={(url) =>
                     setGalleryForm({ ...galleryForm, imageUrl: url })
@@ -5563,7 +5636,7 @@ export default function AdminDashboard({
                   </div>
                   <FileUpload
                     label="Upload Materi (PDF/IMG/VIDEO)"
-                    allowedTypes={['application/pdf', 'image/*', 'video/*']}
+                    allowedTypes={["application/pdf", "image/*", "video/*"]}
                     initialUrl={eduForm.imageUrl}
                     onUploadSuccess={(url) =>
                       setEduForm({ ...eduForm, imageUrl: url })
@@ -5770,32 +5843,36 @@ export default function AdminDashboard({
                     </p>
                   </div>
                 </div>
-                    <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingItem(selectedReportDetail);
-                        setReportForm({
-                          type: selectedReportDetail.type,
-                          location: selectedReportDetail.location || { address: "", lat: 3.58, lng: 116.63 },
-                          reporterName: selectedReportDetail.reporterName,
-                          reporterPhone: selectedReportDetail.phoneNumber || "",
-                          description: selectedReportDetail.description,
-                          level: selectedReportDetail.level || "normal",
-                          photos: selectedReportDetail.photos || [],
-                        });
-                        setShowReportModal(true);
-                      }}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors text-brand-red flex items-center gap-2 font-black italic uppercase text-[10px] tracking-widest bg-white/5 px-4"
-                    >
-                      <Edit className="w-4 h-4" /> Edit Laporan
-                    </button>
-                    <button
-                      onClick={() => setShowDetailModal(false)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                      <CloseIcon className="w-6 h-6" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingItem(selectedReportDetail);
+                      setReportForm({
+                        type: selectedReportDetail.type,
+                        location: selectedReportDetail.location || {
+                          address: "",
+                          lat: 3.58,
+                          lng: 116.63,
+                        },
+                        reporterName: selectedReportDetail.reporterName,
+                        reporterPhone: selectedReportDetail.phoneNumber || "",
+                        description: selectedReportDetail.description,
+                        level: selectedReportDetail.level || "normal",
+                        photos: selectedReportDetail.photos || [],
+                      });
+                      setShowReportModal(true);
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-brand-red flex items-center gap-2 font-black italic uppercase text-[10px] tracking-widest bg-white/5 px-4"
+                  >
+                    <Edit className="w-4 h-4" /> Edit Laporan
+                  </button>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <CloseIcon className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-10 overflow-y-auto space-y-10">
@@ -5875,18 +5952,21 @@ export default function AdminDashboard({
                       <p className="text-sm italic leading-relaxed font-medium">
                         "{selectedReportDetail.description}"
                       </p>
-                      {selectedReportDetail.photos && selectedReportDetail.photos.length > 0 && (
-                        <div className="mt-4 grid grid-cols-3 gap-2">
-                          {selectedReportDetail.photos.map((p: string, i: number) => (
-                            <img 
-                              key={i} 
-                              src={p} 
-                              className="w-full aspect-square object-cover rounded-lg border-2 border-white/20" 
-                              referrerPolicy="no-referrer"
-                            />
-                          ))}
-                        </div>
-                      )}
+                      {selectedReportDetail.photos &&
+                        selectedReportDetail.photos.length > 0 && (
+                          <div className="mt-4 grid grid-cols-3 gap-2">
+                            {selectedReportDetail.photos.map(
+                              (p: string, i: number) => (
+                                <img
+                                  key={i}
+                                  src={p}
+                                  className="w-full aspect-square object-cover rounded-lg border-2 border-white/20"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ),
+                            )}
+                          </div>
+                        )}
                     </div>
                     <AlertTriangle className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5" />
                   </div>

@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { AlertCircle, CheckCircle2, Phone, Send, Loader2, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Phone,
+  Send,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 
 // Tipe Data untuk Form dan Hasil API
 export interface LaporanFormData {
@@ -17,36 +24,48 @@ export interface LaporanFormData {
 export default function FormLaporan() {
   const locationState = useLocation();
   const queryParams = new URLSearchParams(locationState.search);
-  const initialType = queryParams.get('type') || 'Kebakaran';
+  const initialType = queryParams.get("type") || "Kebakaran";
 
   const [formData, setFormData] = useState<LaporanFormData>({
-    nama_pelapor: '',
-    no_hp: '',
-    alamat: '',
-    isi_laporan: '',
-    jenis_laporan: initialType === 'Evakuasi' || initialType === 'Penyelamatan' ? 'Penyelamatan' : 'Kebakaran',
-    sub_jenis_laporan: initialType === 'Evakuasi' ? 'Evakuasi' : (initialType === 'Kebakaran' ? 'Rumah' : 'Dan Lainnya')
+    nama_pelapor: "",
+    no_hp: "",
+    alamat: "",
+    isi_laporan: "",
+    jenis_laporan:
+      initialType === "Evakuasi" || initialType === "Penyelamatan"
+        ? "Penyelamatan"
+        : "Kebakaran",
+    sub_jenis_laporan:
+      initialType === "Evakuasi"
+        ? "Evakuasi"
+        : initialType === "Kebakaran"
+          ? "Rumah"
+          : "Dan Lainnya",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [ticketId, setTicketId] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [ticketId, setTicketId] = useState("");
 
   // Handler untuk mengelola perubahan input text dan select
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
     const { name, value } = e.target;
-    
-    if (name === 'jenis_laporan') {
+
+    if (name === "jenis_laporan") {
       setFormData({
         ...formData,
         jenis_laporan: value,
-        sub_jenis_laporan: value === 'Kebakaran' ? 'Rumah' : 'Evakuasi' // Reset sub jenis sesuai kategori baru
+        sub_jenis_laporan: value === "Kebakaran" ? "Rumah" : "Evakuasi", // Reset sub jenis sesuai kategori baru
       });
     } else {
       setFormData({
         ...formData,
-        [name]: value
+        [name]: value,
       });
     }
   };
@@ -55,34 +74,61 @@ export default function FormLaporan() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSuccessMessage('');
-    setErrorMessage('');
-    setTicketId('');
+    setSuccessMessage("");
+    setErrorMessage("");
+    setTicketId("");
 
     // Mengambil URL Google Apps Script dari file konfigurasi (.env)
-    const gasUrl = import.meta.env.VITE_GAS_URL; 
+    const gasUrl = import.meta.env.VITE_GAS_URL;
 
     if (!gasUrl) {
-      setErrorMessage("Konfigurasi belum lengkap! VITE_GAS_URL belum diatur di file .env Anda.");
+      setErrorMessage(
+        "Konfigurasi belum lengkap! VITE_GAS_URL belum diatur di file .env Anda.",
+      );
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // 1. Simpan ke Database Firestore
-      const docRef = await addDoc(collection(db, 'laporan_masuk'), {
-        ...formData,
-        createdAt: Date.now(),
-        status: 'pending'
-      });
-      console.log("Laporan berhasil tersimpan di Firestore dengan ID:", docRef.id);
+      // 1. Generate Report Number
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}`;
+      const randomStr = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
+      const reportNumber = `DMK-${dateStr}-${randomStr}`;
 
-      // 2. Kirim data ke Google Apps Script (Backend)
+      // 2. Simpan ke Database Firestore (koleksi "reports", format EmergencyReport)
+      const firestoreData = {
+        reporterName: formData.nama_pelapor,
+        phoneNumber: formData.no_hp,
+        type: formData.jenis_laporan,
+        description: `Kategori: ${formData.sub_jenis_laporan}\n\n${formData.isi_laporan}`,
+        location: {
+          lat: 0,
+          lng: 0,
+          address: formData.alamat,
+        },
+        level: "high",
+        status: "Menunggu Penanganan",
+        reportNumber,
+        createdAt: Date.now(),
+        newsGenerated: false,
+        source: "form_laporan",
+      };
+
+      const docRef = await addDoc(collection(db, "reports"), firestoreData);
+      console.log(
+        "Laporan berhasil tersimpan di Firestore dengan ID:",
+        docRef.id,
+      );
+
+      // 3. Kirim data asli ke Google Apps Script (Backend) untuk WhatsApp Fonnte
       console.log("Meneruskan laporan ke Backend GAS...");
       const responGas = await fetch(gasUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(formData) 
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(formData),
       });
 
       // 3. Baca jawaban dari GAS
@@ -91,15 +137,28 @@ export default function FormLaporan() {
 
       if (hasilGas.status === true) {
         setTicketId(docRef.id);
-        setSuccessMessage("Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!");
-        setFormData({ nama_pelapor: '', no_hp: '', alamat: '', isi_laporan: '', jenis_laporan: 'Kebakaran', sub_jenis_laporan: 'Rumah' }); // Reset form
+        setSuccessMessage(
+          "Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!",
+        );
+        setFormData({
+          nama_pelapor: "",
+          no_hp: "",
+          alamat: "",
+          isi_laporan: "",
+          jenis_laporan: "Kebakaran",
+          sub_jenis_laporan: "Rumah",
+        }); // Reset form
       } else {
-        setErrorMessage("Gagal mengirim notifikasi WA: " + (hasilGas.msg || JSON.stringify(hasilGas)));
+        setErrorMessage(
+          "Gagal mengirim notifikasi WA: " +
+            (hasilGas.msg || JSON.stringify(hasilGas)),
+        );
       }
-
     } catch (error: any) {
       console.error("Terjadi pengecualian jaringan:", error);
-      setErrorMessage(`Terjadi kesalahan sistem/jaringan saat mengirim ke backend. Pastikan URL GAS benar.`);
+      setErrorMessage(
+        `Terjadi kesalahan sistem/jaringan saat mengirim ke backend. Pastikan URL GAS benar.`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -113,8 +172,12 @@ export default function FormLaporan() {
             <AlertCircle className="w-6 h-6 text-brand-red" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Lapor Darurat</h2>
-            <p className="text-xs text-slate-500 font-medium">Layanan Pemadam Kebakaran & Penyelamatan</p>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              Lapor Darurat
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              Layanan Pemadam Kebakaran & Penyelamatan
+            </p>
           </div>
         </div>
 
@@ -125,9 +188,15 @@ export default function FormLaporan() {
               <p className="text-sm font-semibold">{successMessage}</p>
               {ticketId && (
                 <div className="p-4 bg-white border border-emerald-100 rounded-lg shadow-sm w-full">
-                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Tiket Laporan Anda:</p>
-                  <p className="text-2xl font-mono font-black text-emerald-900 tracking-widest">{ticketId.substring(0, 8).toUpperCase()}</p>
-                  <p className="text-xs text-slate-500 font-medium mt-1">Simpan nomor tiket ini untuk mengecek status laporan.</p>
+                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">
+                    Tiket Laporan Anda:
+                  </p>
+                  <p className="text-2xl font-mono font-black text-emerald-900 tracking-widest">
+                    {ticketId.substring(0, 8).toUpperCase()}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    Simpan nomor tiket ini untuk mengecek status laporan.
+                  </p>
                 </div>
               )}
             </div>
@@ -143,7 +212,12 @@ export default function FormLaporan() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
-            <label htmlFor="nama_pelapor" className="text-xs font-bold uppercase tracking-wider text-slate-500">Nama Pelapor</label>
+            <label
+              htmlFor="nama_pelapor"
+              className="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Nama Pelapor
+            </label>
             <input
               id="nama_pelapor"
               name="nama_pelapor"
@@ -158,7 +232,12 @@ export default function FormLaporan() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="no_hp" className="text-xs font-bold uppercase tracking-wider text-slate-500">Nomor Handphone / WA</label>
+            <label
+              htmlFor="no_hp"
+              className="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Nomor Handphone / WA
+            </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Phone className="w-5 h-5 text-slate-400" />
@@ -178,7 +257,12 @@ export default function FormLaporan() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="alamat" className="text-xs font-bold uppercase tracking-wider text-slate-500">Alamat Kejadian</label>
+            <label
+              htmlFor="alamat"
+              className="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Alamat Kejadian
+            </label>
             <textarea
               id="alamat"
               name="alamat"
@@ -190,12 +274,20 @@ export default function FormLaporan() {
               onChange={handleChange}
               disabled={isSubmitting}
             />
-            <p className="text-[10px] text-brand-red font-semibold uppercase tracking-wider mt-1">* Alamat harus jelas dan detail agar memudahkan petugas dalam menuju lokasi kejadian</p>
+            <p className="text-[10px] text-brand-red font-semibold uppercase tracking-wider mt-1">
+              * Alamat harus jelas dan detail agar memudahkan petugas dalam
+              menuju lokasi kejadian
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label htmlFor="jenis_laporan" className="text-xs font-bold uppercase tracking-wider text-slate-500">Jenis Laporan</label>
+              <label
+                htmlFor="jenis_laporan"
+                className="text-xs font-bold uppercase tracking-wider text-slate-500"
+              >
+                Jenis Laporan
+              </label>
               <div className="relative">
                 <select
                   id="jenis_laporan"
@@ -216,7 +308,12 @@ export default function FormLaporan() {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="sub_jenis_laporan" className="text-xs font-bold uppercase tracking-wider text-slate-500">Kategori Kejadian</label>
+              <label
+                htmlFor="sub_jenis_laporan"
+                className="text-xs font-bold uppercase tracking-wider text-slate-500"
+              >
+                Kategori Kejadian
+              </label>
               <div className="relative">
                 <select
                   id="sub_jenis_laporan"
@@ -227,7 +324,7 @@ export default function FormLaporan() {
                   onChange={handleChange}
                   disabled={isSubmitting}
                 >
-                  {formData.jenis_laporan === 'Kebakaran' ? (
+                  {formData.jenis_laporan === "Kebakaran" ? (
                     <>
                       <option value="Lahan">Lahan</option>
                       <option value="Rumah">Rumah</option>
@@ -251,7 +348,12 @@ export default function FormLaporan() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="isi_laporan" className="text-xs font-bold uppercase tracking-wider text-slate-500">Isi Laporan Kejadian</label>
+            <label
+              htmlFor="isi_laporan"
+              className="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Isi Laporan Kejadian
+            </label>
             <textarea
               id="isi_laporan"
               name="isi_laporan"
