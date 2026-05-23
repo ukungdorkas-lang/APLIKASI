@@ -22,6 +22,7 @@ import { cn } from './lib/utils';
 import News from './pages/News';
 import NewsDetail from './pages/NewsDetail';
 import Profile from './pages/Profile';
+import StrukturOrganisasiPage from './pages/StrukturOrganisasiPage';
 import Education from './pages/Education';
 import Documentation from './pages/Documentation';
 import Contact from './pages/Contact';
@@ -48,11 +49,11 @@ function Home() {
 
   React.useEffect(() => {
     // Fetch sectors and squads for "Personil Siaga"
-    const unsubSectors = onSnapshot(collection(db, 'sectors'), (s) => setSectors(s.docs.map(d => ({id: d.id, ...d.data()}))));
-    const unsubSquads = onSnapshot(collection(db, 'squads'), (s) => setSquads(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubSectors = onSnapshot(collection(db, 'sectors'), (s) => setSectors(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.warn("unsubSectors failed", err));
+    const unsubSquads = onSnapshot(collection(db, 'squads'), (s) => setSquads(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.warn("unsubSquads failed", err));
     const unsubReports = onSnapshot(query(collection(db, 'operational_reports'), orderBy('date', 'desc'), limit(50)), (s) => {
       setOpsReports(s.docs.map(d => ({id: d.id, ...d.data()})));
-    });
+    }, (err) => console.warn("unsubReports failed", err));
 
     const q = query(
       collection(db, 'news'),
@@ -64,15 +65,18 @@ function Home() {
     const unsubNews = onSnapshot(q, (snapshot) => {
       setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NewsArticle)));
       setLoading(false);
+    }, (err) => {
+      console.warn("unsubNews failed", err);
+      setLoading(false);
     });
 
     const unsubBanner = onSnapshot(doc(db, 'banners', 'home'), (snap) => {
       if (snap.exists()) setBanner(snap.data() as BannerConfig);
-    });
+    }, (err) => console.warn("unsubBanner failed", err));
 
     const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
       if (snap.exists()) setConfig(snap.data() as AppConfig);
-    });
+    }, (err) => console.warn("unsubConfig failed", err));
 
     return () => {
       unsubSectors();
@@ -664,6 +668,16 @@ export default function App() {
 
 function AppContent() {
   const location = useLocation();
+  const [quotaExceeded, setQuotaExceeded] = React.useState(
+    typeof window !== 'undefined' ? !!(window as any).__firebaseQuotaExceeded : false
+  );
+
+  React.useEffect(() => {
+    const handleQuota = () => setQuotaExceeded(true);
+    window.addEventListener('firebase-quota-exceeded', handleQuota);
+    return () => window.removeEventListener('firebase-quota-exceeded', handleQuota);
+  }, []);
+
   const isAdminRoute = 
     location.pathname.startsWith('/admin') || 
     location.pathname.startsWith('/staff') || 
@@ -672,6 +686,12 @@ function AppContent() {
 
   return (
     <div className="min-h-screen relative flex flex-col" key="app-root-container">
+      {quotaExceeded && (
+        <div id="firebase-quota-warning-banner" className="bg-amber-500 text-slate-950 px-6 py-2 text-center text-xs font-black uppercase tracking-wider flex items-center justify-center gap-3 z-[9999] sticky top-0 shadow-lg border-b border-amber-600">
+          <AlertTriangle className="w-4 h-4 animate-bounce text-slate-950 shrink-0" />
+          <span>⚠️ Batas Kuota Harian Firebase Tercapai (Free Tier Exhausted). Mohon tunggu reset kuota harian atau aktifkan penagihan pada konsol Firebase Anda.</span>
+        </div>
+      )}
       <div 
          id="navbar-persistent-container" 
          key="navbar-wrapper" 
@@ -742,6 +762,7 @@ function AppContent() {
           <Route path="/check-ticket" element={<CheckTicket />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:slug" element={<Profile />} />
+          <Route path="/struktur-organisasi" element={<StrukturOrganisasiPage />} />
           <Route path="/education" element={<Education />} />
           <Route path="/documentation" element={<Documentation />} />
           <Route path="/contact" element={<Contact />} />

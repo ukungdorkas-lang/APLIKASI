@@ -23,8 +23,17 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null, auth: any) {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  
+  if (errMessage.toLowerCase().includes("quota") || errMessage.toLowerCase().includes("resource-exhausted") || errMessage.toLowerCase().includes("limit exceeded")) {
+    if (typeof window !== "undefined") {
+      (window as any).__firebaseQuotaExceeded = true;
+      window.dispatchEvent(new CustomEvent("firebase-quota-exceeded"));
+    }
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,

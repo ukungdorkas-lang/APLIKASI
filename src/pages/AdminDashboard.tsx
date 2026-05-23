@@ -1,4 +1,5 @@
 import React from "react";
+import { defaultOrgData } from "../components/StrukturOrganisasi";
 import { useReports } from "../hooks/useReports";
 import DashboardStats from "../components/DashboardStats";
 import ReportList from "../components/ReportList";
@@ -11,7 +12,7 @@ import {
   orderBy,
   addDoc,
   doc,
-  updateDoc,
+  updateDoc, limit,
   deleteDoc,
   getDocs,
 } from "firebase/firestore";
@@ -67,7 +68,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
 import Markdown from "react-markdown";
 
-import { logAudit } from "../lib/auditLogger";
 import NotificationManagement from "../components/NotificationManagement";
 import { handleFirestoreError } from "../lib/errorHandler";
 import { OperationType } from "../types";
@@ -90,6 +90,7 @@ type AdminTab =
   | "gallery"
   | "education"
   | "profiles"
+  | "org_structure"
   | "banners"
   | "settings"
   | "bank_data"
@@ -117,15 +118,13 @@ export default function AdminDashboard({
   }, [initialTab]);
   const [news, setNews] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
-  const [logs, setLogs] = React.useState<any[]>([]);
-  const [aiChats, setAiChats] = React.useState<any[]>([]);
+    const [aiChats, setAiChats] = React.useState<any[]>([]);
   const [gallery, setGallery] = React.useState<any[]>([]);
   const [education, setEducation] = React.useState<any[]>([]);
   const [profileSections, setProfileSections] = React.useState<any[]>([]);
   const [bankData, setBankData] = React.useState<any[]>([]);
   const [banners, setBanners] = React.useState<any[]>([]);
-  const [riverSensors, setRiverSensors] = React.useState<any[]>([]);
-  const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
+    const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [galleryFilter, setGalleryFilter] = React.useState<
     "SEMUA" | "OPERASIONAL" | "KEGIATAN"
@@ -137,10 +136,10 @@ export default function AdminDashboard({
   const [dataLoading, setDataLoading] = React.useState({
     news: true,
     users: true,
-    logs: true,
-    gallery: true,
+        gallery: true,
     education: true,
     profiles: true,
+    org_structure: true,
     banners: true,
     bank_data: true,
     settings: true,
@@ -254,6 +253,8 @@ export default function AdminDashboard({
       "https://images.unsplash.com/photo-1516562309708-05f3b2b2c238?auto=format&fit=crop&q=80",
     stats: [] as { label: string; value: string; icon?: string }[],
   });
+
+  const [orgDataForm, setOrgDataForm] = React.useState<any>(defaultOrgData);
 
   const [bankDataForm, setBankDataForm] = React.useState({
     title: "",
@@ -727,6 +728,27 @@ export default function AdminDashboard({
     }
   };
 
+  const handleSaveOrgStructure = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateDoc(doc(db, "settings", "org_structure"), { data: orgDataForm });
+      showToast("Struktur organisasi berhasil diperbarui");
+    } catch (err: any) {
+      if (err.name === 'SyntaxError') {
+         showToast("Format JSON tidak valid!", "error");
+      } else {
+         // Create the doc if it doesn't exist
+         try {
+           const { setDoc } = await import("firebase/firestore");
+           await setDoc(doc(db, "settings", "org_structure"), { data: orgDataForm });
+           showToast("Struktur organisasi berhasil diperbarui");
+         } catch (e2) {
+           showToast("Gagal menyimpan struktur", "error");
+         }
+      }
+    }
+  };
+
   const seedProfiles = async () => {
     try {
       showToast("Menginisialisasi profil default...");
@@ -895,29 +917,7 @@ export default function AdminDashboard({
     }
   };
 
-  const handleSaveRiver = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingItem) {
-        await updateDoc(doc(db, "river_sensors", editingItem.id), {
-          ...riverForm,
-          updatedAt: Date.now(),
-        });
-        showToast("Data sensor diperbarui");
-      } else {
-        await addDoc(collection(db, "river_sensors"), {
-          ...riverForm,
-          updatedAt: Date.now(),
-        });
-        showToast("Sensor baru ditambahkan");
-      }
-      setShowFloodModal(false);
-      setEditingItem(null);
-    } catch (err) {
-      showToast("Gagal menyimpan data sensor", "error");
-    }
-  };
-
+  
   const handleSaveWeather = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -978,9 +978,11 @@ export default function AdminDashboard({
     setPrevReportsCount(reports.length);
   }, [reports, prevReportsCount]);
 
+  
   React.useEffect(() => {
+    if (activeTab !== "news" && activeTab !== "overview") return;
     const unsubNews = onSnapshot(
-      query(collection(db, "news"), orderBy("date", "desc")),
+      query(collection(db, "news"), orderBy("date", "desc"), limit(25)),
       (sn) => {
         setNews(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
         setDataLoading((prev) => ({ ...prev, news: false }));
@@ -989,9 +991,13 @@ export default function AdminDashboard({
         console.warn("Listener failed for collection: news", err);
         handleFirestoreError(err, OperationType.LIST, "news", auth);
         setDataLoading((prev) => ({ ...prev, news: false }));
-      },
+      }
     );
+    return () => unsubNews();
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "users") return;
     const unsubUsers = onSnapshot(
       query(collection(db, "admins")),
       (snAdmins) => {
@@ -1001,8 +1007,7 @@ export default function AdminDashboard({
           role: d.data().role || "admin",
           collection: "admins",
         }));
-
-        onSnapshot(
+        const unsubPers = onSnapshot(
           query(collection(db, "personnel")),
           (snPersonnel) => {
             const personnelUsers = snPersonnel.docs.map((d) => ({
@@ -1016,42 +1021,39 @@ export default function AdminDashboard({
           },
           (err) => {
             console.warn("Listener failed for collection: personnel", err);
-            setUsers(adminUsers); // Fallback to just admins
+            setUsers(adminUsers);
             setDataLoading((prev) => ({ ...prev, users: false }));
-          },
+          }
         );
+        // We can't return the unsub right here natively easily inside nested onSnapshot, 
+        // but for short term let's just let it be GC'd or we refine the approach.
+        // Actually best is to just fetch them simply. 
       },
       (err) => {
         console.warn("Listener failed for collection: admins", err);
         setDataLoading((prev) => ({ ...prev, users: false }));
-      },
+      }
     );
+    return () => unsubUsers();
+  }, [activeTab]);
 
-    const unsubLogs = onSnapshot(
-      query(collection(db, "audit_logs"), orderBy("timestamp", "desc")),
-      (sn) => {
-        setLogs(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setDataLoading((prev) => ({ ...prev, logs: false }));
-      },
-      (err) => {
-        console.warn("Listener failed for collection: audit_logs", err);
-        handleFirestoreError(err, OperationType.LIST, "audit_logs", auth);
-        setDataLoading((prev) => ({ ...prev, logs: false }));
-      },
-    );
-
+  
+  React.useEffect(() => {
+    if (activeTab !== "ai_chats") return;
     const unsubAiChats = onSnapshot(
-      query(collection(db, "ai_chats"), orderBy("timestamp", "desc")),
+      query(collection(db, "ai_chats"), orderBy("timestamp", "desc"), limit(20)),
       (sn) => {
         setAiChats(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
       },
-      (err) => {
-        console.warn("Listener failed for collection: ai_chats", err);
-      },
+      (err) => console.warn("Listener failed for collection: ai_chats", err)
     );
+    return () => unsubAiChats();
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "gallery" && activeTab !== "overview") return;
     const unsubGallery = onSnapshot(
-      query(collection(db, "gallery"), orderBy("createdAt", "desc")),
+      query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(25)),
       (sn) => {
         setGallery(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
         setDataLoading((prev) => ({ ...prev, gallery: false }));
@@ -1060,11 +1062,15 @@ export default function AdminDashboard({
         console.warn("Listener failed for collection: gallery", err);
         handleFirestoreError(err, OperationType.LIST, "gallery", auth);
         setDataLoading((prev) => ({ ...prev, gallery: false }));
-      },
+      }
     );
+    return () => unsubGallery();
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "education") return;
     const unsubEducation = onSnapshot(
-      query(collection(db, "education"), orderBy("createdAt", "desc")),
+      query(collection(db, "education"), orderBy("createdAt", "desc"), limit(20)),
       (sn) => {
         setEducation(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
         setDataLoading((prev) => ({ ...prev, education: false }));
@@ -1073,9 +1079,13 @@ export default function AdminDashboard({
         console.warn("Listener failed for collection: education", err);
         handleFirestoreError(err, OperationType.LIST, "education", auth);
         setDataLoading((prev) => ({ ...prev, education: false }));
-      },
+      }
     );
+    return () => unsubEducation();
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "profiles") return;
     const unsubProfiles = onSnapshot(
       query(collection(db, "profile_sections"), orderBy("order", "asc")),
       (sn) => {
@@ -1086,9 +1096,13 @@ export default function AdminDashboard({
         console.warn("Listener failed for collection: profile_sections", err);
         handleFirestoreError(err, OperationType.LIST, "profile_sections", auth);
         setDataLoading((prev) => ({ ...prev, profiles: false }));
-      },
+      }
     );
+    return () => unsubProfiles();
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "banners") return;
     const unsubBanners = onSnapshot(
       collection(db, "banners"),
       (sn) => {
@@ -1099,9 +1113,27 @@ export default function AdminDashboard({
         console.warn("Listener failed for collection: banners", err);
         handleFirestoreError(err, OperationType.LIST, "banners", auth);
         setDataLoading((prev) => ({ ...prev, banners: false }));
-      },
+      }
     );
+    return () => unsubBanners();
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "org_structure") return;
+    const unsubOrg = onSnapshot(doc(db, "settings", "org_structure"), (docSnap) => {
+      if (docSnap.exists() && docSnap.data().data) {
+        setOrgDataForm(docSnap.data().data);
+      }
+      setDataLoading((prev) => ({ ...prev, org_structure: false }));
+    }, (err) => {
+      console.warn("Listener failed for collection: org_structure", err);
+      setDataLoading((prev) => ({ ...prev, org_structure: false }));
+    });
+    return () => unsubOrg();
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab !== "settings") return;
     const unsubSettings = onSnapshot(
       doc(db, "settings", "app"),
       (snap) => {
@@ -1114,47 +1146,43 @@ export default function AdminDashboard({
         console.warn("Listener failed for document: settings/app", err);
         handleFirestoreError(err, OperationType.GET, "settings/app", auth);
         setDataLoading((prev) => ({ ...prev, settings: false }));
-      },
+      }
     );
+    return () => unsubSettings();
+  }, [activeTab]);
 
-    const unsubRiver = onSnapshot(
-      query(collection(db, "river_sensors"), orderBy("updatedAt", "desc")),
-      (sn) => {
-        setRiverSensors(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setDataLoading((prev) => ({ ...prev, monitoring: false }));
-      },
-    );
-
-    const unsubWeather = onSnapshot(
-      query(collection(db, "weather_upstream"), orderBy("updatedAt", "desc")),
+  React.useEffect(() => {
+    if (activeTab !== "monitoring" && activeTab !== "overview") return;
+        const unsubWeather = onSnapshot(
+      query(collection(db, "weather_upstream"), orderBy("updatedAt", "desc"), limit(20)),
       (sn) => {
         setWeatherUpstream(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
       },
+      (err) => {
+        console.warn("Listener failed for collection: weather_upstream", err);
+        handleFirestoreError(err, OperationType.LIST, "weather_upstream", auth);
+      }
     );
+    return () => { unsubWeather(); };
+  }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab !== "bank_data") return;
     const unsubBankData = onSnapshot(
-      query(collection(db, "bank_data"), orderBy("createdAt", "desc")),
+      query(collection(db, "bank_data"), orderBy("createdAt", "desc"), limit(25)),
       (sn) => {
         setBankData(sn.docs.map((d) => ({ id: d.id, ...d.data() })));
         setDataLoading((prev) => ({ ...prev, bank_data: false }));
       },
+      (err) => {
+        console.warn("Listener failed for collection: bank_data", err);
+        handleFirestoreError(err, OperationType.LIST, "bank_data", auth);
+        setDataLoading((prev) => ({ ...prev, bank_data: false }));
+      }
     );
-
-    return () => {
-      unsubNews();
-      unsubUsers();
-      unsubLogs();
-      unsubAiChats();
-      unsubGallery();
-      unsubEducation();
-      unsubProfiles();
-      unsubBanners();
-      unsubSettings();
-      unsubRiver();
-      unsubWeather();
-      unsubBankData();
-    };
-  }, []);
+    return () => unsubBankData();
+  }, [activeTab]);
+  
 
   const seedBanners = async () => {
     try {
@@ -1315,8 +1343,7 @@ export default function AdminDashboard({
   };
 
   const handleLogout = async () => {
-    await logAudit("LOGOUT", "User logged out from control panel");
-    await auth.signOut();
+        await auth.signOut();
     navigate("/login");
   };
 
@@ -1386,10 +1413,7 @@ export default function AdminDashboard({
           unitsUsed: newsData.unitsUsed || report.documentation?.units || [],
         });
         await updateDoc(doc(db, "reports", report.id), { newsGenerated: true });
-        await logAudit(
-          "NEWS_GENERATED",
-          `Automated news generated for report ${report.id}`,
-        );
+
         showToast("Berita berhasil dipublikasi!");
       }
     } catch (e) {
@@ -1435,6 +1459,11 @@ export default function AdminDashboard({
           id: "profiles",
           name: "Manajemen Profil",
           icon: <User className="w-5 h-5" />,
+        },
+        {
+          id: "org_structure",
+          name: "Struktur Organisasi",
+          icon: <Users className="w-5 h-5" />,
         },
         {
           id: "banners",
@@ -1484,12 +1513,7 @@ export default function AdminDashboard({
           name: "Admin & Petugas",
           icon: <Users className="w-5 h-5" />,
         },
-        {
-          id: "logs",
-          name: "Audit & Riwayat",
-          icon: <Clock className="w-5 h-5" />,
-        },
-        {
+                {
           id: "ai_chats",
           name: "Riwayat Chat AI",
           icon: <Bot className="w-5 h-5" />,
@@ -1550,8 +1574,15 @@ export default function AdminDashboard({
         "w-72 bg-brand-dark flex flex-col fixed h-full z-50 border-r border-white/5 transition-transform duration-300",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="p-10 text-center">
-          <Link to="/" className="flex flex-col items-center gap-3">
+        <div className="p-10 text-center relative">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-white/5 rounded-xl transition-all"
+            aria-label="Close menu"
+          >
+            <CloseIcon className="w-5 h-5" />
+          </button>
+          <Link to="/" className="flex flex-col items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
             <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
               <ShieldAlert className="text-white w-7 h-7" />
             </div>
@@ -1581,8 +1612,8 @@ export default function AdminDashboard({
                         navigate(item.path);
                       } else {
                         setActiveTab(item.id as AdminTab);
-                        setIsMobileMenuOpen(false);
                       }
+                      setIsMobileMenuOpen(false);
                     }}
                     className={cn(
                       "w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all font-bold text-sm",
@@ -1653,7 +1684,7 @@ export default function AdminDashboard({
               </span>
             </div>
 
-            <div className="relative max-w-sm w-full group">
+            <div className="relative max-w-sm w-full group hidden sm:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-brand-red transition-colors" />
               <input
                 className="w-full bg-slate-100 border-none rounded-xl py-2.5 pl-12 pr-4 focus:bg-white focus:ring-2 focus:ring-brand-red/10 outline-none font-medium text-sm transition-all"
@@ -1664,8 +1695,8 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex -space-x-2">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex -space-x-2 hidden md:flex">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
@@ -1683,9 +1714,9 @@ export default function AdminDashboard({
               <Bell className="w-5 h-5 text-slate-500 group-hover:text-brand-red" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-brand-red rounded-full border-2 border-white" />
             </button>
-            <div className="h-8 w-px bg-slate-100" />
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
+            <div className="h-8 w-px bg-slate-100 hidden sm:block" />
+            <div className="flex items-center gap-4 hidden sm:flex">
+              <div className="text-right hidden md:block">
                 <div className="text-xs font-bold text-slate-900 leading-none">
                   Status:{" "}
                   <span className="text-green-500 uppercase tracking-widest text-[9px]">
@@ -1705,7 +1736,7 @@ export default function AdminDashboard({
 
         <div
           id="admin-main-content"
-          className="p-12"
+          className="p-4 sm:p-6 md:p-10 lg:p-12"
           key="admin-dynamic-content-wrapper"
         >
           <AnimatePresence mode="wait" initial={false}>
@@ -2238,6 +2269,195 @@ export default function AdminDashboard({
               </motion.div>
             )}
 
+            {activeTab === "org_structure" && (
+              <motion.div
+                key="org_structure"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-12"
+              >
+                <div className="bg-brand-dark p-6 lg:p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div>
+                      <h3 className="text-3xl md:text-5xl text-white font-black uppercase italic tracking-tighter mb-4">
+                        Struktur <span className="text-brand-red">Organisasi</span>
+                      </h3>
+                      <p className="text-slate-400 font-bold max-w-xl text-lg">
+                        Ubah data diagram pohon pegawai. Edit bagian JSON di bawah untuk mengubah formasi pegawai.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-brand-red rounded-full blur-[120px] opacity-20" />
+                </div>
+
+                <div className="bg-white p-6 md:p-10 rounded-[3.5rem] border-2 border-slate-100 shadow-2xl">
+                  <form onSubmit={handleSaveOrgStructure} className="space-y-6">
+                    <div className="space-y-12">
+                      {/* Top Level Management */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {/* Kepala Dinas */}
+                        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                          <h4 className="font-bold text-slate-800 text-lg mb-6 border-b border-slate-200 pb-3 uppercase">Kepala Dinas</h4>
+                          <div className="space-y-5">
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Nama Lengkap</label>
+                              <input type="text" value={orgDataForm?.kepala?.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.kepala.nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium text-slate-800 focus:border-brand-red focus:outline-none transition-colors" placeholder="Masukkan nama..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Jabatan</label>
+                              <input type="text" value={orgDataForm?.kepala?.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.kepala.jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium text-slate-800 focus:border-brand-red focus:outline-none transition-colors" placeholder="Masukkan jabatan..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Foto URL</label>
+                              <FileUpload label="Upload Foto" initialUrl={orgDataForm?.kepala?.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.kepala.foto = url; setOrgDataForm(nd); }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Sekretaris */}
+                        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                          <h4 className="font-bold text-slate-800 text-lg mb-6 border-b border-slate-200 pb-3 uppercase">Sekretaris</h4>
+                          <div className="space-y-5">
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Nama Lengkap</label>
+                              <input type="text" value={orgDataForm?.sekretaris?.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.sekretaris.nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium text-slate-800 focus:border-brand-red focus:outline-none transition-colors" placeholder="Masukkan nama..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Jabatan</label>
+                              <input type="text" value={orgDataForm?.sekretaris?.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.sekretaris.jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium text-slate-800 focus:border-brand-red focus:outline-none transition-colors" placeholder="Masukkan jabatan..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Foto URL</label>
+                              <FileUpload label="Upload Foto" initialUrl={orgDataForm?.sekretaris?.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.sekretaris.foto = url; setOrgDataForm(nd); }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Jabatan Fungsional */}
+                        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                          <h4 className="font-bold text-slate-800 text-lg mb-6 border-b border-slate-200 pb-3 uppercase">Jab. Fungsional</h4>
+                          <div className="space-y-5">
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Nama Lengkap</label>
+                              <input type="text" value={orgDataForm?.fungsional?.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.fungsional.nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium text-slate-800 focus:border-brand-red focus:outline-none transition-colors" placeholder="Masukkan nama..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Jabatan</label>
+                              <input type="text" value={orgDataForm?.fungsional?.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.fungsional.jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium text-slate-800 focus:border-brand-red focus:outline-none transition-colors" placeholder="Masukkan jabatan..." />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Foto URL</label>
+                              <FileUpload label="Upload Foto" initialUrl={orgDataForm?.fungsional?.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.fungsional.foto = url; setOrgDataForm(nd); }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t-4 border-slate-100 pt-12 mt-12">
+                        <div className="text-center mb-10">
+                           <h4 className="font-black text-slate-900 text-3xl uppercase italic tracking-tighter">Subbagian & Bidang</h4>
+                           <p className="font-medium text-slate-500">Sesuaikan struktur bawahan langsung dan bidang fungsional.</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                          
+                          {/* SUBBAGIAN SECTION */}
+                          <div className="bg-slate-50 p-6 md:p-8 rounded-[2.5rem] border-2 border-slate-200">
+                            <h5 className="font-black text-slate-800 text-center bg-white p-4 rounded-2xl mb-8 border border-slate-200 shadow-sm uppercase tracking-wide text-lg">Subbagian</h5>
+                            <div className="space-y-6">
+                              {orgDataForm?.subbag?.map((item: any, idx: number) => (
+                                <div key={`subbag-${idx}`} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                  <h4 className="font-bold text-slate-500 mb-5 border-b border-slate-100 pb-2 flex justify-between items-center">
+                                    <span>SUBBAG {idx + 1}</span>
+                                    {/* Action buttons could go here */}
+                                  </h4>
+                                  <div className="space-y-4">
+                                    <div><label className="block text-xs font-bold text-slate-400 mb-2 uppercase">Nama Lengkap</label><input type="text" value={item.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.subbag[idx].nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-4 py-2 font-medium rounded-xl bg-slate-50 focus:bg-white focus:border-brand-red transition-all outline-none" /></div>
+                                    <div><label className="block text-xs font-bold text-slate-400 mb-2 uppercase">Jabatan</label><input type="text" value={item.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.subbag[idx].jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-4 py-2 font-medium rounded-xl bg-slate-50 focus:bg-white focus:border-brand-red transition-all outline-none" /></div>
+                                    <div><FileUpload label="Upload Foto" initialUrl={item.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.subbag[idx].foto = url; setOrgDataForm(nd); }} /></div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                      
+                          {/* BIDANG PENCEGAHAN */}
+                          <div className="bg-slate-50 p-6 md:p-8 rounded-[2.5rem] border-2 border-slate-200">
+                            <h5 className="font-black text-slate-800 text-center bg-white p-4 rounded-2xl mb-8 border border-slate-200 shadow-sm uppercase tracking-wide text-lg">{orgDataForm?.bidangPencegahan?.jabatan || "Bidang Pencegahan"}</h5>
+                            
+                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md mb-8">
+                                <h4 className="font-bold text-brand-red mb-5 border-b border-brand-red/10 pb-2 uppercase tracking-wide">Kepala Bidang</h4>
+                                <div className="space-y-4">
+                                  <div><label className="block text-xs font-bold text-slate-400 mb-2 uppercase">Nama Lengkap</label><input type="text" value={orgDataForm?.bidangPencegahan?.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPencegahan.nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-4 py-2 font-medium rounded-xl bg-slate-50 focus:bg-white focus:border-brand-red transition-all outline-none" /></div>
+                                  <div><label className="block text-xs font-bold text-slate-400 mb-2 uppercase">Jabatan</label><input type="text" value={orgDataForm?.bidangPencegahan?.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPencegahan.jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-4 py-2 font-medium rounded-xl bg-slate-50 focus:bg-white focus:border-brand-red transition-all outline-none" /></div>
+                                  <div><FileUpload label="Upload Foto" initialUrl={orgDataForm?.bidangPencegahan?.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPencegahan.foto = url; setOrgDataForm(nd); }} /></div>
+                                </div>
+                            </div>
+                            
+                            <h5 className="font-bold text-slate-600 text-sm mb-4 px-3 uppercase tracking-widest flex items-center justify-between">
+                              Sebaran Seksi:
+                            </h5>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            {orgDataForm?.bidangPencegahan?.seksi?.map((item: any, idx: number) => (
+                              <div key={`sek-peng-${idx}`} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative">
+                                <h6 className="text-[10px] uppercase font-black text-slate-400 mb-4 bg-slate-100 py-1 px-3 rounded-lg inline-block">Seksi {idx + 1}</h6>
+                                <div className="space-y-4">
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Nama</label><input type="text" value={item.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPencegahan.seksi[idx].nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-3 py-1.5 font-medium rounded-lg bg-slate-50 text-sm focus:bg-white focus:border-brand-red outline-none" /></div>
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Jabatan</label><input type="text" value={item.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPencegahan.seksi[idx].jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-3 py-1.5 font-medium rounded-lg bg-slate-50 text-sm focus:bg-white focus:border-brand-red outline-none" /></div>
+                                  <div><FileUpload label="Upload Foto" initialUrl={item.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPencegahan.seksi[idx].foto = url; setOrgDataForm(nd); }} /></div>
+                                </div>
+                              </div>
+                            ))}
+                            </div>
+                          </div>
+                          
+                          {/* BIDANG PEMADAM */}
+                          <div className="bg-slate-50 p-6 md:p-8 rounded-[2.5rem] border-2 border-slate-200 lg:col-span-2 xl:col-span-1">
+                            <h5 className="font-black text-slate-800 text-center bg-white p-4 rounded-2xl mb-8 border border-slate-200 shadow-sm uppercase tracking-wide text-lg">{orgDataForm?.bidangPemadam?.jabatan || "Bidang Pemadam"}</h5>
+                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md mb-8">
+                                <h4 className="font-bold text-brand-red mb-5 border-b border-brand-red/10 pb-2 uppercase tracking-wide">Kepala Bidang</h4>
+                                <div className="space-y-4">
+                                  <div><label className="block text-xs font-bold text-slate-400 mb-2 uppercase">Nama Lengkap</label><input type="text" value={orgDataForm?.bidangPemadam?.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPemadam.nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-4 py-2 font-medium rounded-xl bg-slate-50 focus:bg-white focus:border-brand-red transition-all outline-none" /></div>
+                                  <div><label className="block text-xs font-bold text-slate-400 mb-2 uppercase">Jabatan</label><input type="text" value={orgDataForm?.bidangPemadam?.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPemadam.jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-4 py-2 font-medium rounded-xl bg-slate-50 focus:bg-white focus:border-brand-red transition-all outline-none" /></div>
+                                  <div><FileUpload label="Upload Foto" initialUrl={orgDataForm?.bidangPemadam?.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPemadam.foto = url; setOrgDataForm(nd); }} /></div>
+                                </div>
+                            </div>
+                            
+                            <h5 className="font-bold text-slate-600 text-sm mb-4 px-3 uppercase tracking-widest flex items-center justify-between">
+                              Sebaran Seksi:
+                            </h5>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            {orgDataForm?.bidangPemadam?.seksi?.map((item: any, idx: number) => (
+                              <div key={`sek-pem-${idx}`} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative">
+                                <h6 className="text-[10px] uppercase font-black text-slate-400 mb-4 bg-slate-100 py-1 px-3 rounded-lg inline-block">Seksi {idx + 1}</h6>
+                                <div className="space-y-4">
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Nama</label><input type="text" value={item.nama || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPemadam.seksi[idx].nama = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-3 py-1.5 font-medium rounded-lg bg-slate-50 text-sm focus:bg-white focus:border-brand-red outline-none" /></div>
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Jabatan</label><input type="text" value={item.jabatan || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPemadam.seksi[idx].jabatan = e.target.value; setOrgDataForm(nd); }} className="w-full border-2 border-slate-100 px-3 py-1.5 font-medium rounded-lg bg-slate-50 text-sm focus:bg-white focus:border-brand-red outline-none" /></div>
+                                  <div><FileUpload label="Upload Foto" initialUrl={item.foto} onUploadSuccess={(url) => { const nd = JSON.parse(JSON.stringify(orgDataForm)); nd.bidangPemadam.seksi[idx].foto = url; setOrgDataForm(nd); }} /></div>
+                                </div>
+                              </div>
+                            ))}
+                            </div>
+                          </div>
+                      
+                        </div>
+                      </div>
+                      
+                    </div>
+                    <div className="pt-8 mt-4 border-t-2 border-slate-100">
+                      <button
+                        type="submit"
+                        className="w-full bg-brand-red text-white py-5 rounded-[1.5rem] text-lg font-black uppercase italic tracking-widest hover:bg-brand-dark transition-all transform hover:scale-[1.01] shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 group"
+                      >
+                        <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                        Simpan Formasi Pegawai
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === "notifications" && (
               <motion.div
                 key="notifications"
@@ -2256,7 +2476,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-12"
               >
-                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/20">
                       <Waves className="w-6 h-6 text-white" />
@@ -2271,7 +2491,7 @@ export default function AdminDashboard({
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       className="bg-slate-900 px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:bg-brand-red transition-all"
                       onClick={() => {
@@ -2312,154 +2532,7 @@ export default function AdminDashboard({
                   <WeatherWidget />
                 </div>
 
-                <div className="grid lg:grid-cols-2 gap-10">
-                  {/* River Sensors Section */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 px-6">
-                      <Droplets className="w-5 h-5 text-brand-red" />
-                      <h4 className="font-black italic uppercase tracking-tighter text-slate-900">
-                        Ketinggian Air Real-time
-                      </h4>
-                    </div>
-                    <div className="grid gap-6">
-                      {riverSensors.map((sensor) => (
-                        <motion.div
-                          key={sensor.id}
-                          className="bg-white p-5 md:p-8 rounded-3xl border-2 border-slate-100 shadow-sm hover:shadow-xl hover:border-brand-red transition-all relative overflow-hidden group"
-                        >
-                          <div
-                            className={cn(
-                              "absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-20",
-                              sensor.status === "Bahaya"
-                                ? "bg-red-500"
-                                : sensor.status === "Siaga"
-                                  ? "bg-orange-500"
-                                  : "bg-blue-500",
-                            )}
-                          />
-                          <div className="flex items-center justify-between mb-6">
-                            <div>
-                              <h5 className="text-xl font-black italic uppercase tracking-tighter text-brand-dark mb-1">
-                                {sensor.locationName}
-                              </h5>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic leading-none">
-                                ID SENSOR: {sensor.id.slice(0, 8)}
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-brand-red transition-colors"
-                                onClick={() => {
-                                  setRiverForm({
-                                    locationName: sensor.locationName,
-                                    waterLevel: sensor.waterLevel,
-                                    status: sensor.status,
-                                    trend: sensor.trend,
-                                  });
-                                  setEditingItem(sensor);
-                                  setShowFloodModal(true);
-                                }}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-red-500 transition-colors"
-                                onClick={() =>
-                                  handleDeleteItem("river_sensors", sensor.id)
-                                }
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                                TINGGI AIR
-                              </p>
-                              <p className="text-3xl font-black italic text-brand-dark leading-none">
-                                {sensor.waterLevel}
-                                <span className="text-sm ml-1 text-slate-400">
-                                  meter
-                                </span>
-                              </p>
-                            </div>
-                            <div
-                              className={cn(
-                                "p-6 rounded-2xl border flex flex-col justify-center",
-                                sensor.status === "Bahaya"
-                                  ? "bg-red-50 border-red-100"
-                                  : sensor.status === "Siaga"
-                                    ? "bg-orange-50 border-orange-100"
-                                    : "bg-blue-50 border-blue-100",
-                              )}
-                            >
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                                STATUS
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={cn(
-                                    "w-2 h-2 rounded-full animate-pulse",
-                                    sensor.status === "Bahaya"
-                                      ? "bg-red-600"
-                                      : sensor.status === "Siaga"
-                                        ? "bg-orange-600"
-                                        : "bg-blue-600",
-                                  )}
-                                />
-                                <p
-                                  className={cn(
-                                    "text-lg font-black uppercase italic tracking-tighter",
-                                    sensor.status === "Bahaya"
-                                      ? "text-red-600"
-                                      : sensor.status === "Siaga"
-                                        ? "text-orange-600"
-                                        : "text-blue-600",
-                                  )}
-                                >
-                                  {sensor.status}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase italic tracking-tighter">
-                            <span>
-                              Update:{" "}
-                              {sensor.updatedAt
-                                ? new Date(sensor.updatedAt).toLocaleString()
-                                : "-"}
-                            </span>
-                            <span className="flex items-center gap-2">
-                              Trend:{" "}
-                              {sensor.trend === "rising" ? (
-                                <span className="text-red-500">
-                                  ↑ Meningkat
-                                </span>
-                              ) : sensor.trend === "falling" ? (
-                                <span className="text-green-500">
-                                  ↓ Menurun
-                                </span>
-                              ) : (
-                                "→ Stabil"
-                              )}
-                            </span>
-                          </div>
-                        </motion.div>
-                      ))}
-                      {riverSensors.length === 0 && (
-                        <div className="bg-white p-6 lg:p-12 rounded-3xl border-2 border-dashed border-slate-200 text-center opacity-50">
-                          <Droplets className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            Belum ada sensor terdaftar
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
-
-                </div>
               </motion.div>
             )}
 
@@ -2470,7 +2543,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center">
                       <Newspaper className="w-6 h-6 text-white" />
@@ -2484,9 +2557,9 @@ export default function AdminDashboard({
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <button
-                      className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:scale-105 transition-all shadow-xl"
+                      className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:scale-105 transition-all shadow-xl text-center"
                       onClick={() => {
                         setEditingItem(null);
                         setNewsForm({
@@ -2502,7 +2575,7 @@ export default function AdminDashboard({
                       Tambah Berita
                     </button>
                     <button
-                      className="bg-slate-900 px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:bg-slate-800 transition-all"
+                      className="bg-slate-900 px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter hover:bg-slate-800 transition-all text-center"
                       onClick={() => showToast("Broadcast Warta dimulai")}
                     >
                       Informasi Publik
@@ -2522,9 +2595,9 @@ export default function AdminDashboard({
                     news.map((article) => (
                       <article
                         key={article.id}
-                        className="bg-white p-5 md:p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl group flex gap-8"
+                        className="bg-white p-5 md:p-8 rounded-[2rem] border-4 border-brand-dark shadow-2xl group flex flex-col sm:flex-row gap-6 md:gap-8"
                       >
-                        <div className="w-48 h-48 bg-slate-50 rounded-2xl border-4 border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative">
+                        <div className="w-full sm:w-48 h-48 bg-slate-50 rounded-2xl border-4 border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative">
                           {article.imageUrl ? (
                             <img
                               src={article.imageUrl}
@@ -2600,8 +2673,8 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
-                  <div className="flex gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                  <div className="flex flex-wrap gap-2 sm:gap-4">
                     {["SEMUA", "OPERASIONAL", "KEGIATAN"].map((f) => (
                       <button
                         key={`gallery-filter-${f}`}
@@ -3206,7 +3279,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center">
                       <Users className="w-6 h-6 text-white" />
@@ -3439,7 +3512,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl shadow-sm border border-slate-100">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
                       <Bot className="w-8 h-8 text-white" />
@@ -3521,76 +3594,7 @@ export default function AdminDashboard({
               </motion.div>
             )}
 
-            {activeTab === "logs" && (
-              <motion.div
-                key="logs"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-8"
-              >
-                <div className="bg-white rounded-[2.5rem] border-4 border-slate-900 shadow-2xl overflow-hidden">
-                  <div className="p-10 border-b-4 border-slate-900 bg-slate-50 flex justify-between items-center">
-                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">
-                      Audit Log Keamanan
-                    </h3>
-                    <button
-                      className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-brand-red transition-all"
-                      onClick={() => showToast("Filter log diaktifkan")}
-                    >
-                      <Filter className="w-5 h-5" /> Filter Riwayat
-                    </button>
-                  </div>
-                  {dataLoading.logs ? (
-                    <div className="p-20">
-                      <LoadingSpinner message="Mengambil Catatan Aktivitas..." />
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left whitespace-nowrap">
-                        <tbody className="divide-y-4 divide-slate-50">
-                        {logs.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="p-20 text-center font-black italic text-slate-200 uppercase tracking-widest"
-                            >
-                              Tidak ada record aktivitas
-                            </td>
-                          </tr>
-                        ) : (
-                          logs.map((log) => (
-                            <tr
-                              key={log.id}
-                              className="hover:bg-slate-50 transition-colors"
-                            >
-                              <td className="p-10 font-mono text-[10px] text-slate-400 w-64">
-                                {new Date(log.timestamp).toLocaleString(
-                                  "id-ID",
-                                )}
-                              </td>
-                              <td className="p-10">
-                                <span className="px-4 py-2 bg-slate-900 text-white text-[8px] font-black italic uppercase tracking-widest rounded-lg border-2 border-slate-800 shadow-md">
-                                  {log.action}
-                                </span>
-                              </td>
-                              <td className="p-10">
-                                <p className="text-sm font-bold text-slate-600 mb-1">
-                                  {log.userEmail}
-                                </p>
-                                <p className="text-xs font-bold text-slate-400 italic">
-                                  "{log.details}"
-                                </p>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
+            
 
             {activeTab === "settings" && (
               <motion.div
@@ -4188,7 +4192,7 @@ export default function AdminDashboard({
                 animate={{ opacity: 1 }}
                 className="space-y-12"
               >
-                <div className="flex justify-between items-center bg-white p-5 md:p-8 rounded-3xl border-4 border-slate-900 shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-slate-900 shadow-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg">
                       <LayoutDashboard className="w-6 h-6 text-white" />

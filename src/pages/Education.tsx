@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, ShieldCheck, Flame, Droplets, Info, ExternalLink, FileText, Video, Image as ImageIcon, Phone } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { X, Download } from 'lucide-react';
 
 import DynamicBanner from '../components/DynamicBanner';
 
 export default function Education() {
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'education'), orderBy('createdAt', 'desc'));
@@ -80,15 +82,28 @@ export default function Education() {
             className="group h-full bg-white rounded-[2.5rem] p-4 border border-slate-50 hover:border-slate-100 hover:shadow-2xl transition-all flex flex-col"
           >
             <div className="aspect-video relative overflow-hidden rounded-[2rem] bg-slate-100 mb-8">
-              {item.imageUrl ? (
+              {item.imageUrl && item.imageUrl.match(/\.(jpeg|jpg|gif|png)$/i) ? (
                 <img 
                   src={item.imageUrl} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.5] group-hover:grayscale-0" 
                   alt={item.title}
                 />
+              ) : item.imageUrl && item.imageUrl.match(/\.(mp4|webm)$/i) ? (
+                <video 
+                  src={item.imageUrl} 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.5] group-hover:grayscale-0"
+                  muted 
+                  loop 
+                  playsInline
+                />
+              ) : item.imageUrl && !item.imageUrl.match(/\.(jpeg|jpg|gif|png|mp4|webm)$/i) ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                  <FileText className="w-16 h-16 mb-2" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Dokumen</span>
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-200">
-                  <FileText className="w-16 h-16" />
+                <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50">
+                  <BookOpen className="w-16 h-16" />
                 </div>
               )}
               {item.category && (
@@ -112,8 +127,11 @@ export default function Education() {
               </p>
               
               <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
-                <button className="flex items-center gap-3 text-[10px] font-black text-slate-900 uppercase tracking-widest hover:text-brand-red transition-all">
-                  UNDUH MATERI <ExternalLink className="w-4 h-4 text-brand-red" />
+                <button 
+                  onClick={() => setSelectedItem(item)}
+                  className="flex items-center gap-3 text-[10px] font-black text-slate-900 uppercase tracking-widest hover:text-brand-red transition-all cursor-pointer z-10"
+                >
+                  LIHAT MATERI <ExternalLink className="w-4 h-4 text-brand-red" />
                 </button>
               </div>
             </div>
@@ -121,6 +139,85 @@ export default function Education() {
         ))}
       </div>
       </div>
+
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/90 backdrop-blur-xl overflow-y-auto"
+            onClick={() => setSelectedItem(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: -20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-[2rem] sm:rounded-[3rem] w-full max-w-5xl overflow-hidden shadow-2xl my-auto"
+            >
+              <div className="flex justify-between items-center p-6 sm:px-10 sm:py-8 border-b border-slate-100">
+                <h3 className="text-xl sm:text-3xl font-display font-black italic uppercase tracking-tighter text-slate-900">
+                  {selectedItem.title}
+                </h3>
+                <button 
+                  onClick={() => setSelectedItem(null)}
+                  className="p-3 bg-slate-100 rounded-full hover:bg-brand-red hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6 sm:p-10">
+                {selectedItem.imageUrl && selectedItem.imageUrl.match(/\.(jpeg|jpg|gif|png)$/i) && (
+                  <div className="mb-8 rounded-2xl overflow-hidden bg-slate-50 border-4 border-slate-100 text-center flex justify-center">
+                    <img 
+                      src={selectedItem.imageUrl} 
+                      alt={selectedItem.title}
+                      className="w-full h-auto object-contain max-h-[60vh] max-w-full"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                )}
+                {selectedItem.imageUrl && selectedItem.imageUrl.match(/\.(mp4|webm)$/i) && (
+                  <div className="mb-8 rounded-2xl overflow-hidden bg-slate-50 border-4 border-slate-100 text-center flex justify-center">
+                    <video 
+                      src={selectedItem.imageUrl} 
+                      controls
+                      className="w-full h-auto object-contain max-h-[60vh] max-w-full"
+                    />
+                  </div>
+                )}
+                {selectedItem.imageUrl && !selectedItem.imageUrl.match(/\.(jpeg|jpg|gif|png|mp4|webm)$/i) && (
+                   <div className="mb-8 rounded-2xl overflow-hidden bg-slate-50 border-4 border-slate-100 p-10 flex flex-col items-center justify-center text-slate-400">
+                     <FileText className="w-16 h-16 mb-4" />
+                     <p className="font-bold text-sm uppercase tracking-widest">File Dokumen Tersedia</p>
+                   </div>
+                )}
+                
+                <div className="prose prose-slate max-w-none text-slate-600 mb-10 text-base sm:text-lg italic font-medium leading-relaxed">
+                  {selectedItem.content}
+                </div>
+                
+                <div className="flex flex-wrap gap-4 items-center pt-8 border-t border-slate-100">
+                  {selectedItem.imageUrl && (
+                    <a 
+                      href={selectedItem.imageUrl}
+                      download 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex flex-1 sm:flex-none justify-center items-center gap-3 bg-brand-red text-white px-8 py-4 rounded-xl font-black italic uppercase tracking-widest text-xs hover:bg-brand-dark transition-all"
+                    >
+                      <Download className="w-4 h-4" /> 
+                      {selectedItem.imageUrl.match(/\.(jpeg|jpg|gif|png)$/i) ? 'Unduh Gambar' : 
+                       selectedItem.imageUrl.match(/\.(mp4|webm)$/i) ? 'Unduh Video' : 'Unduh Lampiran'}
+                    </a>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="mt-32">
          <div className="bg-brand-dark rounded-[4rem] p-12 sm:p-20 relative overflow-hidden group">

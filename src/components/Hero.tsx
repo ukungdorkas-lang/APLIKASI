@@ -112,7 +112,7 @@ export default function Hero() {
               {banner?.subtitle || config?.slogan || 'Kami siap melindungi masyarakat dari bahaya kebakaran dengan pelayanan cepat, akurat, dan terpercaya selama 24 jam penuh.'}
             </p>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 mb-20">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-6 mb-20">
               <Link to={banner?.ctaLink || "/report"} className="emergency-btn group px-8 md:px-12 py-6 text-2xl">
                 <span>{banner?.ctaText || "BUAT LAPORAN"}</span>
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-brand-red transition-all">
@@ -127,6 +127,18 @@ export default function Hero() {
                   <Users className="w-5 h-5 text-brand-red group-hover:text-white transition-all" />
                 </div>
                 LOGIN PETUGAS
+              </Link>
+              <Link 
+                to="/profile" 
+                className="bg-slate-900/80 backdrop-blur-xl border-2 border-slate-700 px-8 md:px-8 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-slate-900 transition-all flex items-center justify-center shadow-xl group"
+              >
+                PROFIL
+              </Link>
+              <Link 
+                to="/education" 
+                className="bg-brand-red/90 backdrop-blur-xl border-2 border-brand-red px-8 md:px-8 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-red transition-all flex items-center justify-center shadow-xl group"
+              >
+                EDUKASI WARGA
               </Link>
             </div>
 

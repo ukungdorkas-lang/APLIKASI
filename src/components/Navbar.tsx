@@ -27,15 +27,28 @@ export default function Navbar() {
       if (doc.exists()) {
         setConfig(doc.data() as AppConfig);
       }
+    }, (err) => {
+      console.warn('Navbar config fetch failed:', err);
     });
 
     // Fetch Profile Sections for dropdown
     const unsubProfiles = onSnapshot(collection(db, 'profile_sections'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProfileSection));
-      setProfileSections(data
+      setProfileSections([{
+        id: 'struktur-organisasi', 
+        title: 'Struktur Organisasi',
+        slug: 'struktur-organisasi',
+        isActive: true,
+        order: 99,
+        content: '',
+        createdAt: 0,
+        updatedAt: 0
+      }, ...data
         .filter(s => s.isActive)
         .sort((a, b) => a.order - b.order)
-      );
+      ]);
+    }, (err) => {
+      console.warn('Navbar profiles fetch failed:', err);
     });
 
     return () => {

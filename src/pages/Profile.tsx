@@ -10,6 +10,7 @@ import { cn } from '../lib/utils';
 import { LoadingSpinner } from '../components/Loading';
 
 import DynamicBanner from '../components/DynamicBanner';
+import StrukturOrganisasi from '../components/StrukturOrganisasi';
 
 export default function Profile() {
   const { slug } = useParams<{ slug?: string }>();
@@ -21,10 +22,21 @@ export default function Profile() {
 
   React.useEffect(() => {
     const unsub = onSnapshot(collection(db, 'profile_sections'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProfileSection))
+      let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProfileSection))
         .filter(s => s.isActive)
         .sort((a, b) => a.order - b.order);
         
+      data.push({
+        id: 'struktur-organisasi',
+        title: 'Struktur Organisasi',
+        slug: 'struktur-organisasi',
+        isActive: true,
+        order: 999,
+        content: 'struktur-organisasi-component',
+        createdAt: 0,
+        updatedAt: 0
+      } as ProfileSection);
+
       setSections(data);
       
       if (slug) {
@@ -171,12 +183,18 @@ export default function Profile() {
                   ))}
                 </h1>
 
-                <div 
-                  onClick={() => setFullScreen(true)}
-                  className="prose prose-xl prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-headings:tracking-tighter font-medium text-slate-600 leading-relaxed italic border-l-8 border-brand-red pl-10 mb-10 cursor-zoom-in hover:bg-slate-50 p-6 rounded-2xl transition-colors"
-                >
-                  <Markdown>{activeSection?.content}</Markdown>
-                </div>
+                {activeSection?.content === 'struktur-organisasi-component' ? (
+                  <div className="mb-10 w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                     <StrukturOrganisasi />
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => setFullScreen(true)}
+                    className="prose prose-xl prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-headings:tracking-tighter font-medium text-slate-600 leading-relaxed italic border-l-8 border-brand-red pl-10 mb-10 cursor-zoom-in hover:bg-slate-50 p-6 rounded-2xl transition-colors"
+                  >
+                    <Markdown>{activeSection?.content}</Markdown>
+                  </div>
+                )}
 
                 <div className="mt-24 pt-16 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-10">
                    <div className="flex items-center gap-4">
@@ -231,9 +249,15 @@ export default function Profile() {
                 <h2 className="text-5xl sm:text-7xl font-display font-black text-slate-900 uppercase italic tracking-tighter mb-10 leading-none">
                   {activeSection.title}
                 </h2>
-                <div className="prose prose-2xl prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-headings:tracking-tighter font-medium text-slate-700 leading-relaxed italic border-l-8 border-brand-red pl-12">
-                   <Markdown>{activeSection.content}</Markdown>
-                </div>
+                {activeSection.content === 'struktur-organisasi-component' ? (
+                   <div className="w-full">
+                     <StrukturOrganisasi />
+                   </div>
+                ) : (
+                  <div className="prose prose-2xl prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-headings:tracking-tighter font-medium text-slate-700 leading-relaxed italic border-l-8 border-brand-red pl-12">
+                     <Markdown>{activeSection.content}</Markdown>
+                  </div>
+                )}
               </div>
               <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-center">
                  <button onClick={() => setFullScreen(false)} className="bg-brand-dark text-white px-12 py-5 rounded-2xl font-black italic uppercase tracking-tighter shadow-xl hover:bg-brand-red transition-all">Tutup Jendela Detail</button>
