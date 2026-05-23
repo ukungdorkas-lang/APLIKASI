@@ -41,7 +41,6 @@ export default function Navbar() {
         isActive: true,
         order: 99,
         content: '',
-        createdAt: 0,
         updatedAt: 0
       }, ...data
         .filter(s => s.isActive)

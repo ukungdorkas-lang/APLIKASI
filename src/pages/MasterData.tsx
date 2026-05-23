@@ -593,6 +593,10 @@ export default function MasterData() {
                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kontak Person</label>
                            <input required value={personnelForm.phoneNumber} onChange={e => setPersonnelForm({...personnelForm, phoneNumber: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" />
                         </div>
+                        <div className="col-span-1 md:col-span-2 space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">URL Foto Profil (Opsional)</label>
+                           <input type="text" value={personnelForm.photoUrl || ''} onChange={e => setPersonnelForm({...personnelForm, photoUrl: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" placeholder="https://..." />
+                        </div>
                         <div className="space-y-2">
                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sektor / Pos</label>
                            <select 

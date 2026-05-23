@@ -7,6 +7,9 @@ import {
   addDoc,
   getDocs,
   orderBy,
+  doc,
+  getDoc,
+  updateDoc
 } from "firebase/firestore";
 import { Personnel, Squad, Sector, OperationalReport } from "../types";
 import { motion, AnimatePresence } from "motion/react";
@@ -147,6 +150,62 @@ export default function OperationalForms() {
     fetchData();
   }, []);
 
+  const handleAddArmadaPiket = () => {
+    setForm((prev) => ({
+      ...prev,
+      armadaPiket: [
+        ...(prev.armadaPiket || []),
+        { id: Date.now().toString(), nama: "", plat: "", status: "Siaga", peralatan: [] },
+      ],
+    }));
+  };
+
+  const handleUpdateArmadaPiket = (idx: number, field: string, value: any) => {
+    setForm((prev) => {
+      const newArmada = [...(prev.armadaPiket || [])];
+      newArmada[idx] = { ...newArmada[idx], [field]: value };
+      return { ...prev, armadaPiket: newArmada };
+    });
+  };
+
+  const handleRemoveArmadaPiket = (idx: number) => {
+    setForm((prev) => {
+      const newArmada = [...(prev.armadaPiket || [])];
+      newArmada.splice(idx, 1);
+      return { ...prev, armadaPiket: newArmada };
+    });
+  };
+
+  const handleAddPeralatan = (aIdx: number) => {
+    setForm((prev) => {
+      const newArmada = [...(prev.armadaPiket || [])];
+      const newPeralatan = [...(newArmada[aIdx].peralatan || [])];
+      newPeralatan.push({ nama: "", jumlah: 1, kondisi: "Baik" });
+      newArmada[aIdx] = { ...newArmada[aIdx], peralatan: newPeralatan };
+      return { ...prev, armadaPiket: newArmada };
+    });
+  };
+
+  const handleUpdatePeralatan = (aIdx: number, pIdx: number, field: string, value: any) => {
+    setForm((prev) => {
+      const newArmada = [...(prev.armadaPiket || [])];
+      const newPeralatan = [...(newArmada[aIdx].peralatan || [])];
+      newPeralatan[pIdx] = { ...newPeralatan[pIdx], [field]: value };
+      newArmada[aIdx] = { ...newArmada[aIdx], peralatan: newPeralatan };
+      return { ...prev, armadaPiket: newArmada };
+    });
+  };
+
+  const handleRemovePeralatan = (aIdx: number, pIdx: number) => {
+    setForm((prev) => {
+      const newArmada = [...(prev.armadaPiket || [])];
+      const newPeralatan = [...(newArmada[aIdx].peralatan || [])];
+      newPeralatan.splice(pIdx, 1);
+      newArmada[aIdx] = { ...newArmada[aIdx], peralatan: newPeralatan };
+      return { ...prev, armadaPiket: newArmada };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -158,6 +217,67 @@ export default function OperationalForms() {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+
+      // SYNC TO POSKO STATUS IF THIS IS PIKET DATANG
+      if (reportType === "daily_piket" && form.piketAction === "datang" && form.sectorId) {
+        const sector = sectors.find(s => s.id === form.sectorId);
+        if (sector) {
+          const docRef = doc(db, "settings", "status_posko");
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+             const data = snap.data().data || [];
+             // Find index by posko name matching sector name roughly, or ID if matched.
+             // We'll try to find by sector.name in namaPosko, or we add/update.
+             let pIdx = data.findIndex((p: any) => p.namaPosko.toLowerCase().includes(sector.name.toLowerCase()) || (p.sectorId && p.sectorId === form.sectorId));
+             
+             const officer = personnel.find(p => p.name === form.officerInChargeId) || { name: form.officerInChargeId, rank: "" };
+             const officerName = officer.rank ? `${officer.rank} ${officer.name}` : officer.name;
+             
+             const personilBertugas = form.attendance?.filter(a => a.status === "hadir").map(a => {
+                const psnd = personnel.find(px => px.id === a.personnelId);
+                let mappedPeran = "Anggota";
+                if (psnd) {
+                   if (psnd.role === "officer" || psnd.rank?.toUpperCase().includes("DANRU")) mappedPeran = "Danru";
+                   else if (psnd.rank?.toUpperCase().includes("RESCUE")) mappedPeran = "Rescue";
+                   else if (psnd.rank?.toUpperCase().includes("DRIVER")) mappedPeran = "Driver";
+                }
+
+                return {
+                   id: a.personnelId,
+                   nama: a.name,
+                   peran: mappedPeran,
+                   foto: psnd?.photoUrl || ""
+                };
+             }) || [];
+
+             const armadaUpdate = form.armadaPiket?.map(a => ({
+                 id: a.id,
+                 nama: a.nama,
+                 plat: a.plat,
+                 status: a.status,
+                 peralatan: a.peralatan || []
+             })) || [];
+
+             if (pIdx !== -1) {
+                data[pIdx].danruSiaga = officerName;
+                data[pIdx].personil = personilBertugas;
+                data[pIdx].armada = armadaUpdate;
+             } else {
+                // If not found, just create a new one for this sector
+                data.push({
+                   id: "posko-" + form.sectorId,
+                   sectorId: form.sectorId,
+                   namaPosko: "POSKO " + sector.name.toUpperCase(),
+                   danruSiaga: officerName,
+                   personil: personilBertugas,
+                   armada: armadaUpdate
+                });
+             }
+             await updateDoc(docRef, { data });
+          }
+        }
+      }
+
       alert("Laporan Operasional Berhasil Disimpan!");
       navigate("/staff/ops");
     } catch (error) {
@@ -600,6 +720,93 @@ export default function OperationalForms() {
                   </div>
                 </div>
               )}
+
+            {/* Armada & Peralatan Section */}
+            {reportType === "daily_piket" && form.piketAction === "datang" && (
+                <div className="space-y-6 pt-10 border-t-8 border-slate-50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter italic">
+                      Armada & <span className="text-brand-red">Peralatan Siaga</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleAddArmadaPiket}
+                      className="text-xs font-black uppercase text-brand-red hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" /> Tambah Armada
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {form.armadaPiket?.map((armada, aIdx) => (
+                      <div key={armada.id} className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-200 shadow-sm relative">
+                        <button
+                           type="button"
+                           onClick={() => handleRemoveArmadaPiket(aIdx)}
+                           className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-brand-red text-white font-bold flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                        >
+                           <X className="w-4 h-4" />
+                        </button>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                           <div>
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Nama Armada</label>
+                              <input type="text" value={armada.nama} onChange={(e) => handleUpdateArmadaPiket(aIdx, "nama", e.target.value)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold uppercase outline-none focus:border-brand-red" placeholder="Cth: Unit Gajah 01" />
+                           </div>
+                           <div>
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Plat Nomor</label>
+                              <input type="text" value={armada.plat} onChange={(e) => handleUpdateArmadaPiket(aIdx, "plat", e.target.value)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold uppercase outline-none focus:border-brand-red" placeholder="Cth: KU 8000 M" />
+                           </div>
+                           <div>
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Status Unit</label>
+                              <select value={armada.status} onChange={(e) => handleUpdateArmadaPiket(aIdx, "status", e.target.value)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold uppercase outline-none focus:border-brand-red">
+                                 <option value="Siaga">SIAGA</option>
+                                 <option value="Bertugas">BERTUGAS</option>
+                                 <option value="Perawatan">PERAWATAN</option>
+                              </select>
+                           </div>
+                        </div>
+
+                        {/* Peralatan List */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-200">
+                           <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Daftar Peralatan</span>
+                              <button type="button" onClick={() => handleAddPeralatan(aIdx)} className="text-[9px] font-bold text-blue-600 hover:underline">+ Tambah Alat</button>
+                           </div>
+                           {(!armada.peralatan || armada.peralatan.length === 0) && (
+                              <p className="text-xs text-slate-400 italic text-center py-2">Belum ada peralatan ditambahkan.</p>
+                           )}
+                           <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                              {armada.peralatan?.map((alat, pIdx) => (
+                                 <div key={pIdx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                    <div className="flex-1">
+                                       <input type="text" value={alat.nama} onChange={(e) => handleUpdatePeralatan(aIdx, pIdx, "nama", e.target.value)} placeholder="Nama Alat..." className="w-full bg-transparent text-xs font-bold font-italic outline-none uppercase" />
+                                    </div>
+                                    <div className="w-16">
+                                       <input type="number" min={1} value={alat.jumlah} onChange={(e) => handleUpdatePeralatan(aIdx, pIdx, "jumlah", parseInt(e.target.value) || 0)} className="w-full bg-white border border-slate-200 px-2 py-1 text-xs text-center rounded outline-none" />
+                                    </div>
+                                    <div className="w-24">
+                                       <select value={alat.kondisi} onChange={(e) => handleUpdatePeralatan(aIdx, pIdx, "kondisi", e.target.value)} className="w-full bg-white border border-slate-200 px-1 py-1 text-[10px] font-bold rounded outline-none uppercase">
+                                          <option value="Baik">Baik</option>
+                                          <option value="Rusak Ringan">Rusak Ringan</option>
+                                          <option value="Rusak Berat">Rusak Berat</option>
+                                       </select>
+                                    </div>
+                                    <button type="button" onClick={() => handleRemovePeralatan(aIdx, pIdx)} className="text-brand-red hover:text-red-700 font-bold px-1">&times;</button>
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                    {(!form.armadaPiket || form.armadaPiket.length === 0) && (
+                       <button type="button" onClick={handleAddArmadaPiket} className="w-full py-6 border-2 border-dashed border-slate-300 rounded-[2rem] text-slate-400 font-bold uppercase tracking-widest text-sm hover:border-brand-red hover:text-brand-red transition-colors flex items-center justify-center gap-2">
+                          <Truck className="w-5 h-5" /> TAMBAHKAN ARMADA
+                       </button>
+                    )}
+                  </div>
+                </div>
+            )}
+            
           </section>
 
           {/* Section 2: Technical Details */}

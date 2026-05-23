@@ -240,6 +240,7 @@ export interface Personnel {
   phoneNumber: string;
   status: 'active' | 'on_leave' | 'retired';
   role: 'admin' | 'officer' | 'field_personnel';
+  photoUrl?: string;
 }
 
 export interface Squad {
@@ -286,6 +287,13 @@ export interface OperationalReport {
     lng: number;
   };
   attendance?: AttendanceRecord[];
+  armadaPiket?: {
+    id: string;
+    nama: string;
+    plat: string;
+    status: string;
+    peralatan: { nama: string; jumlah: number; kondisi: string }[];
+  }[];
   details: {
     // For Fire
     cause?: string;

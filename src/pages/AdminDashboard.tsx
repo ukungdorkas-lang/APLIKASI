@@ -1,5 +1,6 @@
 import React from "react";
 import { defaultOrgData } from "../components/StrukturOrganisasi";
+import { defaultPoskoData } from "../components/StatusPoskoTerpadu";
 import { useReports } from "../hooks/useReports";
 import DashboardStats from "../components/DashboardStats";
 import ReportList from "../components/ReportList";
@@ -62,6 +63,7 @@ import {
   FileDown,
   Eye,
   Menu,
+  Siren,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, Link } from "react-router-dom";
@@ -91,6 +93,7 @@ type AdminTab =
   | "education"
   | "profiles"
   | "org_structure"
+  | "posko_status"
   | "banners"
   | "settings"
   | "bank_data"
@@ -140,6 +143,7 @@ export default function AdminDashboard({
     education: true,
     profiles: true,
     org_structure: true,
+    posko_status: true,
     banners: true,
     bank_data: true,
     settings: true,
@@ -255,6 +259,7 @@ export default function AdminDashboard({
   });
 
   const [orgDataForm, setOrgDataForm] = React.useState<any>(defaultOrgData);
+  const [poskoDataForm, setPoskoDataForm] = React.useState<any[]>(defaultPoskoData);
 
   const [bankDataForm, setBankDataForm] = React.useState({
     title: "",
@@ -728,6 +733,22 @@ export default function AdminDashboard({
     }
   };
 
+  const handleSavePoskoData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateDoc(doc(db, "settings", "status_posko"), { data: poskoDataForm });
+      showToast("Data posko berhasil diperbarui");
+    } catch (err: any) {
+      try {
+        const { setDoc } = await import("firebase/firestore");
+        await setDoc(doc(db, "settings", "status_posko"), { data: poskoDataForm });
+        showToast("Data posko berhasil diperbarui");
+      } catch (e2) {
+        showToast("Gagal menyimpan posko", "error");
+      }
+    }
+  };
+
   const handleSaveOrgStructure = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -937,7 +958,30 @@ export default function AdminDashboard({
       setShowWeatherModal(false);
       setEditingItem(null);
     } catch (err) {
-      showToast("Gagal menyimpan cuaca hulu", "error");
+      showToast("Gagal menyimpan data cuaca hulu", "error");
+    }
+  };
+
+  const handleSaveRiver = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, "river_monitoring", editingItem.id), {
+          ...riverForm,
+          updatedAt: Date.now(),
+        });
+        showToast("Data sungai diperbarui");
+      } else {
+        await addDoc(collection(db, "river_monitoring"), {
+          ...riverForm,
+          updatedAt: Date.now(),
+        });
+        showToast("Data sungai ditambahkan");
+      }
+      setShowFloodModal(false);
+      setEditingItem(null);
+    } catch (err) {
+      showToast("Gagal menyimpan data sungai", "error");
     }
   };
 
@@ -1130,6 +1174,20 @@ export default function AdminDashboard({
       setDataLoading((prev) => ({ ...prev, org_structure: false }));
     });
     return () => unsubOrg();
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab !== "posko_status") return;
+    const unsubPosko = onSnapshot(doc(db, "settings", "status_posko"), (docSnap) => {
+      if (docSnap.exists() && docSnap.data().data) {
+        setPoskoDataForm(docSnap.data().data);
+      }
+      setDataLoading((prev) => ({ ...prev, posko_status: false }));
+    }, (err) => {
+      console.warn("Listener failed for collection: status_posko", err);
+      setDataLoading((prev) => ({ ...prev, posko_status: false }));
+    });
+    return () => unsubPosko();
   }, [activeTab]);
 
   React.useEffect(() => {
@@ -1464,6 +1522,11 @@ export default function AdminDashboard({
           id: "org_structure",
           name: "Struktur Organisasi",
           icon: <Users className="w-5 h-5" />,
+        },
+        {
+          id: "posko_status",
+          name: "Kesiapan Posko",
+          icon: <Siren className="w-5 h-5" />,
         },
         {
           id: "banners",
@@ -2451,6 +2514,123 @@ export default function AdminDashboard({
                       >
                         <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
                         Simpan Formasi Pegawai
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "posko_status" && (
+              <motion.div
+                key="posko_status"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-12"
+              >
+                <div className="bg-brand-dark p-6 lg:p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div>
+                      <h3 className="text-3xl md:text-5xl text-white font-black uppercase italic tracking-tighter mb-4">
+                        Kesiapan <span className="text-brand-red">Posko</span>
+                      </h3>
+                      <p className="text-slate-400 font-bold max-w-xl text-lg">
+                        Edit JSON pergantian piket: nama posko, danru siaga, armada dan personil yang bertugas hari ini.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-brand-red rounded-full blur-[120px] opacity-20" />
+                </div>
+
+                <div className="bg-white p-6 md:p-10 rounded-[3.5rem] border-2 border-slate-100 shadow-2xl">
+                  <form onSubmit={handleSavePoskoData} className="space-y-12">
+                    {poskoDataForm.map((posko, pIdx) => (
+                      <div key={pIdx} className="bg-slate-50 p-6 md:p-8 rounded-[2.5rem] border-2 border-slate-200 shadow-sm relative overflow-visible">
+                        <div className="flex justify-between items-center mb-6 border-b-2 border-slate-200 pb-4">
+                           <h4 className="font-black text-slate-800 text-xl uppercase italic">POSKO {pIdx + 1}</h4>
+                           <button type="button" onClick={() => { const nd = [...poskoDataForm]; nd.splice(pIdx, 1); setPoskoDataForm(nd); }} className="text-brand-red bg-brand-red/10 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-brand-red hover:text-white transition-all">Hapus Posko</button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                           <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Nama Posko</label>
+                              <input type="text" value={posko.namaPosko} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].namaPosko = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: POSKO INDUK DAMKAR" />
+                           </div>
+                           <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Danru Siaga</label>
+                              <input type="text" value={posko.danruSiaga} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].danruSiaga = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: Komandan Asep..." />
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                           {/* Armada Editor */}
+                           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                              <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                 <h5 className="font-bold text-slate-700 uppercase">Armada ({posko.armada?.length || 0})</h5>
+                                 <button type="button" onClick={() => { const nd = [...poskoDataForm]; if(!nd[pIdx].armada) nd[pIdx].armada = []; nd[pIdx].armada.push({id: Date.now().toString(), nama: "", plat: "", status: "Siaga"}); setPoskoDataForm(nd); }} className="text-brand-red text-xs font-bold uppercase hover:underline">+ Tambah Armada</button>
+                              </div>
+                              <div className="space-y-4">
+                                 {posko.armada?.map((arm, aIdx) => (
+                                    <div key={aIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl relative">
+                                       <button type="button" onClick={() => { const nd = [...poskoDataForm]; nd[pIdx].armada.splice(aIdx, 1); setPoskoDataForm(nd); }} className="absolute -top-3 -right-3 w-6 h-6 bg-brand-red text-white rounded-full flex items-center justify-center shadow-md font-bold">&times;</button>
+                                       <div className="space-y-3">
+                                         <div><input type="text" value={arm.nama} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].armada[aIdx].nama = e.target.value; setPoskoDataForm(nd); }} className="w-full border border-slate-200 px-3 py-2 rounded-lg bg-white text-sm" placeholder="Nama Unit..." /></div>
+                                         <div className="grid grid-cols-2 gap-3">
+                                           <input type="text" value={arm.plat} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].armada[aIdx].plat = e.target.value; setPoskoDataForm(nd); }} className="w-full border border-slate-200 px-3 py-2 rounded-lg bg-white text-sm uppercase" placeholder="Plat Nomor" />
+                                           <select value={arm.status} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].armada[aIdx].status = e.target.value; setPoskoDataForm(nd); }} className="w-full border border-slate-200 px-3 py-2 rounded-lg bg-white text-sm">
+                                             <option value="Siaga">Siaga</option>
+                                             <option value="Bertugas">Bertugas</option>
+                                             <option value="Perawatan">Perawatan</option>
+                                           </select>
+                                         </div>
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
+
+                           {/* Personil Editor */}
+                           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                              <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                 <h5 className="font-bold text-slate-700 uppercase">Personil Bertugas ({posko.personil?.length || 0})</h5>
+                                 <button type="button" onClick={() => { const nd = [...poskoDataForm]; if(!nd[pIdx].personil) nd[pIdx].personil = []; nd[pIdx].personil.push({id: Date.now().toString(), nama: "", peran: "Anggota"}); setPoskoDataForm(nd); }} className="text-brand-dark text-xs font-bold uppercase hover:underline">+ Tambah Personil</button>
+                              </div>
+                              <div className="space-y-4">
+                                 {posko.personil?.map((per, rIdx) => (
+                                    <div key={rIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl relative">
+                                       <button type="button" onClick={() => { const nd = [...poskoDataForm]; nd[pIdx].personil.splice(rIdx, 1); setPoskoDataForm(nd); }} className="absolute -top-3 -right-3 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-md font-bold">&times;</button>
+                                       <div className="grid grid-cols-3 gap-3 mb-2">
+                                         <div className="col-span-2"><input type="text" value={per.nama} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].personil[rIdx].nama = e.target.value; setPoskoDataForm(nd); }} className="w-full border border-slate-200 px-3 py-2 rounded-lg bg-white text-sm" placeholder="Nama Personil..." /></div>
+                                         <div className="col-span-1">
+                                           <select value={per.peran} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].personil[rIdx].peran = e.target.value; setPoskoDataForm(nd); }} className="w-full border border-slate-200 px-3 py-2 rounded-lg bg-white text-sm font-bold">
+                                             <option value="Anggota">Anggota</option>
+                                             <option value="Rescue">Rescue</option>
+                                             <option value="Driver">Driver</option>
+                                           </select>
+                                         </div>
+                                       </div>
+                                       <div>
+                                          <input type="text" value={per.foto || ""} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].personil[rIdx].foto = e.target.value; setPoskoDataForm(nd); }} className="w-full border border-slate-200 px-3 py-2 rounded-lg bg-white text-[10px]" placeholder="URL Foto Profil (opsional)" />
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button type="button" onClick={() => { setPoskoDataForm([...poskoDataForm, {id: Date.now().toString(), namaPosko: "POSKO BARU", danruSiaga: "", armada: [], personil: []}]); }} className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold uppercase border-2 border-dashed border-slate-300 hover:border-brand-red hover:text-brand-red transition-all">
+                       + Tambah Posko Baru
+                    </button>
+
+                    <div className="pt-8 mt-8 border-t-2 border-slate-100">
+                      <button
+                        type="submit"
+                        className="w-full bg-brand-dark text-white py-5 rounded-[1.5rem] text-xl font-black uppercase italic tracking-widest hover:bg-brand-red transition-all transform hover:scale-[1.01] shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 group"
+                      >
+                        <CheckCircle className="w-7 h-7 group-hover:scale-110 transition-transform" />
+                        Simpan Laporan Piket
                       </button>
                     </div>
                   </form>

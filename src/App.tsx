@@ -17,6 +17,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LoadingSpinner, Skeleton } from './components/Loading';
 import DynamicBanner from './components/DynamicBanner';
 import WeatherWidget from './components/WeatherWidget';
+import StatusPoskoTerpadu from './components/StatusPoskoTerpadu';
 import { cn } from './lib/utils';
 
 import News from './pages/News';
@@ -44,13 +45,8 @@ function Home() {
   const recentReports = emergencyReports.slice(0, 3);
 
   const [opsReports, setOpsReports] = React.useState<any[]>([]);
-  const [sectors, setSectors] = React.useState<any[]>([]);
-  const [squads, setSquads] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    // Fetch sectors and squads for "Personil Siaga"
-    const unsubSectors = onSnapshot(collection(db, 'sectors'), (s) => setSectors(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.warn("unsubSectors failed", err));
-    const unsubSquads = onSnapshot(collection(db, 'squads'), (s) => setSquads(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.warn("unsubSquads failed", err));
     const unsubReports = onSnapshot(query(collection(db, 'operational_reports'), orderBy('date', 'desc'), limit(50)), (s) => {
       setOpsReports(s.docs.map(d => ({id: d.id, ...d.data()})));
     }, (err) => console.warn("unsubReports failed", err));
@@ -79,8 +75,6 @@ function Home() {
     }, (err) => console.warn("unsubConfig failed", err));
 
     return () => {
-      unsubSectors();
-      unsubSquads();
       unsubReports();
       unsubNews();
       unsubBanner();
@@ -169,6 +163,11 @@ function Home() {
       {/* Weather Widget */}
       <WeatherWidget />
 
+      {/* Status Posko Terpadu */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-10">
+        <StatusPoskoTerpadu />
+      </section>
+
       {/* Latest News Section */}
       {(!config?.homeLayout || config.homeLayout.showNewsSection) && (
         <section className="max-w-7xl mx-auto px-6 sm:px-10">
@@ -245,84 +244,7 @@ function Home() {
       </section>
       )}
 
-      {/* Personil Siaga Section */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-10">
-        <div className="bg-slate-900 rounded-[4rem] p-6 lg:p-12 sm:p-20 relative overflow-hidden border-4 border-brand-red/20 shadow-2xl">
-           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/10 blur-[120px] -mr-48 -mt-48 rounded-full" />
-           
-           <div className="relative z-10">
-              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12 mb-16">
-                 <div className="max-w-2xl">
-                    <h2 className="text-4xl sm:text-6xl font-display font-black text-white uppercase italic tracking-tighter leading-none mb-6">
-                       Personil <span className="text-brand-red">Siaga.</span>
-                    </h2>
-                    <p className="text-slate-400 font-medium italic border-l-2 border-brand-red pl-6 uppercase tracking-widest text-xs">
-                       Daftar seluruh personil yang bertugas siaga saat ini di setiap sektor/wilayah Kabupaten Malinau.
-                    </p>
-                 </div>
-                 <div className="px-8 py-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
-                     <div className="flex items-center gap-3">
-                        <Activity className="w-5 h-5 text-green-500 animate-pulse" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Status Real-Time</span>
-                     </div>
-                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                 {sectors.map(sector => {
-                    const latestReport = opsReports
-                      .filter(r => r.type === 'daily_piket' && r.sectorId === sector.id && r.piketAction === 'datang')
-                      .sort((a, b) => b.date - a.date)[0];
-                    
-                     const squad = squads.find(s => s.id === latestReport?.squadId);
-                     const presentPersonnel = latestReport?.attendance?.filter((a: any) => a.status === 'hadir') || [];
-
-                     return (
-                        <div key={sector.id} className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group shadow-inner flex flex-col">
-                           <div className="flex items-center gap-4 mb-6">
-                              <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-                                 <MapPin className="w-6 h-6 text-white" />
-                              </div>
-                              <div>
-                                 <h4 className="text-white font-black uppercase italic tracking-tighter text-base leading-none">{sector.name}</h4>
-                                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">{squad ? `REGU ${squad.name}` : 'Sektor Wilayah'}</p>
-                              </div>
-                           </div>
-                           
-                           {presentPersonnel.length > 0 ? (
-                              <div className="flex-1 flex flex-col space-y-4">
-                                 <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                                    {presentPersonnel.map((p: any, idx: number) => (
-                                       <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between hover:bg-white/10 transition-colors">
-                                          <span className="text-[10px] text-white font-black uppercase italic tracking-tight">{p.name}</span>
-                                          {p.personnelId === squad?.commanderId && (
-                                            <span className="text-[7px] font-black bg-brand-red text-white px-2 py-0.5 rounded italic shadow-lg shadow-red-900/20">DANRU</span>
-                                          )}
-                                       </div>
-                                    ))}
-                                 </div>
-                                 <div className="pt-4 border-t border-white/5 flex items-center gap-2 text-[8px] font-bold text-slate-400 italic mt-auto">
-                                    <Calendar className="w-3 h-3" />
-                                    <span>Piket {latestReport.shift === 'pagi' ? 'Pagi (08:00 - 20:00)' : 'Malam (20:00 - 08:00)'}</span>
-                                 </div>
-                              </div>
-                           ) : (
-                              <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Belum Ada Laporan Masuk</p>
-                              </div>
-                           )}
-                        </div>
-                     );
-                 })}
-                 {sectors.length === 0 && (
-                   <div className="col-span-full py-10 text-center border border-dashed border-white/10 rounded-3xl">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Menyiapkan Data Wilayah...</p>
-                   </div>
-                 )}
-              </div>
-           </div>
-        </div>
-      </section>
 
       {/* Recent Cases Section */}
       {(!config?.homeLayout || config.homeLayout.showGallerySection) && (
