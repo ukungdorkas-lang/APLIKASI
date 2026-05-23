@@ -80,6 +80,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { LoadingSpinner, Skeleton } from "../components/Loading";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import DashboardProfilWilayah from "./admin/DashboardProfilWilayah";
 
 type AdminTab =
   | "overview"
@@ -2328,6 +2329,10 @@ export default function AdminDashboard({
                       </div>
                     ))
                   )}
+                </div>
+
+                <div className="mt-12">
+                  <DashboardProfilWilayah />
                 </div>
               </motion.div>
             )}
