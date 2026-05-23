@@ -74,7 +74,7 @@ export default function DashboardProfilWilayah() {
             <div className="flex-1 w-full h-[400px] lg:h-full relative bg-slate-100">
               <iframe
                 title="Google My Maps - Damkar Malinau"
-                src="<iframe src="https://www.google.com/maps/d/embed?mid=1x1lMXDroFqc5RzH_qEELRd-s3ZgEEmI&ehbc=2E312F" width="640" height="480"></iframe>"
+                src="https://www.google.com/maps/d/embed?mid=1x1lMXDroFqc5RzH_qEELRd-s3ZgEEmI&ehbc=2E312F" width="640" height="480"></iframe>"
                 width="100%"
                 height="100%"
                 className="absolute inset-0 w-full h-full border-0"
