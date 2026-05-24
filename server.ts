@@ -79,7 +79,7 @@ async function startServer() {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.5-flash',
         contents: "Cari informasi cuaca terkini untuk hulu Sungai Malinau (daerah Mentarang Hulu & Malinau Selatan Hulu), Kalimantan Utara melalui Google Search. Khususnya untuk desa-desa: Long Jalan, Long Lake, Long Rat, Tanjung Nanga, Metut, Halanga, Long Simau, Long Kebinu, Long Berang, Long Mekatip. Berikan data dalam JSON: 1. Condition (Kondisi umum), 2. Rainfall (Curah hujan rata-rata mm/24h), 3. OverflowPotential (Rendah/Sedang/Tinggi/Bahaya), 4. Summary (Kesimpulan situasi keseluruhan di hulu), 5. Recommendation (Saran instruksi untuk tim BPBD/Damkar).",
         config: {
           tools: [{ googleSearch: {} }],
@@ -108,10 +108,18 @@ async function startServer() {
   });
 
   app.post('/api/ai/generate-news', async (req, res) => {
-    if (!process.env.GEMINI_API_KEY) {
+    const { report, settings } = req.body;
+    const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return res.status(500).json({ success: false, error: 'GEMINI_API_KEY missing' });
     }
-    const { report } = req.body;
+    
+    // Create local instance for custom API key
+    const localAi = new GoogleGenAI({
+      apiKey: apiKey,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
     try {
       const prompt = `
         Anda adalah PPID Damkar Malinau. Buat rilis berita dari data ini:
@@ -124,31 +132,44 @@ async function startServer() {
         Sajikan dalam JSON: { "title": string, "content": string, "summary": string, "personnelCount": number, "unitsUsed": string[] }
       `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+      const response = await localAi.models.generateContent({
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: { responseMimeType: 'application/json' }
       });
-      res.json({ success: true, data: JSON.parse(response.text) });
+      const responseText = response.text || "{}";
+      const cleaned = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      res.json({ success: true, data: JSON.parse(cleaned) });
     } catch (err) {
+      console.error('Gemini Generate News Error:', err);
       res.status(500).json({ success: false, error: String(err) });
     }
   });
 
   app.post('/api/ai/develop-narrative', async (req, res) => {
-    if (!process.env.GEMINI_API_KEY) {
+    const { outline, settings } = req.body;
+    const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return res.status(500).json({ success: false, error: 'GEMINI_API_KEY missing' });
     }
-    const { outline } = req.body;
+
+    const localAi = new GoogleGenAI({
+      apiKey: apiKey,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
     try {
       const prompt = `Kembangkan draf ini menjadi narasi berita Damkar formal: "${outline}". Sajikan JSON: { "title": string, "content": string, "summary": string }`;
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+      const response = await localAi.models.generateContent({
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: { responseMimeType: 'application/json' }
       });
-      res.json({ success: true, data: JSON.parse(response.text) });
+      const responseText = response.text || "{}";
+      const cleaned = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      res.json({ success: true, data: JSON.parse(cleaned) });
     } catch (err) {
+      console.error('Gemini Develop Narrative Error:', err);
       res.status(500).json({ success: false, error: String(err) });
     }
   });

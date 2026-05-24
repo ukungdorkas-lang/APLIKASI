@@ -1456,7 +1456,7 @@ export default function AdminDashboard({
   const handleGenerateNews = async (report: any) => {
     try {
       showToast("Membangun narasi AI...");
-      const newsData = await generateNewsFromReport(report);
+      const newsData = await generateNewsFromReport(report, settingsForm as any);
       if (newsData) {
         await addDoc(collection(db, "news"), {
           ...newsData,
@@ -5979,8 +5979,9 @@ export default function AdminDashboard({
                     </select>
                   </div>
                   <FileUpload
-                    label="Upload Materi (PDF/IMG/VIDEO)"
+                    label="Upload Materi (Maks 1MB)"
                     allowedTypes={["application/pdf", "image/*", "video/*"]}
+                    maxSize={1.5}
                     initialUrl={eduForm.imageUrl}
                     onUploadSuccess={(url) =>
                       setEduForm({ ...eduForm, imageUrl: url })

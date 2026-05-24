@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MapPin, Phone, Users, Shield, Clock, PhoneCall } from 'lucide-react';
 import { motion } from 'motion/react';
+import { cn } from '../../lib/utils';
 
 const stations = [
   {
@@ -10,7 +11,8 @@ const stations = [
     commander: "Komandan Asep",
     personnel: 24,
     phone: "081112223334",
-    status: "Siaga 24 Jam"
+    status: "Siaga 24 Jam",
+    coordinates: { lat: 3.571069, lng: 116.6057099, z: 15 }
   },
   {
     id: 2,
@@ -19,7 +21,8 @@ const stations = [
     commander: "Danru Budi",
     personnel: 12,
     phone: "082223334445",
-    status: "Siaga 24 Jam"
+    status: "Siaga 24 Jam",
+    coordinates: { lat: 3.5349505, lng: 116.5969593, z: 15 }
   },
   {
     id: 3,
@@ -28,7 +31,8 @@ const stations = [
     commander: "Danru Cecep",
     personnel: 10,
     phone: "083334445556",
-    status: "Siaga 24 Jam"
+    status: "Siaga 24 Jam",
+    coordinates: { lat: 3.6110806, lng: 116.6306027, z: 15 }
   },
   {
     id: 4,
@@ -37,11 +41,26 @@ const stations = [
     commander: "Danru Dodi",
     personnel: 8,
     phone: "084445556667",
-    status: "Siaga 24 Jam"
+    status: "Siaga 24 Jam",
+    coordinates: { lat: 3.5272043, lng: 116.5091857, z: 15 }
   }
 ];
 
 export default function DashboardProfilWilayah() {
+  const baseUrl = "https://www.google.com/maps/d/embed?mid=1x1lMXDroFqc5RzH_qEELRd-s3ZgEEmI&ehbc=2E312F";
+  const [mapUrl, setMapUrl] = useState(baseUrl);
+  const [activeStation, setActiveStation] = useState<number | null>(null);
+
+  const handleStationClick = (station: typeof stations[0]) => {
+    if (activeStation === station.id) {
+      setActiveStation(null);
+      setMapUrl(baseUrl);
+    } else {
+      setActiveStation(station.id);
+      setMapUrl(`${baseUrl}&ll=${station.coordinates.lat},${station.coordinates.lng}&z=${station.coordinates.z}`);
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 relative">
        {/* Background Pattern */}
@@ -74,10 +93,10 @@ export default function DashboardProfilWilayah() {
             <div className="flex-1 w-full h-[400px] lg:h-full relative bg-slate-100">
               <iframe
                 title="Google My Maps - Damkar Malinau"
-                src="https://www.google.com/maps/d/embed?mid=1x1lMXDroFqc5RzH_qEELRd-s3ZgEEmI&ehbc=2E312F"
+                src={mapUrl}
                 width="100%"
                 height="100%"
-                className="absolute inset-0 w-full h-full border-0"
+                className="absolute inset-0 w-full h-full border-0 transition-opacity duration-500"
                 allowFullScreen={false}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -105,13 +124,23 @@ export default function DashboardProfilWilayah() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
                   key={station.id}
-                  className="bg-white rounded-[2rem] p-6 lg:p-8 border-2 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-slate-200 transition-all duration-300 relative overflow-hidden group/card"
+                  onClick={() => handleStationClick(station)}
+                  className={cn(
+                    "cursor-pointer bg-white rounded-[2rem] p-6 lg:p-8 border-2 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group/card",
+                    activeStation === station.id ? "border-brand-red/50 ring-4 ring-brand-red/10 shadow-lg" : "border-slate-100 hover:border-slate-200"
+                  )}
                 >
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-red to-orange-500" />
+                  <div className={cn(
+                    "absolute top-0 left-0 w-1.5 h-full",
+                    activeStation === station.id ? "bg-brand-red" : "bg-gradient-to-b from-brand-red to-orange-500"
+                  )} />
                   
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
                     <div>
-                      <h3 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tight group-hover/card:text-brand-red transition-colors">
+                      <h3 className={cn(
+                        "text-lg md:text-xl font-black uppercase tracking-tight transition-colors",
+                        activeStation === station.id ? "text-brand-red" : "text-slate-800 group-hover/card:text-brand-red"
+                      )}>
                         {station.name}
                       </h3>
                       <div className="flex items-center gap-1.5 mt-2 text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full inline-flex border border-slate-200">
@@ -156,7 +185,10 @@ export default function DashboardProfilWilayah() {
 
                   <div className="mt-6 pt-6 border-t font-medium border-slate-100">
                     <button 
-                      onClick={() => window.open(`https://wa.me/${station.phone}`, '_blank')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`https://wa.me/${station.phone}`, '_blank');
+                      }}
                       className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn"
                     >
                       <PhoneCall className="w-4 h-4 group-hover/btn:animate-pulse" />

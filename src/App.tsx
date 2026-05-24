@@ -163,14 +163,9 @@ function Home() {
       {/* Weather Widget */}
       <WeatherWidget />
 
-      {/* Status Posko Terpadu */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-10">
-        <StatusPoskoTerpadu />
-      </section>
-
       {/* Latest News Section */}
       {(!config?.homeLayout || config.homeLayout.showNewsSection) && (
-        <section className="max-w-7xl mx-auto px-6 sm:px-10">
+        <section className="max-w-7xl mx-auto px-6 sm:px-10 mt-16 sm:mt-24">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16">
           <div className="max-w-2xl">
              <div className="flex items-center gap-3 mb-6">
@@ -243,6 +238,11 @@ function Home() {
         </div>
       </section>
       )}
+
+      {/* Status Posko Terpadu */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-10 mt-16 sm:mt-24">
+        <StatusPoskoTerpadu />
+      </section>
 
 
 

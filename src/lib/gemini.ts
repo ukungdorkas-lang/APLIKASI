@@ -79,7 +79,7 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
   `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json"
@@ -137,7 +137,7 @@ export async function developNarrative(outline: string, settings?: AppConfig) {
   `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json"
@@ -173,7 +173,7 @@ export async function getChatAssistantResponse(message: string, history: { role:
 
   try {
     const chat = ai.chats.create({ 
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       config: {
         systemInstruction: systemPrompt
       }

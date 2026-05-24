@@ -11,6 +11,7 @@ export default function Education() {
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'education'), orderBy('createdAt', 'desc'));
@@ -168,14 +169,20 @@ export default function Education() {
                 </button>
               </div>
               <div className="p-6 sm:p-10">
-                {selectedItem.imageUrl && selectedItem.imageUrl.match(/\.(jpeg|jpg|gif|png)$/i) && (
-                  <div className="mb-8 rounded-2xl overflow-hidden bg-slate-50 border-4 border-slate-100 text-center flex justify-center">
+                {selectedItem.imageUrl && selectedItem.imageUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i) && (
+                  <div 
+                    className="mb-8 rounded-2xl overflow-hidden bg-slate-50 border-4 border-slate-100 text-center flex justify-center cursor-zoom-in relative group"
+                    onClick={() => setFullScreenImage(selectedItem.imageUrl)}
+                  >
                     <img 
                       src={selectedItem.imageUrl} 
                       alt={selectedItem.title}
-                      className="w-full h-auto object-contain max-h-[60vh] max-w-full"
+                      className="w-full h-auto object-contain max-h-[60vh] max-w-full transition-transform duration-300 group-hover:scale-[1.02]"
                       referrerPolicy="no-referrer"
                     />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <span className="bg-black/50 text-white px-4 py-2 rounded-full font-bold text-sm tracking-wider uppercase backdrop-blur-sm">Lihat Penuh</span>
+                    </div>
                   </div>
                 )}
                 {selectedItem.imageUrl && selectedItem.imageUrl.match(/\.(mp4|webm)$/i) && (
@@ -208,13 +215,40 @@ export default function Education() {
                       className="inline-flex flex-1 sm:flex-none justify-center items-center gap-3 bg-brand-red text-white px-8 py-4 rounded-xl font-black italic uppercase tracking-widest text-xs hover:bg-brand-dark transition-all"
                     >
                       <Download className="w-4 h-4" /> 
-                      {selectedItem.imageUrl.match(/\.(jpeg|jpg|gif|png)$/i) ? 'Unduh Gambar' : 
+                      {selectedItem.imageUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Unduh Gambar' : 
                        selectedItem.imageUrl.match(/\.(mp4|webm)$/i) ? 'Unduh Video' : 'Unduh Lampiran'}
                     </a>
                   )}
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {fullScreenImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[10000] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => setFullScreenImage(null)}
+          >
+            <button
+              onClick={() => setFullScreenImage(null)}
+              className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors"
+            >
+              <X className="w-10 h-10" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              src={fullScreenImage}
+              className="max-w-full max-h-screen object-contain"
+              alt="Full Screen"
+            />
           </motion.div>
         )}
       </AnimatePresence>
