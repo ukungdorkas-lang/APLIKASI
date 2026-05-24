@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { EmergencyReport, OperationType } from '../types';
 
 export function useReports() {
@@ -7,16 +8,12 @@ export function useReports() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Initial Fetch
-    const fetchReports = async () => {
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (!error && data) {
-        // Map database fields to application types
-        const mappedData = data.map(doc => ({
+    const q = query(collection(db, 'operational_reports'), orderBy('created_at', 'desc'));
+    const unsub = onSnapshot(q, (snapshot: any) => {
+      const mappedData = snapshot.docs.map((docSnap: any) => {
+        const doc = docSnap.data();
+        return {
+          id: docSnap.id,
           ...doc,
           createdAt: doc.created_at,
           resolvedAt: doc.resolved_at,
@@ -26,29 +23,16 @@ export function useReports() {
           reportNumber: doc.report_number,
           officerNotes: doc.officer_notes,
           newsGenerated: doc.news_generated
-        })) as EmergencyReport[];
-        setReports(mappedData);
-      }
+        } as EmergencyReport;
+      });
+      setReports(mappedData);
       setLoading(false);
-    };
+    }, (err: any) => {
+      console.error("useReports snapshot error:", err);
+      setLoading(false);
+    });
 
-    fetchReports();
-
-    // 2. Realtime Subscription
-    const channel = supabase
-      .channel('reports_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reports' },
-        (payload) => {
-          fetchReports(); // Re-fetch on any change for simplicity, or manage state manually
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsub();
   }, []);
 
   const submitReport = async (reportData: Partial<EmergencyReport>) => {
@@ -73,55 +57,36 @@ export function useReports() {
         news_generated: false
       };
 
-      const { data, error } = await supabase
-        .from('reports')
-        .insert([insertData])
-        .select()
-        .single();
-        
-      if (error) throw error;
+      const docRef = await addDoc(collection(db, 'operational_reports'), insertData);
       
       const newReport = {
-        ...data,
-        id: data.id,
-        createdAt: data.created_at,
-        resolvedAt: data.resolved_at,
-        reporterName: data.reporter_name,
-        phoneNumber: data.phone_number,
-        mediaUrl: data.media_url,
-        reportNumber: data.report_number,
-        officerNotes: data.officer_notes,
-        newsGenerated: data.news_generated
+        id: docRef.id,
+        ...insertData,
+        createdAt: insertData.created_at,
+        reporterName: insertData.reporter_name,
+        phoneNumber: insertData.phone_number,
+        mediaUrl: insertData.media_url,
+        reportNumber: insertData.report_number,
+        newsGenerated: insertData.news_generated
       };
-
-      // Trigger notifications: Not migrating notificationService yet, skipping or wrapping
-      // await processNotifications(newReport as EmergencyReport);
       
-      return newReport;
+      return newReport as EmergencyReport;
     } catch (error) {
-      console.error("Supabase Create Error:", error);
+      console.error("Create Error:", error);
       throw error;
     }
   };
 
   const updateStatus = async (reportId: string, status: EmergencyReport['status'], officerNotes?: string, documentation?: EmergencyReport['documentation']) => {
     try {
-      const updateData: any = {
-        status,
-        updated_at: Date.now() // Note: Supabase reports table doesn't have an `updated_at` column by default, let's omit or just rely on resolved_at
-      };
+      const updateData: any = { status };
       if (officerNotes !== undefined) updateData.officer_notes = officerNotes;
       if (documentation !== undefined) updateData.documentation = documentation;
       if (status === 'Selesai Ditangani') updateData.resolved_at = Date.now();
 
-      const { error } = await supabase
-        .from('reports')
-        .update(updateData)
-        .eq('id', reportId);
-
-      if (error) throw error;
+      await updateDoc(doc(db, 'operational_reports', reportId), updateData);
     } catch (error) {
-       console.error("Supabase Update Error:", error);
+       console.error("Update Error:", error);
     }
   };
 

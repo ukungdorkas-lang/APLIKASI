@@ -18,7 +18,7 @@ export function collection(db: any, path: string) {
 
 export function doc(db: any, path: string, id?: string) {
   if (!id) {
-    id = crypto.randomUUID();
+    id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
   }
   return new DocReference(path, id);
 }
@@ -163,7 +163,7 @@ export async function setDoc(ref: DocReference, dataP: any, options?: { merge?: 
 }
 
 export async function addDoc(col: CollectionReference, dataP: any) {
-  const id = crypto.randomUUID();
+  const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
   const ref = new DocReference(col.collectionPath, id);
   await setDoc(ref, dataP);
   return { id, path: ref.collectionPath + '/' + id };
@@ -212,9 +212,15 @@ export function onSnapshot(ref: any, callback: any, errorCallback?: any) {
 
   // Initial fetch
   if (ref instanceof DocReference) {
-    getDoc(ref).then(callback).catch(errorCallback);
+    getDoc(ref).then(callback).catch(err => {
+      if (errorCallback) errorCallback(err);
+      else console.error("onSnapshot getDoc error:", err);
+    });
   } else {
-    getDocs(ref).then(callback).catch(errorCallback);
+    getDocs(ref).then(callback).catch(err => {
+      if (errorCallback) errorCallback(err);
+      else console.error("onSnapshot getDocs error:", err);
+    });
   }
 
   // Polling fallback to simulate realtime for this adapter without complex real-time subscriptions setup per query

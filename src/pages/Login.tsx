@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, setDoc, doc } from 'firebase/firestore';
 import { ShieldAlert, Lock, Mail, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -63,14 +65,14 @@ export default function Login() {
 
           // If admin, also store in admins for direct access
           if (role === 'admin') {
-            await supabase.from('admins').insert([userData]);
+            await setDoc(doc(db, 'admins', authData.user.id), userData);
           } else {
             // Store in personnel
-            await supabase.from('personnel').insert([{
+            await setDoc(doc(db, 'personnel', authData.user.id), {
               ...userData,
               position: 'Petugas Damkar',
               rank: role === 'officer' ? 'DANRU' : 'ANGGOTA'
-            }]);
+            });
           }
         }
 
@@ -93,22 +95,20 @@ export default function Login() {
         if (!user) throw new Error("Gagal login: User tidak ditemukan.");
         
         // Check in admins collection
-        const { data: adminData } = await supabase
-          .from('admins')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const adminQ = query(collection(db, 'admins'), where('user_id', '==', user.id));
+        const adminSnap = await getDocs(adminQ);
+        const adminData = !adminSnap.empty ? adminSnap.docs[0].data() : null;
         
         // Auto-restore super admin if they are deleted but logging in
         if (!adminData && user.email === 'ukungdorkas@gmail.com') {
-          await supabase.from('admins').insert([{
+          await setDoc(doc(db, 'admins', user.id), {
             user_id: user.id,
             email: user.email,
             name: "Super Admin",
             role: 'super',
             status: 'active',
             created_at: Date.now()
-          }]);
+          });
           navigate('/admin');
           return;
         }
@@ -124,11 +124,9 @@ export default function Login() {
         }
 
         // Check in personnel collection
-        const { data: personnelData } = await supabase
-          .from('personnel')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const persQ = query(collection(db, 'personnel'), where('user_id', '==', user.id));
+        const persSnap = await getDocs(persQ);
+        const personnelData = !persSnap.empty ? persSnap.docs[0].data() : null;
           
         if (personnelData) {
           if (personnelData.status === 'pending') {

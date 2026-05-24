@@ -9,7 +9,7 @@ import ReportList from './components/ReportList';
 import { useReports } from './hooks/useReports';
 import { supabase } from './lib/supabase';
 import { generateNewsFromReport } from './lib/gemini';
-import { collection, addDoc, getDoc, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDoc, getDocs, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
 import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle, Lock } from 'lucide-react';
 import { NewsArticle, BannerConfig, AppConfig } from './types';
@@ -48,72 +48,28 @@ function Home() {
   const [opsReports, setOpsReports] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    // ==== SUPABASE: FETCH DATA ====
-    const fetchReports = async () => {
-      const { data, error } = await supabase
-        .from('operational_reports')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(50);
-      if (!error && data) setOpsReports(data);
-    };
+    const unsubReports = onSnapshot(query(collection(db, 'operational_reports'), orderBy('date', 'desc'), limit(50)), (s: any) => {
+      setOpsReports(s.docs.map((d: any) => ({id: d.id, ...d.data()})));
+    }, (err: any) => console.warn("unsubReports failed", err));
 
-    const fetchBanner = async () => {
-      const { data, error } = await supabase
-        .from('banners')
-        .select('*')
-        .eq('id', 'home')
-        .single();
-      if (!error && data) setBanner(data as BannerConfig);
-    };
+    const unsubBanner = onSnapshot(doc(db, 'banners', 'home'), (snap: any) => {
+      if (snap.exists()) setBanner(snap.data() as BannerConfig);
+    }, (err: any) => console.warn("unsubBanner failed", err));
 
-    const fetchConfig = async () => {
-      const { data, error } = await supabase
-        .from('app_config')
-        .select('*')
-        .eq('id', 'app')
-        .single();
-      if (!error && data) setConfig(data as AppConfig);
-    };
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
+      if (snap.exists()) setConfig(snap.data() as AppConfig);
+    }, (err: any) => console.warn("unsubConfig failed", err));
 
-    fetchReports();
-    fetchBanner();
-    fetchConfig();
-
-    const fetchNews = async () => {
-      const { data, error } = await supabase
-        .from('news')
-        .select('*')
-        .eq('status', 'Publish Otomatis')
-        .order('date', { ascending: false })
-        .limit(3);
-        
-      if (!error && data) {
-        setNews(data.map(d => ({
-          ...d,
-          reportId: d.report_id,
-          isAIGenerated: d.is_ai_generated,
-          personnelCount: d.personnel_count,
-          unitsUsed: d.units_used,
-          imageUrl: d.image_url
-        } as NewsArticle)));
-      }
+    const unsubNews = onSnapshot(query(collection(db, 'news'), where('status', '==', 'Publish Otomatis'), orderBy('date', 'desc'), limit(3)), (s: any) => {
+      setNews(s.docs.map((d: any) => ({id: d.id, ...d.data()} as NewsArticle)));
       setLoading(false);
-    };
-
-    fetchNews();
-
-    // Supabase Realtime channels
-    const channels = supabase
-      .channel('home_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'operational_reports' }, fetchReports)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, fetchBanner)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, fetchConfig)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews)
-      .subscribe();
+    }, (err: any) => console.warn("unsubNews failed", err));
 
     return () => {
-      supabase.removeChannel(channels);
+      unsubReports();
+      unsubBanner();
+      unsubConfig();
+      unsubNews();
     };
   }, []);
 
@@ -427,31 +383,33 @@ function Dashboard() {
     try {
       const news = await generateNewsFromReport(report);
       if (news) {
-        // Simpan ke Supabase tabel 'news'
-        const { error: newsError } = await supabase.from('news').insert([{
-          report_id: report.id,
-          title: news.title,
-          content: news.content,
-          summary: news.summary,
-          date: Date.now(),
-          location: report.location?.address || 'Malinau',
-          status: "Publish Otomatis",
-          is_ai_generated: true,
-          photos: report.documentation?.photos || [],
-          videos: report.documentation?.videos || [],
-          personnel_count: news.personnelCount || report.documentation?.personnel || 0,
-          units_used: news.unitsUsed || report.documentation?.units || [],
-        }]);
+        // Simpan ke Supabase tabel 'news' via firestore adapter
+        try {
+          await addDoc(collection(db, 'news'), {
+            report_id: report.id,
+            title: news.title,
+            content: news.content,
+            summary: news.summary,
+            date: Date.now(),
+            location: report.location?.address || 'Malinau',
+            status: "Publish Otomatis",
+            is_ai_generated: true,
+            photos: report.documentation?.photos || [],
+            videos: report.documentation?.videos || [],
+            personnel_count: news.personnelCount || report.documentation?.personnel || 0,
+            units_used: news.unitsUsed || report.documentation?.units || [],
+          });
+        } catch (e) {
+          console.error("Gagal simpan news otomatis:", e);
+        }
 
-        if (newsError) throw newsError;
-
-        // Update di Supabase tabel 'reports'
-        const { error: updateError } = await supabase
-          .from('reports')
-          .update({ news_generated: true })
-          .eq('id', report.id);
-
-        if (updateError) throw updateError;
+        try {
+          await updateDoc(doc(db, 'operational_reports', report.id), {
+             news_generated: true
+          });
+        } catch (e) {
+          console.error("Gagal update report news_generated:", e);
+        }
 
         alert('Berita berhasil digenerate otomatis!');
       }
@@ -517,11 +475,9 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
         }
 
         // Check in admins collection
-        const { data: adminData } = await supabase
-          .from('admins')
-          .select('*')
-          .eq('user_id', u.id)
-          .single();
+        const adminQ = query(collection(db, 'admins'), where('user_id', '==', u.id));
+        const adminSnap = await getDocs(adminQ);
+        const adminData = !adminSnap.empty ? adminSnap.docs[0].data() : null;
           
         if (adminData) {
           if (adminData.status === 'pending') {
@@ -539,11 +495,9 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
         }
 
         // Check in personnel collection
-        const { data: personnelData } = await supabase
-          .from('personnel')
-          .select('*')
-          .eq('user_id', u.id)
-          .single();
+        const persQ = query(collection(db, 'personnel'), where('user_id', '==', u.id));
+        const persSnap = await getDocs(persQ);
+        const personnelData = !persSnap.empty ? persSnap.docs[0].data() : null;
           
         if (personnelData) {
           if (personnelData.status === 'pending') {
