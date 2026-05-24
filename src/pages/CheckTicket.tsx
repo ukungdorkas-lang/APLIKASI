@@ -1,6 +1,5 @@
 import React from 'react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { EmergencyReport } from '../types';
 import { Search, ShieldAlert, MapPin, Clock, CheckCircle2, AlertTriangle, Loader2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -26,17 +25,30 @@ export default function CheckTicket() {
     setReport(null);
 
     try {
-      const q = query(
-        collection(db, 'reports'),
-        where('reportNumber', '==', ticket.trim().toUpperCase()),
-        limit(1)
-      );
-      const snapshot = await getDocs(q);
+      const { data, error: fetchError } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('report_number', ticket.trim().toUpperCase())
+        .limit(1)
+        .single();
+        
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
-      if (snapshot.empty) {
+      if (!data) {
         setError('Laporan tidak ditemukan. Pastikan nomor tiket yang Anda masukkan benar.');
       } else {
-        setReport({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as EmergencyReport);
+        setReport({
+          ...data,
+          id: data.id,
+          createdAt: data.created_at,
+          resolvedAt: data.resolved_at,
+          reporterName: data.reporter_name,
+          phoneNumber: data.phone_number,
+          mediaUrl: data.media_url,
+          reportNumber: data.report_number,
+          officerNotes: data.officer_notes,
+          newsGenerated: data.news_generated
+        } as EmergencyReport);
       }
     } catch (err) {
       console.error('Error fetching ticket:', err);

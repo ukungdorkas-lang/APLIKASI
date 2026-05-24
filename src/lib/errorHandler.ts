@@ -51,8 +51,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errorMessage = JSON.stringify(errInfo);
   console.error('Firestore Error: ', errorMessage);
   
-  // Don't throw for LIST operations to prevent total app crash from index/permission issues on lists
-  if (operationType === OperationType.LIST) {
+  if (operationType === OperationType.LIST || errMessage.toLowerCase().includes("quota") || errMessage.toLowerCase().includes("resource-exhausted")) {
     return;
   }
   

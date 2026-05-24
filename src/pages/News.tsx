@@ -1,8 +1,7 @@
 import React from 'react';
 import { Newspaper, Calendar, MapPin, ArrowRight, X, User, Truck, Camera, Video, Share2, AlertCircle } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
-import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { NewsArticle } from '../types';
 import Markdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,16 +18,36 @@ export default function News() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    const q = query(
-      collection(db, 'news'), 
-      where('status', '==', 'Publish Otomatis'),
-      orderBy('date', 'desc')
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NewsArticle)));
+    const fetchNews = async () => {
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .eq('status', 'Publish Otomatis')
+        .order('date', { ascending: false });
+        
+      if (!error && data) {
+        setNews(data.map(d => ({
+          ...d,
+          reportId: d.report_id,
+          isAIGenerated: d.is_ai_generated,
+          personnelCount: d.personnel_count,
+          unitsUsed: d.units_used,
+          imageUrl: d.image_url
+        } as NewsArticle)));
+      }
       setLoading(false);
-    }, () => setLoading(false));
-    return () => unsubscribe();
+    };
+
+    fetchNews();
+
+    const channel = supabase
+      .channel('public:news_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (

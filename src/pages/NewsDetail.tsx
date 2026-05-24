@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { NewsArticle } from '../types';
 import { Calendar, MapPin, User, Truck, ArrowLeft, Share2, AlertCircle, Newspaper, Bookmark, X, Maximize2, Image as ImageIcon, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,10 +18,23 @@ export default function NewsDetail() {
     async function fetchArticle() {
       if (!id) return;
       try {
-        const docRef = doc(db, 'news', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setArticle({ id: docSnap.id, ...docSnap.data() } as NewsArticle);
+        const { data, error } = await supabase
+          .from('news')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        if (data) {
+          setArticle({
+            ...data,
+            reportId: data.report_id,
+            isAIGenerated: data.is_ai_generated,
+            personnelCount: data.personnel_count,
+            unitsUsed: data.units_used,
+            imageUrl: data.image_url
+          } as NewsArticle);
         }
       } catch (error) {
         console.error("Error fetching article:", error);

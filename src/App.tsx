@@ -7,6 +7,7 @@ import FormLaporan from './components/FormLaporan';
 import DashboardStats from './components/DashboardStats';
 import ReportList from './components/ReportList';
 import { useReports } from './hooks/useReports';
+import { supabase } from './lib/supabase';
 import { generateNewsFromReport } from './lib/gemini';
 import { collection, addDoc, getDoc, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
@@ -47,38 +48,72 @@ function Home() {
   const [opsReports, setOpsReports] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    const unsubReports = onSnapshot(query(collection(db, 'operational_reports'), orderBy('date', 'desc'), limit(50)), (s) => {
-      setOpsReports(s.docs.map(d => ({id: d.id, ...d.data()})));
-    }, (err) => console.warn("unsubReports failed", err));
+    // ==== SUPABASE: FETCH DATA ====
+    const fetchReports = async () => {
+      const { data, error } = await supabase
+        .from('operational_reports')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(50);
+      if (!error && data) setOpsReports(data);
+    };
 
-    const q = query(
-      collection(db, 'news'),
-      where('status', '==', 'Publish Otomatis'),
-      orderBy('date', 'desc'),
-      limit(3)
-    );
+    const fetchBanner = async () => {
+      const { data, error } = await supabase
+        .from('banners')
+        .select('*')
+        .eq('id', 'home')
+        .single();
+      if (!error && data) setBanner(data as BannerConfig);
+    };
 
-    const unsubNews = onSnapshot(q, (snapshot) => {
-      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NewsArticle)));
+    const fetchConfig = async () => {
+      const { data, error } = await supabase
+        .from('app_config')
+        .select('*')
+        .eq('id', 'app')
+        .single();
+      if (!error && data) setConfig(data as AppConfig);
+    };
+
+    fetchReports();
+    fetchBanner();
+    fetchConfig();
+
+    const fetchNews = async () => {
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .eq('status', 'Publish Otomatis')
+        .order('date', { ascending: false })
+        .limit(3);
+        
+      if (!error && data) {
+        setNews(data.map(d => ({
+          ...d,
+          reportId: d.report_id,
+          isAIGenerated: d.is_ai_generated,
+          personnelCount: d.personnel_count,
+          unitsUsed: d.units_used,
+          imageUrl: d.image_url
+        } as NewsArticle)));
+      }
       setLoading(false);
-    }, (err) => {
-      console.warn("unsubNews failed", err);
-      setLoading(false);
-    });
+    };
 
-    const unsubBanner = onSnapshot(doc(db, 'banners', 'home'), (snap) => {
-      if (snap.exists()) setBanner(snap.data() as BannerConfig);
-    }, (err) => console.warn("unsubBanner failed", err));
+    fetchNews();
 
-    const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
-      if (snap.exists()) setConfig(snap.data() as AppConfig);
-    }, (err) => console.warn("unsubConfig failed", err));
+    // Supabase Realtime channels
+    const channels = supabase
+      .channel('home_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'operational_reports' }, fetchReports)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, fetchBanner)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, fetchConfig)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews)
+      .subscribe();
 
     return () => {
-      unsubReports();
-      unsubNews();
-      unsubBanner();
-      unsubConfig();
+      supabase.removeChannel(channels);
     };
   }, []);
 
@@ -392,24 +427,39 @@ function Dashboard() {
     try {
       const news = await generateNewsFromReport(report);
       if (news) {
-        await addDoc(collection(db, 'news'), {
-          ...news,
-          reportId: report.id,
+        // Simpan ke Supabase tabel 'news'
+        const { error: newsError } = await supabase.from('news').insert([{
+          report_id: report.id,
+          title: news.title,
+          content: news.content,
+          summary: news.summary,
           date: Date.now(),
           location: report.location?.address || 'Malinau',
           status: "Publish Otomatis",
-          isAIGenerated: true,
+          is_ai_generated: true,
           photos: report.documentation?.photos || [],
           videos: report.documentation?.videos || [],
-          personnelCount: news.personnelCount || report.documentation?.personnel || 0,
-          unitsUsed: news.unitsUsed || report.documentation?.units || [],
-        });
-        await updateDoc(doc(db, "reports", report.id), { newsGenerated: true });
+          personnel_count: news.personnelCount || report.documentation?.personnel || 0,
+          units_used: news.unitsUsed || report.documentation?.units || [],
+        }]);
+
+        if (newsError) throw newsError;
+
+        // Update di Supabase tabel 'reports'
+        const { error: updateError } = await supabase
+          .from('reports')
+          .update({ news_generated: true })
+          .eq('id', report.id);
+
+        if (updateError) throw updateError;
+
         alert('Berita berhasil digenerate otomatis!');
       }
     } catch (error: any) {
       if (error?.message?.includes("leaked")) {
         alert("Gagal: API Key Anda terdeteksi bocor (Leaked). Harap perbarui di pengaturan Admin.");
+      } else if (error?.message?.includes("429") || error?.message?.includes("quota") || error?.message?.includes("RESOURCE_EXHAUSTED")) {
+        alert("Gagal: Kuota API Key telah habis (Quota Exceeded). Harap gunakan API Key berbayar atau tunggu beberapa saat.");
       } else {
         alert("Gagal memproses berita AI: " + (error?.message || "Terjadi kesalahan"));
       }
@@ -452,72 +502,93 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+    let mounted = true;
+    
+    const checkAuthStatus = async (session: any) => {
+      const u = session?.user;
       if (u) {
         // Special case for root admin
         if (u.email === 'ukungdorkas@gmail.com') {
-          setUser(u);
-          setLoading(false);
+          if (mounted) {
+             setUser(u);
+             setLoading(false);
+          }
           return;
         }
 
         // Check in admins collection
-        const adminDoc = await getDoc(doc(db, 'admins', u.uid));
-        if (adminDoc.exists()) {
-          const data = adminDoc.data();
-          if (data.status === 'pending') {
-            setError('Akun Anda sedang menunggu verifikasi administrator untuk akses penuh.');
-            setLoading(false);
+        const { data: adminData } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('user_id', u.id)
+          .single();
+          
+        if (adminData) {
+          if (adminData.status === 'pending') {
+            if (mounted) {
+              setError('Akun Anda sedang menunggu verifikasi administrator untuk akses penuh.');
+              setLoading(false);
+            }
             return;
           }
-          setUser(u);
-          setLoading(false);
+          if (mounted) {
+             setUser(u);
+             setLoading(false);
+          }
           return;
         }
 
         // Check in personnel collection
-        const personnelDoc = await getDoc(doc(db, 'personnel', u.uid));
-        if (personnelDoc.exists()) {
-          const data = personnelDoc.data();
-          if (data.status === 'pending') {
-            setError('Akun personil Anda sedang menunggu verifikasi Danru/Admin.');
-            setLoading(false);
+        const { data: personnelData } = await supabase
+          .from('personnel')
+          .select('*')
+          .eq('user_id', u.id)
+          .single();
+          
+        if (personnelData) {
+          if (personnelData.status === 'pending') {
+            if (mounted) {
+              setError('Akun personil Anda sedang menunggu verifikasi Danru/Admin.');
+              setLoading(false);
+            }
             return;
           }
           
-          if (role === 'admin' && data.role !== 'admin') {
-            auth.signOut();
+          if (role === 'admin' && personnelData.role !== 'admin') {
+            supabase.auth.signOut();
             navigate('/login');
             return;
           }
-          setUser(u);
-          setLoading(false);
-          return;
-        }
-
-        // Check users collection if exists
-        const userDoc = await getDoc(doc(db, 'users', u.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          if (data.status === 'pending') {
-            setError('Akun sedang menunggu verifikasi.');
+          if (mounted) {
+            setUser(u);
             setLoading(false);
-            return;
           }
-          setUser(u);
-          setLoading(false);
           return;
         }
 
         // Neither admin nor personnel
-        auth.signOut();
+        supabase.auth.signOut();
         navigate('/login');
       } else {
         navigate('/login');
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      checkAuthStatus(session);
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        checkAuthStatus(session);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate, role]);
 
   if (loading) return (
@@ -545,7 +616,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
           <div className="space-y-4">
              <button 
                onClick={() => {
-                 auth.signOut();
+                 supabase.auth.signOut();
                  navigate('/login');
                }}
                className="emergency-btn w-full py-4 uppercase tracking-widest text-sm"

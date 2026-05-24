@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Image as ImageIcon, X, MapPin, Calendar, Info, Maximize2, Download } from 'lucide-react';
 import DynamicBanner from '../components/DynamicBanner';
@@ -22,12 +21,33 @@ export default function Documentation() {
   const [filter, setFilter] = useState('SEMUA');
 
   useEffect(() => {
-    const q = query(collection(db, 'gallery'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setGallery(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryItem)));
+    const fetchGallery = async () => {
+      const { data, error } = await supabase
+        .from('gallery')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setGallery(data.map(d => ({
+          ...d,
+          imageUrl: d.url, // Notice mapping url -> imageUrl, category -> type etc. Wait, let's look at schema
+          category: d.type,
+          createdAt: d.created_at
+        } as GalleryItem)));
+      }
       setLoading(false);
-    });
-    return () => unsub();
+    };
+
+    fetchGallery();
+
+    const channel = supabase
+      .channel('public:gallery')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const categories = ['SEMUA', 'OPERASIONAL', 'KEGIATAN', 'PELATIHAN', 'ALUTSISTA'];

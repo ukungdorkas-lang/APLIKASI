@@ -454,6 +454,8 @@ export default function AdminDashboard({
     } catch (err: any) {
       if (err?.message?.includes("leaked")) {
         showToast("Gagal: API Key Anda terdeteksi bocor (Leaked). Harap perbarui di pengaturan.", "error");
+      } else if (err?.message?.includes("429") || err?.message?.includes("quota") || err?.message?.includes("RESOURCE_EXHAUSTED")) {
+        showToast("Gagal: Kuota API Key telah habis (Quota Exceeded). Harap gunakan API Key berbayar atau tunggu beberapa saat.", "error");
       } else {
         showToast(err?.message || "Terjadi kesalahan saat menghubungi AI", "error");
       }
@@ -1482,6 +1484,8 @@ export default function AdminDashboard({
     } catch (e: any) {
       if (e?.message?.includes("leaked")) {
         showToast("Gagal: API Key Anda terdeteksi bocor (Leaked). Harap perbarui di pengaturan.", "error");
+      } else if (e?.message?.includes("429") || e?.message?.includes("quota") || e?.message?.includes("RESOURCE_EXHAUSTED")) {
+        showToast("Gagal: Kuota API Key telah habis (Quota Exceeded). Harap gunakan API Key berbayar atau tunggu beberapa saat.", "error");
       } else {
         showToast(e?.message || "Gagal memproses berita", "error");
       }
