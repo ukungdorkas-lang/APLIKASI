@@ -10,6 +10,10 @@ export const defaultPoskoData = [
     id: "posko-induk",
     namaPosko: "POSKO INDUK DAMKAR MALINAU",
     danruSiaga: "Komandan Asep Surahman",
+    address: "Jl. Pusat Pemerintahan, Malinau Kota, Kab. Malinau, Kalimantan Utara",
+    phone: "081112223334",
+    statusPosko: "Siaga 24 Jam",
+    coordinates: { lat: 3.571069, lng: 116.6057099, z: 15 },
     armada: [
       { id: "a1", nama: "Unit Pemadam 01 (Ayaxx)", plat: "KU 8001 M", status: "Siaga" },
       { id: "a2", nama: "Mobil Water Supply 02", plat: "KU 8002 M", status: "Bertugas" },

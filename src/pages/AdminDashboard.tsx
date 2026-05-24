@@ -2556,14 +2556,25 @@ export default function AdminDashboard({
                            <button type="button" onClick={() => { const nd = [...poskoDataForm]; nd.splice(pIdx, 1); setPoskoDataForm(nd); }} className="text-brand-red bg-brand-red/10 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-brand-red hover:text-white transition-all">Hapus Posko</button>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                            <div>
                               <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Nama Posko</label>
-                              <input type="text" value={posko.namaPosko} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].namaPosko = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: POSKO INDUK DAMKAR" />
+                              <input type="text" value={posko.namaPosko || ""} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].namaPosko = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: POSKO INDUK DAMKAR" />
                            </div>
                            <div>
                               <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Danru Siaga</label>
-                              <input type="text" value={posko.danruSiaga} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].danruSiaga = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: Komandan Asep..." />
+                              <input type="text" value={posko.danruSiaga || ""} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].danruSiaga = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: Komandan Asep..." />
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                           <div className="md:col-span-2">
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Alamat Lengkap</label>
+                              <input type="text" value={posko.address || ""} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].address = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: Jl. Pusat Pemerintahan..." />
+                           </div>
+                           <div>
+                              <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">No WA / Panggilan Cepat</label>
+                              <input type="text" value={posko.phone || ""} onChange={(e) => { const nd = [...poskoDataForm]; nd[pIdx].phone = e.target.value; setPoskoDataForm(nd); }} className="w-full border-2 border-slate-200 px-4 py-3 rounded-xl bg-white font-medium focus:border-brand-red focus:outline-none transition-colors" placeholder="Cth: 081112223334" />
                            </div>
                         </div>
 
