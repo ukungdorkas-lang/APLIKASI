@@ -36,11 +36,19 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ report, settings })
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.success) return data.data;
+      if (!resp.ok) {
+         const data = await resp.json().catch(() => ({}));
+         throw new Error(data?.error || "Gagal menghubungi server AI");
+      }
+      const data = await resp.json();
+      if (data.success) {
+         return data.data;
+      } else {
+         throw new Error(data.error || "Gagal memproses AI");
       }
     }
+    
+    // Server-side fallback logic (if executed on server directly)
     const ai = getAiInstance(settings);
     const prompt = `
     Anda adalah Pejabat Pengelola Informasi dan Dokumentasi (PPID) Dinas Pemadam Kebakaran dan Penyelamatan Kabupaten Malinau.
@@ -53,7 +61,7 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
     - Kronologi Lapangan: ${report.documentation?.chronology || report.description}
     - Personel Terlibat: ${report.documentation?.personnel || report.officerNotes?.match(/\d+/)?.[0] || '1 Tim'} Personel
     - Unit Armada: ${report.documentation?.units?.join(', ') || 'Unit Reaksi Cepat'}
-    - Tindakan Penyelamatan: ${report.documentation?.actions || 'Pemuadaman dan Penyelamatan'}
+    - Tindakan Penyelamatan: ${report.documentation?.actions || 'Pemadaman dan Penyelamatan'}
     - Korban/Kerugian: ${report.documentation?.victims || 'Tidak ada/Masih dalam pendataan'}
     - Durasi Penanganan: ${report.documentation?.duration || 'Selesai'}
 
@@ -79,7 +87,7 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
   `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json"
@@ -92,11 +100,12 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
       personnelCount: parsed.personnelCount || report.documentation?.personnel || 0,
       unitsUsed: parsed.unitsUsed || report.documentation?.units || []
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Generation Error:", error);
-    return null;
+    throw error;
   }
 }
+
 
 export async function developNarrative(outline: string, settings?: AppConfig) {
   try {
@@ -104,11 +113,17 @@ export async function developNarrative(outline: string, settings?: AppConfig) {
       const resp = await fetch('/api/ai/develop-narrative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outline })
+        body: JSON.stringify({ outline, settings })
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.success) return data.data;
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data?.error || "Gagal menghubungi server AI");
+      }
+      const data = await resp.json();
+      if (data.success) {
+        return data.data;
+      } else {
+        throw new Error(data.error || "Gagal memproses AI");
       }
     }
     const ai = getAiInstance(settings);
@@ -137,7 +152,7 @@ export async function developNarrative(outline: string, settings?: AppConfig) {
   `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json"
@@ -145,9 +160,9 @@ export async function developNarrative(outline: string, settings?: AppConfig) {
     });
 
     return JSON.parse(response.text || '{}');
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Narrative Development Error:", error);
-    return null;
+    throw error;
   }
 }
 
@@ -173,7 +188,7 @@ export async function getChatAssistantResponse(message: string, history: { role:
 
   try {
     const chat = ai.chats.create({ 
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       config: {
         systemInstruction: systemPrompt
       }

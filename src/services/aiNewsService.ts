@@ -13,9 +13,15 @@ export async function generateNewsArticle(report: EmergencyReport) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ report })
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.success) return data.data;
+      if (!resp.ok) {
+         const data = await resp.json().catch(() => ({}));
+         throw new Error(data?.error || "Gagal menghubungi server AI");
+      }
+      const data = await resp.json();
+      if (data.success) {
+         return data.data;
+      } else {
+         throw new Error(data.error || "Gagal memproses AI");
       }
     }
   const prompt = `
@@ -49,7 +55,7 @@ export async function generateNewsArticle(report: EmergencyReport) {
   `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -67,7 +73,7 @@ export async function generateNewsArticle(report: EmergencyReport) {
 
     const result = JSON.parse(response.text || '{}');
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI News Generation Error:", error);
     throw error;
   }

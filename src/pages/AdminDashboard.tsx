@@ -451,8 +451,12 @@ export default function AdminDashboard({
       } else {
         showToast("Gagal menghubungkan ke AI", "error");
       }
-    } catch (err) {
-      showToast("Terjadi kesalahan saat menghubungi AI", "error");
+    } catch (err: any) {
+      if (err?.message?.includes("leaked")) {
+        showToast("Gagal: API Key Anda terdeteksi bocor (Leaked). Harap perbarui di pengaturan.", "error");
+      } else {
+        showToast(err?.message || "Terjadi kesalahan saat menghubungi AI", "error");
+      }
     } finally {
       setIsAiDeveloping(false);
     }
@@ -1475,8 +1479,12 @@ export default function AdminDashboard({
 
         showToast("Berita berhasil dipublikasi!");
       }
-    } catch (e) {
-      showToast("Gagal memproses berita", "error");
+    } catch (e: any) {
+      if (e?.message?.includes("leaked")) {
+        showToast("Gagal: API Key Anda terdeteksi bocor (Leaked). Harap perbarui di pengaturan.", "error");
+      } else {
+        showToast(e?.message || "Gagal memproses berita", "error");
+      }
     }
   };
 
