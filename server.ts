@@ -79,7 +79,7 @@ async function startServer() {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.0-flash',
         contents: "Cari informasi cuaca terkini untuk hulu Sungai Malinau (daerah Mentarang Hulu & Malinau Selatan Hulu), Kalimantan Utara melalui Google Search. Khususnya untuk desa-desa: Long Jalan, Long Lake, Long Rat, Tanjung Nanga, Metut, Halanga, Long Simau, Long Kebinu, Long Berang, Long Mekatip. Berikan data dalam JSON: 1. Condition (Kondisi umum), 2. Rainfall (Curah hujan rata-rata mm/24h), 3. OverflowPotential (Rendah/Sedang/Tinggi/Bahaya), 4. Summary (Kesimpulan situasi keseluruhan di hulu), 5. Recommendation (Saran instruksi untuk tim BPBD/Damkar).",
         config: {
           tools: [{ googleSearch: {} }],
@@ -133,7 +133,7 @@ async function startServer() {
       `;
 
       const response = await localAi.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: { responseMimeType: 'application/json' }
       });
@@ -161,7 +161,7 @@ async function startServer() {
     try {
       const prompt = `Kembangkan draf ini menjadi narasi berita Damkar formal: "${outline}". Sajikan JSON: { "title": string, "content": string, "summary": string }`;
       const response = await localAi.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: { responseMimeType: 'application/json' }
       });

@@ -8,7 +8,7 @@ import DashboardStats from './components/DashboardStats';
 import ReportList from './components/ReportList';
 import { useReports } from './hooks/useReports';
 import { generateNewsFromReport } from './lib/gemini';
-import { collection, addDoc, getDoc, doc, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDoc, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
 import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle, Lock } from 'lucide-react';
 import { NewsArticle, BannerConfig, AppConfig } from './types';
@@ -389,15 +389,30 @@ function Dashboard() {
   const { reports, loading, updateStatus } = useReports();
 
   const handleGenerateNews = async (report: any) => {
-    const news = await generateNewsFromReport(report);
-    if (news) {
-      await addDoc(collection(db, 'news'), {
-        ...news,
-        reportId: report.id,
-        date: Date.now(),
-        location: report.location.address || 'Malinau'
-      });
-      alert('Berita berhasil digenerate otomatis!');
+    try {
+      const news = await generateNewsFromReport(report);
+      if (news) {
+        await addDoc(collection(db, 'news'), {
+          ...news,
+          reportId: report.id,
+          date: Date.now(),
+          location: report.location?.address || 'Malinau',
+          status: "Publish Otomatis",
+          isAIGenerated: true,
+          photos: report.documentation?.photos || [],
+          videos: report.documentation?.videos || [],
+          personnelCount: news.personnelCount || report.documentation?.personnel || 0,
+          unitsUsed: news.unitsUsed || report.documentation?.units || [],
+        });
+        await updateDoc(doc(db, "reports", report.id), { newsGenerated: true });
+        alert('Berita berhasil digenerate otomatis!');
+      }
+    } catch (error: any) {
+      if (error?.message?.includes("leaked")) {
+        alert("Gagal: API Key Anda terdeteksi bocor (Leaked). Harap perbarui di pengaturan Admin.");
+      } else {
+        alert("Gagal memproses berita AI: " + (error?.message || "Terjadi kesalahan"));
+      }
     }
   };
 
