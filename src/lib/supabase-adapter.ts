@@ -130,7 +130,7 @@ const VALID_COLUMNS: Record<string, Set<string>> = {
 
 const resolveFieldName = (table: string, field: string) => {
   if (table === "reports") {
-    if (field === "created_at" || field === "createdAt" || field === "createdat") return "created_at";
+    if (field === "created_at" || field === "createdAt" || field === "createdat") return "createdat";
     if (field === "reporter_name" || field === "reporterName") return "reporterName";
     if (field === "phone_number" || field === "phoneNumber") return "phoneNumber";
     if (field === "media_url" || field === "mediaUrl") return "mediaUrl";
@@ -145,6 +145,27 @@ const resolveFieldName = (table: string, field: string) => {
     if (field === "personnel_count" || field === "personnelCount") return "personnelCount";
     if (field === "units_used" || field === "unitsUsed") return "unitsUsed";
     if (field === "ai_prompt" || field === "aiPrompt") return "aiPrompt";
+  }
+  if (table === "gallery") {
+    if (field === "imageUrl" || field === "image_url") return "url";
+    if (field === "category") return "type";
+    if (field === "description") return "tags";
+  }
+  if (table === "profile_sections") {
+    if (field === "order") return "order_num";
+    if (field === "updatedAt") return "created_at";
+  }
+  if (table === "weather_upstream") {
+    if (field === "updatedAt") return "timestamp";
+  }
+  if (table === "river_monitoring") {
+    if (field === "updatedAt") return "created_at";
+  }
+  if (table === "bank_data") {
+    if (field === "uploadedBy") return "uploaded_by";
+  }
+  if (table === "education") {
+    if (field === "imageUrl" || field === "image_url") return "thumbnail";
   }
   if (field === "created_at" || field === "createdAt" || field === "createdat") return "created_at";
   if (field === "updated_at" || field === "updatedAt" || field === "updatedat") return "updated_at";
@@ -177,6 +198,31 @@ const mapDocumentData = (table: string, row: any) => {
       camel.resolved_at = resAt;
     }
   }
+  if (table === "gallery") {
+    // Reverse map columns back
+    camel.imageUrl = row.url || camel.url;
+    camel.category = row.type || camel.type;
+    camel.description = row.tags || camel.tags;
+  }
+  if (table === "profile_sections") {
+    camel.order = row.order_num || camel.orderNum;
+    camel.updatedAt = row.created_at || camel.createdAt;
+  }
+  if (table === "weather_upstream") {
+    camel.updatedAt = row.timestamp || camel.timestamp;
+  }
+  if (table === "river_monitoring") {
+    camel.updatedAt = row.created_at || camel.createdAt;
+  }
+  if (table === "bank_data") {
+    camel.uploadedBy = row.uploaded_by || camel.uploadedBy;
+  }
+  if (table === "banners") {
+    camel.id = row.page_id || camel.pageId || row.id;
+  }
+  if (table === "education") {
+    camel.imageUrl = row.thumbnail || camel.thumbnail;
+  }
   return camel;
 };
 
@@ -184,6 +230,9 @@ const applyQueryOperations = (table: string, queryBuilder: any, operations: any[
   operations.forEach((op) => {
     if (op.type === "where") {
       let fieldPath = useCamel ? toCamelCase(op.field) : resolveFieldName(table, op.field);
+      if (table === "firestore_docs" && fieldPath !== "collection_id" && fieldPath !== "id") {
+        fieldPath = `data->>${fieldPath}`;
+      }
       const val = mapValue(op.value);
       if (op.op === "==") {
         queryBuilder = queryBuilder.eq(fieldPath, val);
@@ -199,6 +248,9 @@ const applyQueryOperations = (table: string, queryBuilder: any, operations: any[
   operations.forEach((op) => {
     if (op.type === "orderBy") {
       let fieldPath = useCamel ? toCamelCase(op.field) : resolveFieldName(table, op.field);
+      if (table === "firestore_docs" && fieldPath !== "collection_id" && fieldPath !== "id") {
+        fieldPath = `data->${op.field}`; // arrow without string output for correct sorting? or need to cast?
+      }
       queryBuilder = queryBuilder.order(fieldPath, {
         ascending: op.direction === "asc",
         nullsFirst: false,
@@ -217,7 +269,24 @@ const applyQueryOperations = (table: string, queryBuilder: any, operations: any[
 
 // Mappings for table names
 const tableMap = (colPath: string) => {
-  if (["settings", "menus", "footer_links"].includes(colPath))
+  if ([
+    "settings", 
+    "menus", 
+    "footer_links", 
+    "themes", 
+    "banners", 
+    "education", 
+    "profile_sections", 
+    "bank_data",
+    "river_monitoring",
+    "weather_upstream",
+    "personnel",
+    "squads",
+    "sectors",
+    "operational_reports",
+    "admins",
+    "ai_chats"
+  ].includes(colPath))
     return "firestore_docs";
   return colPath;
 };

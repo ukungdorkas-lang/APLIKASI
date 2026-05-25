@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, File, Image as ImageIcon, Video, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../lib/supabase';
 
 interface FileUploadProps {
   onUploadSuccess: (url: string) => void;
@@ -95,58 +96,59 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     startSimulatedUpload(selected);
   };
 
-  const startSimulatedUpload = (file: File) => {
-    setUploading(true);
-    setProgress(0);
-    
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 10;
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-        setProgress(100);
-        setUploading(false);
+    const startSimulatedUpload = async (file: File) => {
+      setUploading(true);
+      setProgress(10);
+      
+      try {
+        const fileName = `${Date.now()}-${file.name.replace(/([^\w.-])/g, '_')}`;
         
-        // Support all file types via server-side storage if it's a full-stack app
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = reader.result as string;
+        // Simulasikan progress awal
+        setTimeout(() => setProgress(30), 100);
+        
+        const { data, error } = await supabase.storage
+          .from('gallery')
+          .upload(fileName, file, {
+             cacheControl: '3600',
+             upsert: false
+          });
           
-          try {
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fileName: `${Date.now()}-${file.name}`,
-                fileData: base64
-              })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-              setPreview(file.type.startsWith('image/') ? base64 : null);
-              onUploadSuccess(result.fileUrl);
-            } else {
-              throw new Error(result.error);
-            }
-          } catch (err) {
-            console.error('Upload Error:', err);
-            // Fallback to base64 if server fails and file is small enough
-            if (file.size < 700 * 1024) {
-              onUploadSuccess(base64);
-            } else {
-              alert('Gagal mengunggah file besar. Silakan coba lagi atau gunakan file yang lebih kecil.');
-            }
-          }
-          setProgress(100);
+        setProgress(80);
+          
+        if (error) {
+          throw error;
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('gallery')
+          .getPublicUrl(fileName);
+          
+        setProgress(100);
+        setPreview(file.type.startsWith('image/') ? publicUrl : null);
+        
+        setTimeout(() => {
+          onUploadSuccess(publicUrl);
           setUploading(false);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setProgress(currentProgress);
+        }, 300);
+        
+      } catch (err) {
+        console.error('Upload Error:', err);
+        // Fallback to base64 if server fails and file is small enough
+        if (file.size < 700 * 1024) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+             onUploadSuccess(reader.result as string);
+             setUploading(false);
+             setProgress(100);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setUploading(false);
+          setProgress(0);
+          alert('Gagal mengunggah file. Pastikan bucket "gallery" di Supabase public dan dapat diakses.');
+        }
       }
-    }, 50);
-  };
+    };
 
   const removeFile = () => {
     setFile(null);
