@@ -6666,6 +6666,47 @@ export default function AdminDashboard({
                           }
                         />
                       </div>
+                      {(docsForm.photos?.length > 0 || docsForm.videos?.length > 0) && (
+                        <div className="mt-4 space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Media Tersimpan
+                          </label>
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                            {docsForm.photos?.map((photo, idx) => (
+                              <div key={idx} className="relative group rounded-lg overflow-hidden bg-white border border-slate-200 aspect-square">
+                                <img src={photo} alt="docs" className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newPhotos = [...docsForm.photos];
+                                    newPhotos.splice(idx, 1);
+                                    setDocsForm({ ...docsForm, photos: newPhotos });
+                                  }}
+                                  className="absolute top-1 right-1 bg-white/90 text-brand-red rounded-md p-1.5 opacity-0 group-hover:opacity-100 shadow-sm transition-all hover:bg-red-50"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            {docsForm.videos?.map((video, idx) => (
+                              <div key={idx} className="relative group rounded-lg overflow-hidden bg-white border border-slate-200 aspect-square flex items-center justify-center">
+                                <video src={video} className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newVideos = [...docsForm.videos];
+                                    newVideos.splice(idx, 1);
+                                    setDocsForm({ ...docsForm, videos: newVideos });
+                                  }}
+                                  className="absolute top-1 right-1 bg-white/90 text-brand-red rounded-md p-1.5 opacity-0 group-hover:opacity-100 shadow-sm transition-all hover:bg-red-50 z-10"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
