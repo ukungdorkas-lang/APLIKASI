@@ -130,7 +130,7 @@ const VALID_COLUMNS: Record<string, Set<string>> = {
 
 const resolveFieldName = (table: string, field: string) => {
   if (table === "reports") {
-    if (field === "created_at" || field === "createdAt" || field === "createdat") return "createdat";
+    if (field === "created_at" || field === "createdAt" || field === "createdat") return "created_at";
     if (field === "reporter_name" || field === "reporterName") return "reporterName";
     if (field === "phone_number" || field === "phoneNumber") return "phoneNumber";
     if (field === "media_url" || field === "mediaUrl") return "mediaUrl";

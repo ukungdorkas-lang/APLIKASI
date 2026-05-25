@@ -17,6 +17,7 @@ import {
   deleteDoc,
   getDocs,
 } from '@/src/lib/supabase-adapter';
+import { supabase } from '../lib/supabase';
 import { generateNewsFromReport, developNarrative } from "../lib/gemini";
 import {
   Bot,
@@ -3119,13 +3120,20 @@ export default function AdminDashboard({
                                       }
 
                                       // Hapus fisik jika ada
-                                      if (item.imageUrl?.startsWith('/uploads/')) {
-                                        const fname = item.imageUrl.split('/').pop();
-                                        if (fname) {
-                                          try {
-                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
-                                          } catch(e) {}
-                                        }
+                                      const url = item.imageUrl;
+                                      if (url) {
+                                        try {
+                                          if (url.startsWith('/uploads/')) {
+                                            const fname = url.split('/').pop();
+                                            if (fname) await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } else if (url.includes('supabase.co')) {
+                                            const fname = url.split('/').pop();
+                                            if (fname) {
+                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
+                                            }
+                                          }
+                                        } catch(e) {}
                                       }
 
                                       showToast(
@@ -3164,15 +3172,20 @@ export default function AdminDashboard({
                                 <button
                                   onClick={async() => {
                                     if (confirm("Hapus item ini beserta filenya?")) {
-                                      if (item.imageUrl?.startsWith('/uploads/')) {
-                                        const fname = item.imageUrl.split('/').pop();
-                                        if (fname) {
-                                          try {
-                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
-                                          } catch(e) {
-                                            console.log(e);
+                                      const url = item.imageUrl;
+                                      if (url) {
+                                        try {
+                                          if (url.startsWith('/uploads/')) {
+                                            const fname = url.split('/').pop();
+                                            if (fname) await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } else if (url.includes('supabase.co')) {
+                                            const fname = url.split('/').pop();
+                                            if (fname) {
+                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
+                                            }
                                           }
-                                        }
+                                        } catch(e) { console.error(e); }
                                       }
                                       handleDeleteItem("gallery", item.id);
                                     }
@@ -6829,13 +6842,19 @@ export default function AdminDashboard({
                                   type="button"
                                   onClick={async() => {
                                     if (confirm("Hapus file media ini?")) {
-                                      if (photo.startsWith('/uploads/')) {
-                                        const fname = photo.split('/').pop();
-                                        if (fname) {
-                                          try {
-                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
-                                          } catch(e) {}
-                                        }
+                                      if (photo) {
+                                        try {
+                                          if (photo.startsWith('/uploads/')) {
+                                            const fname = photo.split('/').pop();
+                                            if (fname) await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } else if (photo.includes('supabase.co')) {
+                                            const fname = photo.split('/').pop();
+                                            if (fname) {
+                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
+                                            }
+                                          }
+                                        } catch(e) {}
                                       }
                                       const newPhotos = [...docsForm.photos];
                                       newPhotos.splice(idx, 1);
@@ -6855,13 +6874,19 @@ export default function AdminDashboard({
                                   type="button"
                                   onClick={async() => {
                                     if (confirm("Hapus file media ini?")) {
-                                      if (video.startsWith('/uploads/')) {
-                                        const fname = video.split('/').pop();
-                                        if (fname) {
-                                          try {
-                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
-                                          } catch(e) {}
-                                        }
+                                      if (video) {
+                                        try {
+                                          if (video.startsWith('/uploads/')) {
+                                            const fname = video.split('/').pop();
+                                            if (fname) await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } else if (video.includes('supabase.co')) {
+                                            const fname = video.split('/').pop();
+                                            if (fname) {
+                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
+                                            }
+                                          }
+                                        } catch(e) {}
                                       }
                                       const newVideos = [...docsForm.videos];
                                       newVideos.splice(idx, 1);
