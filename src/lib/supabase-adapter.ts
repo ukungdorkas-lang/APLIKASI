@@ -146,7 +146,7 @@ const resolveFieldName = (table: string, field: string) => {
     if (field === "units_used" || field === "unitsUsed") return "unitsUsed";
     if (field === "ai_prompt" || field === "aiPrompt") return "aiPrompt";
   }
-  if (field === "created_at" || field === "createdAt" || field === "createdat") return "createdat";
+  if (field === "created_at" || field === "createdAt" || field === "createdat") return "created_at";
   if (field === "updated_at" || field === "updatedAt" || field === "updatedat") return "updated_at";
   return toSnakeCase(field);
 };

@@ -6827,10 +6827,20 @@ export default function AdminDashboard({
                                 <img src={photo} alt="docs" className="w-full h-full object-cover" />
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const newPhotos = [...docsForm.photos];
-                                    newPhotos.splice(idx, 1);
-                                    setDocsForm({ ...docsForm, photos: newPhotos });
+                                  onClick={async() => {
+                                    if (confirm("Hapus file media ini?")) {
+                                      if (photo.startsWith('/uploads/')) {
+                                        const fname = photo.split('/').pop();
+                                        if (fname) {
+                                          try {
+                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } catch(e) {}
+                                        }
+                                      }
+                                      const newPhotos = [...docsForm.photos];
+                                      newPhotos.splice(idx, 1);
+                                      setDocsForm({ ...docsForm, photos: newPhotos });
+                                    }
                                   }}
                                   className="absolute top-1 right-1 bg-white/90 text-brand-red rounded-md p-1.5 opacity-0 group-hover:opacity-100 shadow-sm transition-all hover:bg-red-50"
                                 >
@@ -6843,10 +6853,20 @@ export default function AdminDashboard({
                                 <video src={video} className="w-full h-full object-cover" />
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const newVideos = [...docsForm.videos];
-                                    newVideos.splice(idx, 1);
-                                    setDocsForm({ ...docsForm, videos: newVideos });
+                                  onClick={async() => {
+                                    if (confirm("Hapus file media ini?")) {
+                                      if (video.startsWith('/uploads/')) {
+                                        const fname = video.split('/').pop();
+                                        if (fname) {
+                                          try {
+                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } catch(e) {}
+                                        }
+                                      }
+                                      const newVideos = [...docsForm.videos];
+                                      newVideos.splice(idx, 1);
+                                      setDocsForm({ ...docsForm, videos: newVideos });
+                                    }
                                   }}
                                   className="absolute top-1 right-1 bg-white/90 text-brand-red rounded-md p-1.5 opacity-0 group-hover:opacity-100 shadow-sm transition-all hover:bg-red-50 z-10"
                                 >
