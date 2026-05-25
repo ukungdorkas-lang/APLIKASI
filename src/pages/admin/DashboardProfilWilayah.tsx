@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, Users, Shield, Clock, PhoneCall, Search, Edit2, Check, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc } from '@/src/lib/supabase-adapter';
+import { db } from '../../lib/db';
 import { cn } from '../../lib/utils';
 import { defaultPoskoData } from '../../components/StatusPoskoTerpadu';
 

@@ -5,7 +5,7 @@ import { useReports } from "../hooks/useReports";
 import DashboardStats from "../components/DashboardStats";
 import ReportList from "../components/ReportList";
 import ReportChart from "../components/ReportChart";
-import { db, auth } from "../lib/firebase";
+import { db, auth } from '../lib/db';
 import {
   collection,
   onSnapshot,
@@ -16,7 +16,7 @@ import {
   updateDoc, limit,
   deleteDoc,
   getDocs,
-} from "firebase/firestore";
+} from '@/src/lib/supabase-adapter';
 import { generateNewsFromReport, developNarrative } from "../lib/gemini";
 import {
   Bot,
@@ -747,7 +747,7 @@ export default function AdminDashboard({
       showToast("Data posko berhasil diperbarui");
     } catch (err: any) {
       try {
-        const { setDoc } = await import("firebase/firestore");
+        const { setDoc } = await import('@/src/lib/supabase-adapter');
         await setDoc(doc(db, "settings", "status_posko"), { data: poskoDataForm });
         showToast("Data posko berhasil diperbarui");
       } catch (e2) {
@@ -767,7 +767,7 @@ export default function AdminDashboard({
       } else {
          // Create the doc if it doesn't exist
          try {
-           const { setDoc } = await import("firebase/firestore");
+           const { setDoc } = await import('@/src/lib/supabase-adapter');
            await setDoc(doc(db, "settings", "org_structure"), { data: orgDataForm });
            showToast("Struktur organisasi berhasil diperbarui");
          } catch (e2) {
@@ -1001,7 +1001,7 @@ export default function AdminDashboard({
     } catch (err) {
       // If doc doesn't exist, try setting it
       try {
-        const { setDoc } = await import("firebase/firestore");
+        const { setDoc } = await import('@/src/lib/supabase-adapter');
         await setDoc(doc(db, "settings", "app"), settingsForm);
         showToast("Pengaturan sistem diperbarui");
       } catch (e) {
@@ -1311,7 +1311,7 @@ export default function AdminDashboard({
         },
       ];
 
-      const { setDoc } = await import("firebase/firestore");
+      const { setDoc } = await import('@/src/lib/supabase-adapter');
       for (const b of defaults) {
         await setDoc(doc(db, "banners", b.id), { ...b, updatedAt: Date.now() });
       }
@@ -1324,7 +1324,7 @@ export default function AdminDashboard({
   const handleSaveBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { setDoc } = await import("firebase/firestore");
+      const { setDoc } = await import('@/src/lib/supabase-adapter');
       await setDoc(doc(db, "banners", bannerForm.id), {
         ...bannerForm,
         updatedAt: Date.now(),

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { db } from '../lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/db';
+import { doc, onSnapshot } from '@/src/lib/supabase-adapter';
 import { BannerConfig } from '../types';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';

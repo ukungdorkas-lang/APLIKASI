@@ -9,8 +9,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { onSnapshot, doc, collection, addDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { onSnapshot, doc, collection, addDoc } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/db';
 import { getChatAssistantResponse } from "../lib/gemini";
 import { AppConfig } from "../types";
 import Markdown from "react-markdown";
@@ -70,7 +70,7 @@ export default function AiAssistant() {
           timestamp: Date.now(),
         });
       } catch (e) {
-        console.error("Failed to save chat to firestore", e);
+        console.error("Failed to save chat to database", e);
       }
     } catch (error) {
       console.error("Chat AI Error:", error);

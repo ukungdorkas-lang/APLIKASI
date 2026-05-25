@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, ShieldCheck, Flame, Droplets, Info, ExternalLink, FileText, Video, Image as ImageIcon, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
+import { collection, query, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
 import { X, Download } from 'lucide-react';
 
 import DynamicBanner from '../components/DynamicBanner';
@@ -13,31 +14,24 @@ export default function Education() {
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchContent = async () => {
-      const { data, error } = await supabase
-        .from('education')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (!error && data) {
-        setContent(data.map(d => ({
-          ...d,
-          createdAt: d.created_at
-        })));
-      }
+    const q = query(
+      collection(db, 'education'),
+      orderBy('created_at', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setContent(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().created_at || doc.data().createdAt
+      })));
       setLoading(false);
-    };
+    }, (error) => {
+      console.error("Error fetching education:", error);
+      setLoading(false);
+    });
 
-    fetchContent();
-
-    const channel = supabase
-      .channel('public:education')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'education' }, fetchContent)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, []);
 
   return (

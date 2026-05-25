@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { db, auth } from "../lib/firebase";
+import { db, auth } from '../lib/db';
 import {
   collection,
   onSnapshot,
@@ -10,7 +10,7 @@ import {
   doc,
   getDoc,
   updateDoc
-} from "firebase/firestore";
+} from '@/src/lib/supabase-adapter';
 import { Personnel, Squad, Sector, OperationalReport } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import {

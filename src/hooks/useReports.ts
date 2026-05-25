@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/db';
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from '@/src/lib/supabase-adapter';
 import { EmergencyReport, OperationType } from '../types';
 
 export function useReports() {
@@ -8,21 +8,21 @@ export function useReports() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'operational_reports'), orderBy('created_at', 'desc'));
+    const q = query(collection(db, 'reports'), orderBy('created_at', 'desc'));
     const unsub = onSnapshot(q, (snapshot: any) => {
       const mappedData = snapshot.docs.map((docSnap: any) => {
         const doc = docSnap.data();
         return {
           id: docSnap.id,
           ...doc,
-          createdAt: doc.created_at,
-          resolvedAt: doc.resolved_at,
-          reporterName: doc.reporter_name,
-          phoneNumber: doc.phone_number,
-          mediaUrl: doc.media_url,
-          reportNumber: doc.report_number,
-          officerNotes: doc.officer_notes,
-          newsGenerated: doc.news_generated
+          createdAt: doc.createdAt || doc.created_at,
+          resolvedAt: doc.resolvedAt || doc.resolved_at,
+          reporterName: doc.reporterName || doc.reporter_name,
+          phoneNumber: doc.phoneNumber || doc.phone_number,
+          mediaUrl: doc.mediaUrl || doc.media_url,
+          reportNumber: doc.reportNumber || doc.report_number,
+          officerNotes: doc.officerNotes || doc.officer_notes,
+          newsGenerated: doc.newsGenerated || doc.news_generated
         } as EmergencyReport;
       });
       setReports(mappedData);
@@ -57,7 +57,7 @@ export function useReports() {
         news_generated: false
       };
 
-      const docRef = await addDoc(collection(db, 'operational_reports'), insertData);
+      const docRef = await addDoc(collection(db, 'reports'), insertData);
       
       const newReport = {
         id: docRef.id,
@@ -84,7 +84,7 @@ export function useReports() {
       if (documentation !== undefined) updateData.documentation = documentation;
       if (status === 'Selesai Ditangani') updateData.resolved_at = Date.now();
 
-      await updateDoc(doc(db, 'operational_reports', reportId), updateData);
+      await updateDoc(doc(db, 'reports', reportId), updateData);
     } catch (error) {
        console.error("Update Error:", error);
     }

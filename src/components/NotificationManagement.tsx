@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNotifications } from "../hooks/useNotifications";
-import { db } from "../lib/firebase";
-import { doc, getDoc, updateDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { db } from '../lib/db';
+import { doc, getDoc, updateDoc, onSnapshot, setDoc } from '@/src/lib/supabase-adapter';
 import {
   Plus,
   Trash2,

@@ -1,7 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const envUrl = import.meta.env.VITE_SUPABASE_URL;
-const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+let envUrl = '';
+let envKey = '';
+
+try {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    envUrl = import.meta.env.VITE_SUPABASE_URL || '';
+    envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  }
+} catch (e) {}
+
+if (!envUrl && typeof process !== 'undefined' && process.env) {
+  envUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  envKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+}
 
 const supabaseUrl = (envUrl && envUrl.trim() !== '') ? envUrl.trim() : 'https://dummy.supabase.co';
 const supabaseAnonKey = (envKey && envKey.trim() !== '') ? envKey.trim() : 'dummy-key';

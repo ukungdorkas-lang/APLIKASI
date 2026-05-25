@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, onSnapshot } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/db';
 import { Maximize2, Minimize2 } from 'lucide-react';
 
 // --- DATA DUMMY PEGAWAI ---

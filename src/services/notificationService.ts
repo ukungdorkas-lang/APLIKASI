@@ -1,5 +1,5 @@
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { collection, addDoc, getDocs, query, where } from '@/src/lib/supabase-adapter';
+import { db, auth } from '../lib/db';
 import { EmergencyReport, NotificationRecipient, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/errorHandler';
 

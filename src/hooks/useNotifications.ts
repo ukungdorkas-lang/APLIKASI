@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { collection, onSnapshot, query, orderBy, addDoc, updateDoc, deleteDoc, doc } from '@/src/lib/supabase-adapter';
+import { db, auth } from '../lib/db';
 import { NotificationRecipient, NotificationLog, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/errorHandler';
 

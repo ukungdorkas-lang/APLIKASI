@@ -9,8 +9,8 @@ import ReportList from './components/ReportList';
 import { useReports } from './hooks/useReports';
 import { supabase } from './lib/supabase';
 import { generateNewsFromReport } from './lib/gemini';
-import { collection, addDoc, getDoc, getDocs, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db, auth } from './lib/firebase';
+import { collection, addDoc, getDoc, getDocs, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from '@/src/lib/supabase-adapter';
+import { db, auth } from './lib/db';
 import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle, Lock } from 'lucide-react';
 import { NewsArticle, BannerConfig, AppConfig } from './types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -404,7 +404,7 @@ function Dashboard() {
         }
 
         try {
-          await updateDoc(doc(db, 'operational_reports', report.id), {
+          await updateDoc(doc(db, 'reports', report.id), {
              news_generated: true
           });
         } catch (e) {

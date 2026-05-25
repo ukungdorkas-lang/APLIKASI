@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
+import { collection, query, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
 import { motion, AnimatePresence } from 'motion/react';
 import { Image as ImageIcon, X, MapPin, Calendar, Info, Maximize2, Download } from 'lucide-react';
 import DynamicBanner from '../components/DynamicBanner';
@@ -21,33 +22,26 @@ export default function Documentation() {
   const [filter, setFilter] = useState('SEMUA');
 
   useEffect(() => {
-    const fetchGallery = async () => {
-      const { data, error } = await supabase
-        .from('gallery')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (!error && data) {
-        setGallery(data.map(d => ({
-          ...d,
-          imageUrl: d.url, // Notice mapping url -> imageUrl, category -> type etc. Wait, let's look at schema
-          category: d.type,
-          createdAt: d.created_at
-        } as GalleryItem)));
-      }
+    const q = query(
+      collection(db, 'gallery'),
+      orderBy('created_at', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setGallery(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        imageUrl: doc.data().url || doc.data().imageUrl,
+        category: doc.data().type || doc.data().category,
+        createdAt: doc.data().created_at || doc.data().createdAt
+      } as GalleryItem)));
       setLoading(false);
-    };
+    }, (error) => {
+      console.error("Error fetching gallery:", error);
+      setLoading(false);
+    });
 
-    fetchGallery();
-
-    const channel = supabase
-      .channel('public:gallery')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, []);
 
   const categories = ['SEMUA', 'OPERASIONAL', 'KEGIATAN', 'PELATIHAN', 'ALUTSISTA'];

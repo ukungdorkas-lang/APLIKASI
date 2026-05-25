@@ -2,7 +2,7 @@ import React from 'react';
 import { ShieldAlert, Users, LayoutDashboard, FileText, Settings, Database, LogOut, ChevronRight, BarChart3, AlertCircle, Phone, Flame, Truck, MapPin, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
+import { auth } from '../lib/db';
 import { cn } from '../lib/utils';
 
 interface MenuItem {

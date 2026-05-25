@@ -1,5 +1,6 @@
 import React from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
+import { collection, query, where, getDocs } from '@/src/lib/supabase-adapter';
 import { EmergencyReport } from '../types';
 import { Search, ShieldAlert, MapPin, Clock, CheckCircle2, AlertTriangle, Loader2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,30 +25,63 @@ export default function CheckTicket() {
     setError(null);
     setReport(null);
 
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('report_number', ticket.trim().toUpperCase())
-        .limit(1)
-        .single();
-        
-      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+    const cleanTicket = ticket.trim().toUpperCase();
 
-      if (!data) {
+    try {
+      // 1. Coba cari berdasarkan report_number (Format: DMK-YYYYMMDD-XXX)
+      let q = query(collection(db, 'reports'), where('report_number', '==', cleanTicket));
+      let snap = await getDocs(q);
+
+      // 2. Coba cari berdasarkan UUID lengkap kalau query looks like a UUID
+      if (snap.empty && cleanTicket.length >= 24) {
+        q = query(collection(db, 'reports'), where('id', '==', cleanTicket.toLowerCase()));
+        snap = await getDocs(q);
+      }
+
+      let matchedDoc: any = null;
+
+      if (!snap.empty) {
+        matchedDoc = snap.docs[0];
+      } else {
+        // 3. Fallback: Cari di semua laporan jika input user adalah pecahan ID (8 karakter) atau kata kunci lain
+        const allQ = query(collection(db, 'reports'));
+        const allSnap = await getDocs(allQ);
+        
+        const found = allSnap.docs.find((docSnap: any) => {
+          const docId = docSnap.id.toUpperCase();
+          const rNumber = (docSnap.data().report_number || '').toUpperCase();
+          const rNumberAlt = (docSnap.data().reportNumber || '').toUpperCase();
+          
+          return (
+            docId.startsWith(cleanTicket) || 
+            docId === cleanTicket ||
+            rNumber === cleanTicket ||
+            rNumberAlt === cleanTicket ||
+            rNumber.includes(cleanTicket) ||
+            rNumberAlt.includes(cleanTicket)
+          );
+        });
+
+        if (found) {
+          matchedDoc = found;
+        }
+      }
+
+      if (!matchedDoc) {
         setError('Laporan tidak ditemukan. Pastikan nomor tiket yang Anda masukkan benar.');
       } else {
+        const data = matchedDoc.data();
         setReport({
           ...data,
-          id: data.id,
-          createdAt: data.created_at,
-          resolvedAt: data.resolved_at,
-          reporterName: data.reporter_name,
-          phoneNumber: data.phone_number,
-          mediaUrl: data.media_url,
-          reportNumber: data.report_number,
-          officerNotes: data.officer_notes,
-          newsGenerated: data.news_generated
+          id: matchedDoc.id,
+          createdAt: data.created_at || data.createdAt,
+          resolvedAt: data.resolved_at || data.resolvedAt,
+          reporterName: data.reporter_name || data.reporterName,
+          phoneNumber: data.phone_number || data.phoneNumber,
+          mediaUrl: data.media_url || data.mediaUrl,
+          reportNumber: data.report_number || data.reportNumber,
+          officerNotes: data.officer_notes || data.officerNotes,
+          newsGenerated: data.news_generated || data.newsGenerated
         } as EmergencyReport);
       }
     } catch (err) {

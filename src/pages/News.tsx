@@ -1,7 +1,7 @@
 import React from 'react';
 import { Newspaper, Calendar, MapPin, ArrowRight, X, User, Truck, Camera, Video, Share2, AlertCircle } from 'lucide-react';
-import { useReports } from '../hooks/useReports';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
+import { collection, query, where, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
 import { NewsArticle } from '../types';
 import Markdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,36 +18,29 @@ export default function News() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    const fetchNews = async () => {
-      const { data, error } = await supabase
-        .from('news')
-        .select('*')
-        .eq('status', 'Publish Otomatis')
-        .order('date', { ascending: false });
-        
-      if (!error && data) {
-        setNews(data.map(d => ({
-          ...d,
-          reportId: d.report_id,
-          isAIGenerated: d.is_ai_generated,
-          personnelCount: d.personnel_count,
-          unitsUsed: d.units_used,
-          imageUrl: d.image_url
-        } as NewsArticle)));
-      }
+    const q = query(
+      collection(db, 'news'),
+      where('status', '==', 'Publish Otomatis'),
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setNews(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        reportId: doc.data().report_id,
+        isAIGenerated: doc.data().is_ai_generated || doc.data().isAIGenerated,
+        personnelCount: doc.data().personnel_count || doc.data().personnelCount,
+        unitsUsed: doc.data().units_used || doc.data().unitsUsed,
+        imageUrl: doc.data().image_url || doc.data().imageUrl
+      } as NewsArticle)));
       setLoading(false);
-    };
+    }, (error) => {
+      console.error("Error fetching news:", error);
+      setLoading(false);
+    });
 
-    fetchNews();
-
-    const channel = supabase
-      .channel('public:news_page')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, []);
 
   return (

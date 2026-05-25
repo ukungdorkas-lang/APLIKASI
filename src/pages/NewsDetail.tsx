@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
+import { doc, getDoc } from '@/src/lib/supabase-adapter';
 import { NewsArticle } from '../types';
 import { Calendar, MapPin, User, Truck, ArrowLeft, Share2, AlertCircle, Newspaper, Bookmark, X, Maximize2, Image as ImageIcon, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,22 +19,17 @@ export default function NewsDetail() {
     async function fetchArticle() {
       if (!id) return;
       try {
-        const { data, error } = await supabase
-          .from('news')
-          .select('*')
-          .eq('id', id)
-          .single();
-          
-        if (error && error.code !== 'PGRST116') throw error;
-        
-        if (data) {
+        const snap = await getDoc(doc(db, 'news', id));
+        if (snap.exists()) {
+          const data = snap.data();
           setArticle({
+            id: snap.id,
             ...data,
-            reportId: data.report_id,
-            isAIGenerated: data.is_ai_generated,
-            personnelCount: data.personnel_count,
-            unitsUsed: data.units_used,
-            imageUrl: data.image_url
+            reportId: data.report_id || data.reportId,
+            isAIGenerated: data.is_ai_generated || data.isAIGenerated,
+            personnelCount: data.personnel_count || data.personnelCount,
+            unitsUsed: data.units_used || data.unitsUsed,
+            imageUrl: data.image_url || data.imageUrl
           } as NewsArticle);
         }
       } catch (error) {

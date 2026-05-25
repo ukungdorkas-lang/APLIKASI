@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/firebase';
-import { collection, query, where, getDocs, setDoc, doc } from 'firebase/firestore';
+import { db } from '../lib/db';
+import { collection, query, where, getDocs, setDoc, doc } from '@/src/lib/supabase-adapter';
 import { ShieldAlert, Lock, Mail, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';

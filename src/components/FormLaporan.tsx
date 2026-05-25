@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { collection, addDoc, doc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { collection, addDoc, doc, getDoc } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/db';
 import {
   AlertCircle,
   CheckCircle2,
@@ -47,6 +47,7 @@ export default function FormLaporan() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [ticketId, setTicketId] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
 
   // Handler untuk mengelola perubahan input text dan select
   const handleChange = (
@@ -77,17 +78,10 @@ export default function FormLaporan() {
     setSuccessMessage("");
     setErrorMessage("");
     setTicketId("");
+    setTicketNumber("");
 
     // Mengambil URL Google Apps Script dari file konfigurasi (.env)
     const gasUrl = import.meta.env.VITE_GAS_URL;
-
-    if (!gasUrl) {
-      setErrorMessage(
-        "Konfigurasi belum lengkap! VITE_GAS_URL belum diatur di file .env Anda.",
-      );
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       // 1. Generate Report Number
@@ -114,72 +108,72 @@ export default function FormLaporan() {
         reportNumber,
         createdAt: Date.now(),
         newsGenerated: false,
-        source: "form_laporan",
       };
 
       const docRef = await addDoc(collection(db, "reports"), firestoreData);
       console.log(
-        "Laporan berhasil tersimpan di Firestore dengan ID:",
+        "Laporan berhasil tersimpan di database (Supabase) dengan ID:",
         docRef.id,
       );
 
-      // Cek status notifikasi aktif/tidak
-      const configDoc = await getDoc(doc(db, "settings", "app"));
-      const isNotificationEnabled = configDoc.exists()
-        ? configDoc.data()?.notificationsEnabled !== false
-        : true;
+      // Set status sukses dasar seketika laporan tersimpan di database
+      setTicketId(docRef.id);
+      setTicketNumber(reportNumber);
+      setSuccessMessage(
+        "Laporan berhasil dikirim dan tersimpan di sistem data kami!"
+      );
+      
+      const submittedFormData = { ...formData }; // simpan salinan untuk request GAS
 
-      if (isNotificationEnabled) {
-        // 3. Kirim data asli ke Google Apps Script (Backend) untuk WhatsApp Fonnte
-        console.log("Meneruskan laporan ke Backend GAS...");
-        const responGas = await fetch(gasUrl, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(formData),
-        });
+      setFormData({
+        nama_pelapor: "",
+        no_hp: "",
+        alamat: "",
+        isi_laporan: "",
+        jenis_laporan: "Kebakaran",
+        sub_jenis_laporan: "Rumah",
+      }); // Reset form
 
-        // 3. Baca jawaban dari GAS
-        const hasilGas = await responGas.json();
-        console.log("Balasan dari sistem WA:", hasilGas);
+      // 3. Proses notifikasi WhatsApp secara asinkron atau terisolasi agar tidak menghalangi UX
+      try {
+        const configDoc = await getDoc(doc(db, "settings", "app"));
+        const isNotificationEnabled = configDoc.exists()
+          ? configDoc.data()?.notificationsEnabled !== false
+          : true;
 
-        if (hasilGas.status === true) {
-          setTicketId(docRef.id);
-          setSuccessMessage(
-            "Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!",
-          );
-          setFormData({
-            nama_pelapor: "",
-            no_hp: "",
-            alamat: "",
-            isi_laporan: "",
-            jenis_laporan: "Kebakaran",
-            sub_jenis_laporan: "Rumah",
-          }); // Reset form
-        } else {
-          setErrorMessage(
-            "Gagal mengirim notifikasi WA: " +
-              (hasilGas.msg || JSON.stringify(hasilGas)),
-          );
+        if (isNotificationEnabled && gasUrl) {
+          console.log("Meneruskan laporan ke Backend GAS...");
+          const responGas = await fetch(gasUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(submittedFormData),
+          });
+
+          const hasilGas = await responGas.json();
+          console.log("Balasan dari sistem WA:", hasilGas);
+
+          if (hasilGas.status === true) {
+            setSuccessMessage(
+              "Laporan berhasil dikirim dan diteruskan ke Grup WhatsApp petugas!"
+            );
+          } else {
+            console.warn("Sistem WA Fonnte mengembalikan status false:", hasilGas.msg);
+            setSuccessMessage(
+              "Laporan sukses masuk database! (Notifikasi Grup WhatsApp petugas sedang tertunda)"
+            );
+          }
         }
-      } else {
-        // Sistem notif nonaktif
-        setTicketId(docRef.id);
+      } catch (notifErr) {
+        console.warn("Gagal mengirim notifikasi WA (non-blocking):", notifErr);
+        // Tetap sukses, tidak membatalkan UX sukses
         setSuccessMessage(
-          "Laporan berhasil dikirim! (Sistem Notifikasi WA sedang dinonaktifkan oleh Admin)",
+          "Laporan sukses disimpan di sistem! (Notifikasi sistem WhatsApp sedang mengalami hambatan jaringan)"
         );
-        setFormData({
-          nama_pelapor: "",
-          no_hp: "",
-          alamat: "",
-          isi_laporan: "",
-          jenis_laporan: "Kebakaran",
-          sub_jenis_laporan: "Rumah",
-        }); // Reset form
       }
     } catch (error: any) {
-      console.error("Terjadi pengecualian jaringan:", error);
+      console.error("Terjadi pengecualian database:", error);
       setErrorMessage(
-        `Terjadi kesalahan sistem/jaringan saat mengirim ke backend. Pastikan URL GAS benar.`,
+        `Gagal menyimpan laporan ke database. Hubungi admin atau coba beberapa saat lagi.`
       );
     } finally {
       setIsSubmitting(false);
@@ -208,13 +202,13 @@ export default function FormLaporan() {
             <CheckCircle2 className="w-6 h-6 mt-0.5 shrink-0" />
             <div className="space-y-3 w-full">
               <p className="text-sm font-semibold">{successMessage}</p>
-              {ticketId && (
+              {ticketNumber && (
                 <div className="p-4 bg-white border border-emerald-100 rounded-lg shadow-sm w-full">
                   <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">
                     Tiket Laporan Anda:
                   </p>
                   <p className="text-2xl font-mono font-black text-emerald-900 tracking-widest">
-                    {ticketId.substring(0, 8).toUpperCase()}
+                    {ticketNumber}
                   </p>
                   <p className="text-xs text-slate-500 font-medium mt-1">
                     Simpan nomor tiket ini untuk mengecek status laporan.

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, getDocs, updateDoc, doc, WriteBatch, writeBatch, addDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, query, where, getDocs, updateDoc, doc, WriteBatch, writeBatch, addDoc } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/db';
 import { AppTheme } from '../types';
 
 interface ThemeContextType {

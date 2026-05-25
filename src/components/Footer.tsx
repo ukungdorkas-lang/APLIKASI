@@ -1,8 +1,8 @@
 import React from 'react';
 import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Shield, ArrowRight, Youtube } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { onSnapshot, doc } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/db';
 import { AppConfig } from '../types';
 import Markdown from 'react-markdown';
 

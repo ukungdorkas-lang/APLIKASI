@@ -49,7 +49,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   const errorMessage = JSON.stringify(errInfo);
-  console.error('Firestore Error: ', errorMessage);
+  console.error('Database (Supabase) Error: ', errorMessage);
   
   if (operationType === OperationType.LIST || errMessage.toLowerCase().includes("quota") || errMessage.toLowerCase().includes("resource-exhausted")) {
     return;
