@@ -64,6 +64,9 @@ import {
   Eye,
   Menu,
   Siren,
+  HardDrive,
+  Save,
+  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, Link } from "react-router-dom";
@@ -100,6 +103,7 @@ type AdminTab =
   | "bank_data"
   | "logs"
   | "themes"
+  | "files"
   | "internal_ops"
   | "internal_reports"
   | "internal_master";
@@ -128,7 +132,9 @@ export default function AdminDashboard({
   const [profileSections, setProfileSections] = React.useState<any[]>([]);
   const [bankData, setBankData] = React.useState<any[]>([]);
   const [banners, setBanners] = React.useState<any[]>([]);
-    const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
+  const [weatherUpstream, setWeatherUpstream] = React.useState<any[]>([]);
+  const [mediaFiles, setMediaFiles] = React.useState<any[]>([]);
+  const [filesLoading, setFilesLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [galleryFilter, setGalleryFilter] = React.useState<
     "SEMUA" | "OPERASIONAL" | "KEGIATAN"
@@ -151,7 +157,29 @@ export default function AdminDashboard({
     monitoring: true,
   });
 
-  // Success Toast State
+  React.useEffect(() => {
+    if (activeTab === "files") {
+      loadMediaFiles();
+    }
+  }, [activeTab]);
+
+  const loadMediaFiles = async () => {
+    setFilesLoading(true);
+    try {
+      const res = await fetch("/api/files");
+      const json = await res.json();
+      if (json.success) {
+        setMediaFiles(json.files);
+      } else {
+        showToast("Gagal memuat list file: " + json.error, "error");
+      }
+    } catch (err) {
+      showToast("Gagal menload media files", "error");
+    } finally {
+      setFilesLoading(false);
+    }
+  };
+
   const [toast, setToast] = React.useState<{
     message: string;
     type: "success" | "error";
@@ -178,6 +206,11 @@ export default function AdminDashboard({
   const [showBankDataModal, setShowBankDataModal] = React.useState(false);
   const [showWeatherModal, setShowWeatherModal] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<any>(null);
+  
+  // File management models
+  const [fileToRename, setFileToRename] = React.useState<{name: string} | null>(null);
+  const [renameInput, setRenameInput] = React.useState("");
+  const [fileToDelete, setFileToDelete] = React.useState<{name: string} | null>(null);
   const [bankDataFilter, setBankDataFilter] = React.useState("SEMUA");
 
   const [reportForm, setReportForm] = React.useState({
@@ -1598,6 +1631,11 @@ export default function AdminDashboard({
           id: "themes",
           name: "Manajemen Tema",
           icon: <Sparkles className="w-5 h-5" />,
+        },
+        {
+          id: "files",
+          name: "Pengelola File",
+          icon: <HardDrive className="w-5 h-5" />,
         },
         {
           id: "settings",
@@ -3079,6 +3117,17 @@ export default function AdminDashboard({
                                           },
                                         );
                                       }
+
+                                      // Hapus fisik jika ada
+                                      if (item.imageUrl?.startsWith('/uploads/')) {
+                                        const fname = item.imageUrl.split('/').pop();
+                                        if (fname) {
+                                          try {
+                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } catch(e) {}
+                                        }
+                                      }
+
                                       showToast(
                                         "Foto dokumentasi berhasil dihapus",
                                       );
@@ -3113,9 +3162,21 @@ export default function AdminDashboard({
                                   <Edit className="w-5 h-5 text-brand-dark" />
                                 </button>
                                 <button
-                                  onClick={() =>
-                                    handleDeleteItem("gallery", item.id)
-                                  }
+                                  onClick={async() => {
+                                    if (confirm("Hapus item ini beserta filenya?")) {
+                                      if (item.imageUrl?.startsWith('/uploads/')) {
+                                        const fname = item.imageUrl.split('/').pop();
+                                        if (fname) {
+                                          try {
+                                            await fetch(`/api/files/${fname}`, { method: 'DELETE' });
+                                          } catch(e) {
+                                            console.log(e);
+                                          }
+                                        }
+                                      }
+                                      handleDeleteItem("gallery", item.id);
+                                    }
+                                  }}
                                   className="p-3 bg-brand-red rounded-xl hover:scale-110 transition-transform shadow-xl"
                                 >
                                   <Trash2 className="w-5 h-5 text-white" />
@@ -4573,6 +4634,95 @@ export default function AdminDashboard({
                 </div>
               </motion.div>
             )}
+            {activeTab === "files" && (
+              <motion.div
+                key="files"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-12"
+              >
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-slate-900 shadow-2xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+                      <HardDrive className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl md:text-3xl font-display font-black uppercase tracking-tighter text-slate-900">
+                        Pengelola File Media
+                      </h2>
+                      <p className="text-slate-500 font-medium mt-1">
+                        Kelola data gambar/video yang diunggah ke server
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={loadMediaFiles}
+                    className="h-14 px-8 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-2xl font-bold transition-all shadow-md flex items-center justify-center gap-3"
+                  >
+                    <RefreshCw size={20} />
+                    <span>Muat Ulang</span>
+                  </button>
+                </div>
+
+                <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl border-4 border-slate-900">
+                  {filesLoading ? (
+                    <div className="flex justify-center p-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-red"></div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                      {mediaFiles.length === 0 ? (
+                        <div className="col-span-full py-12 text-center text-slate-400 font-bold italic">
+                          Belum ada file
+                        </div>
+                      ) : (
+                        mediaFiles.map((file, idx) => (
+                          <div key={idx} className="group relative bg-slate-50 rounded-2xl border-2 border-slate-200 overflow-hidden flex flex-col">
+                            <div className="h-40 bg-slate-200 relative overflow-hidden flex items-center justify-center">
+                              {file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                <img src={file.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                              ) : (
+                                <PlayCircle className="w-16 h-16 text-slate-400" />
+                              )}
+                            </div>
+                            <div className="p-4 flex flex-col flex-grow">
+                              <span className="font-mono text-sm break-all font-bold text-slate-800 line-clamp-2" title={file.name}>
+                                {file.name}
+                              </span>
+                              <div className="flex justify-between items-center mt-auto pt-4 relative z-10">
+                                <span className="text-xs text-slate-500 font-medium">
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setFileToRename({ name: file.name });
+                                      setRenameInput(file.name);
+                                    }}
+                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setFileToDelete({ name: file.name });
+                                    }}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === "banners" && (
               <motion.div
                 key="banners"
@@ -7281,6 +7431,128 @@ export default function AdminDashboard({
                   {editingItem ? "Update Data" : "Simpan ke Bank Data"}
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+        {/* FILE RENAME MODAL */}
+        {fileToRename && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setFileToRename(null)}
+              className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col"
+            >
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
+                <h3 className="text-2xl font-black italic uppercase tracking-tighter">
+                  Ganti Nama Media
+                </h3>
+                <button
+                  onClick={() => setFileToRename(null)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <CloseIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Nama Baru (dengan Ekstensi)
+                  </label>
+                  <input
+                    required
+                    value={renameInput}
+                    onChange={(e) => setRenameInput(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (renameInput && renameInput !== fileToRename.name) {
+                      fetch(`/api/files/${fileToRename.name}/rename`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ newName: renameInput })
+                      })
+                        .then(r => r.json())
+                        .then(json => {
+                          if (json.success) {
+                            showToast("File diganti namanya");
+                            loadMediaFiles();
+                            setFileToRename(null);
+                          } else {
+                            showToast("Gagal: " + json.error, "error");
+                          }
+                        });
+                    }
+                  }}
+                  className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black italic uppercase tracking-tighter shadow-2xl hover:bg-blue-700 transition-all mt-4"
+                >
+                  Ganti Nama
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* DELETE FILE MODAL */}
+        {fileToDelete && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setFileToDelete(null)}
+              className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col p-8 text-center items-center"
+            >
+               <div className="w-20 h-20 bg-red-100 text-brand-red rounded-full flex items-center justify-center mb-6">
+                 <Trash2 className="w-10 h-10" />
+               </div>
+               <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-2 text-slate-900">
+                  Hapus File
+               </h3>
+               <p className="text-slate-500 font-medium mb-8">
+                 Apakah Anda yakin ingin menghapus <strong className="text-brand-red">{fileToDelete.name}</strong>? Tindakan ini tidak dapat dibatalkan.
+               </p>
+               <div className="flex w-full gap-4">
+                 <button
+                   onClick={() => setFileToDelete(null)}
+                   className="flex-1 py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold transition-all"
+                 >
+                   Batal
+                 </button>
+                 <button
+                   onClick={() => {
+                      fetch(`/api/files/${fileToDelete.name}`, { method: "DELETE" })
+                        .then(r => r.json())
+                        .then(json => {
+                          if (json.success) {
+                            showToast("File dihapus");
+                            loadMediaFiles();
+                            setFileToDelete(null);
+                          } else {
+                            showToast("Gagal hapus: " + json.error, "error");
+                          }
+                        });
+                   }}
+                   className="flex-1 py-4 bg-brand-red text-white rounded-2xl font-bold shadow-xl shadow-red-900/20 hover:bg-brand-dark transition-all"
+                 >
+                   Hapus
+                 </button>
+               </div>
             </motion.div>
           </div>
         )}

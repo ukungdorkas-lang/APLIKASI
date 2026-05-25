@@ -68,6 +68,71 @@ async function startServer() {
     }
   });
 
+  // API Route to List Files
+  app.get('/api/files', (req, res) => {
+    try {
+      const files = fs.readdirSync(UPLOADS_DIR);
+      const fileList = files.map(file => {
+        const stats = fs.statSync(path.join(UPLOADS_DIR, file));
+        return {
+          name: file,
+          url: `/uploads/${file}`,
+          size: stats.size,
+          mtime: stats.mtime
+        };
+      });
+      res.json({ success: true, files: fileList });
+    } catch (err) {
+      console.error('List Files Error:', err);
+      res.status(500).json({ success: false, error: 'Failed to list files' });
+    }
+  });
+
+  // API Route to Delete a File
+  app.delete('/api/files/:filename', (req, res) => {
+    try {
+      const fileName = req.params.filename;
+      const filePath = path.join(UPLOADS_DIR, fileName);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ success: false, error: 'File not found' });
+      }
+    } catch (err) {
+      console.error('Delete File Error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete file' });
+    }
+  });
+
+  // API Route to Rename a File
+  app.put('/api/files/:filename/rename', (req, res) => {
+    try {
+      const oldName = req.params.filename;
+      const { newName } = req.body;
+      if (!newName) {
+        return res.status(400).json({ success: false, error: 'Missing new file name' });
+      }
+
+      const oldPath = path.join(UPLOADS_DIR, oldName);
+      const newPath = path.join(UPLOADS_DIR, newName);
+
+      if (fs.existsSync(newPath)) {
+        return res.status(400).json({ success: false, error: 'Destination file already exists' });
+      }
+
+      if (fs.existsSync(oldPath)) {
+        fs.renameSync(oldPath, newPath);
+        res.json({ success: true, fileUrl: `/uploads/${newName}` });
+      } else {
+        res.status(404).json({ success: false, error: 'File not found' });
+      }
+    } catch (err) {
+      console.error('Rename File Error:', err);
+      res.status(500).json({ success: false, error: 'Failed to rename file' });
+    }
+  });
+
   // API Route for AI Weather Update
   app.post('/api/ai/weather-upstream', async (req, res) => {
     if (!process.env.GEMINI_API_KEY) {
