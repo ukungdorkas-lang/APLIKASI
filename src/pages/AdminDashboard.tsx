@@ -1007,10 +1007,7 @@ export default function AdminDashboard({
     e.preventDefault();
     try {
       if (editingItem) {
-        await updateDoc(doc(db, "river_monitoring", editingItem.id), {
-          ...riverForm,
-          updatedAt: Date.now(),
-        });
+        await updateDoc(doc(db, "river_monitoring", editingItem.id), riverForm);
         showToast("Data sungai diperbarui");
       } else {
         await addDoc(collection(db, "river_monitoring"), {
@@ -1021,11 +1018,18 @@ export default function AdminDashboard({
       }
       setShowFloodModal(false);
       setEditingItem(null);
+      setRiverForm({
+        locationName: "",
+        waterLevel: 0,
+        status: "Aman",
+        trend: "stable",
+      });
     } catch (err) {
       showToast("Gagal menyimpan data sungai", "error");
     }
   };
 
+  
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {

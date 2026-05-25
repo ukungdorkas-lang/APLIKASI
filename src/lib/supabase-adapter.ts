@@ -272,20 +272,7 @@ const tableMap = (colPath: string) => {
   if ([
     "settings", 
     "menus", 
-    "footer_links", 
-    "themes", 
-    "banners", 
-    "education", 
-    "profile_sections", 
-    "bank_data",
-    "river_monitoring",
-    "weather_upstream",
-    "personnel",
-    "squads",
-    "sectors",
-    "operational_reports",
-    "admins",
-    "ai_chats"
+    "footer_links"
   ].includes(colPath))
     return "firestore_docs";
   return colPath;
@@ -394,7 +381,7 @@ export async function setDoc(
         data: finalData,
         updated_at: Date.now(),
       },
-      { onConflict: "collection_id,id" },
+      { onConflict: "id" },
     );
     if (error) console.error("setDoc firestore_docs error", error);
     return;
