@@ -106,7 +106,9 @@ const VALID_COLUMNS: Record<string, Set<string>> = {
     "officerNotes",
     "newsGenerated",
     "media",
-    "photos"
+    "photos",
+    "report_number",
+    "reportNumber"
   ]),
   news: new Set([
     "id",
@@ -135,7 +137,7 @@ const resolveFieldName = (table: string, field: string) => {
     if (field === "news_generated" || field === "newsGenerated") return "newsGenerated";
     if (field === "resolved_at" || field === "resolvedAt") return "resolvedAt";
     if (field === "officer_notes" || field === "officerNotes") return "officerNotes";
-    if (field === "report_number" || field === "reportNumber") return "id"; // fallback/ignore
+    if (field === "report_number" || field === "reportNumber" || field === "reportNo" || field === "report_no") return "report_number";
   }
   if (table === "news") {
     if (field === "report_id" || field === "reportId") return "reportId";
@@ -161,7 +163,9 @@ const mapDocumentData = (table: string, row: any) => {
     camel.created_at = ts;
     camel.createdat = ts;
     
-    const repNum = row.id ? `DMK-${row.id.substring(0, 8).toUpperCase()}` : "";
+    const loc = row.location && typeof row.location === "object" ? row.location : {};
+    const dbRepNum = loc.reportNumber || loc.report_number || row.report_number || row.reportNumber || row.report_no || row.reportNo || row.report_num;
+    const repNum = dbRepNum || (row.id ? `DMK-${row.id.substring(0, 8).toUpperCase()}` : "");
     camel.reportNumber = repNum;
     camel.report_number = repNum;
     camel.reportNo = repNum;
@@ -330,15 +334,8 @@ export async function setDoc(
   const mappedData: any = {};
   Object.keys(finalData).forEach((key) => {
     const targetKey = resolveFieldName(table, key);
-    if (
-      targetKey !== "reportNumber" &&
-      targetKey !== "report_number" &&
-      targetKey !== "reportNo" &&
-      targetKey !== "report_no"
-    ) {
-      if (!VALID_COLUMNS[table] || VALID_COLUMNS[table].has(targetKey)) {
-        mappedData[targetKey] = finalData[key];
-      }
+    if (!VALID_COLUMNS[table] || VALID_COLUMNS[table].has(targetKey)) {
+      mappedData[targetKey] = finalData[key];
     }
   });
   mappedData.id = ref.id; // Force ID
@@ -387,15 +384,8 @@ export async function updateDoc(ref: DocReference, dataP: any) {
   const mappedData: any = {};
   Object.keys(dataP).forEach((key) => {
     const targetKey = resolveFieldName(table, key);
-    if (
-      targetKey !== "reportNumber" &&
-      targetKey !== "report_number" &&
-      targetKey !== "reportNo" &&
-      targetKey !== "report_no"
-    ) {
-      if (!VALID_COLUMNS[table] || VALID_COLUMNS[table].has(targetKey)) {
-        mappedData[targetKey] = dataP[key];
-      }
+    if (!VALID_COLUMNS[table] || VALID_COLUMNS[table].has(targetKey)) {
+      mappedData[targetKey] = dataP[key];
     }
   });
 

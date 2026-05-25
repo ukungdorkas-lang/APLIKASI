@@ -102,6 +102,7 @@ export default function FormLaporan() {
           lat: 0,
           lng: 0,
           address: formData.alamat,
+          reportNumber: reportNumber, // Save inside JSONB for guaranteed persistency
         },
         level: "high",
         status: "Menunggu Penanganan",
