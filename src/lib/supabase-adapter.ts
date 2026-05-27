@@ -489,6 +489,8 @@ export async function updateDoc(ref: DocReference, dataP: any) {
     const existing = await getDoc(ref);
     if (existing.exists()) {
       await setDoc(ref, { ...existing.data(), ...dataP });
+    } else {
+      await setDoc(ref, dataP);
     }
     return;
   }

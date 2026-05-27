@@ -44,16 +44,19 @@ interface PersonData {
 }
 
 // --- KOMPONEN KARTU PEGAWAI ---
-const PersonCard = ({ data, isTopLevel = false }: { data: PersonData, isTopLevel?: boolean }) => (
-  <motion.div 
-    whileHover={{ scale: 1.05 }}
-    className={`flex flex-col items-center bg-white rounded-xl shadow-md p-4 border-t-4 ${isTopLevel ? 'border-brand-red w-72' : 'border-red-500 w-full md:w-64'} transition-transform hover:shadow-xl`}
-  >
-    <img src={data.foto} alt={data.nama} className={`object-cover rounded-full border-4 border-slate-50 shadow-sm ${isTopLevel ? 'w-28 h-28 mb-4' : 'w-20 h-20 mb-3'}`} />
-    <h3 className="font-bold text-slate-900 text-center text-sm mb-1 uppercase">{data.nama}</h3>
-    <p className="text-xs font-black text-brand-red text-center leading-tight tracking-widest">{data.jabatan}</p>
-  </motion.div>
-);
+const PersonCard = ({ data, isTopLevel = false }: { data: PersonData, isTopLevel?: boolean }) => {
+  if (!data) return null;
+  return (
+    <motion.div 
+      whileHover={{ scale: 1.05 }}
+      className={`flex flex-col items-center bg-white rounded-xl shadow-md p-4 border-t-4 ${isTopLevel ? 'border-brand-red w-72' : 'border-red-500 w-full md:w-64'} transition-transform hover:shadow-xl`}
+    >
+      <img src={data.foto || "https://via.placeholder.com/150"} alt={data.nama || "-"} className={`object-cover rounded-full border-4 border-slate-50 shadow-sm ${isTopLevel ? 'w-28 h-28 mb-4' : 'w-20 h-20 mb-3'}`} />
+      <h3 className="font-bold text-slate-900 text-center text-sm mb-1 uppercase">{data.nama || "-"}</h3>
+      <p className="text-xs font-black text-brand-red text-center leading-tight tracking-widest">{data.jabatan || "-"}</p>
+    </motion.div>
+  );
+};
 
 export default function StrukturOrganisasi() {
   const [orgData, setOrgData] = useState<any>(defaultOrgData);
