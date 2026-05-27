@@ -3863,18 +3863,46 @@ export default function AdminDashboard({
                               ROLE
                             </span>
                             <span className="text-2xl leading-none">
-                              {u.role === "super" ? "S" : "A"}
+                              {u.role === "super"
+                                ? "S"
+                                : u.role === "admin"
+                                ? "A"
+                                : u.role === "officer"
+                                ? "D"
+                                : "P"}
                             </span>
                           </div>
                           <div className="w-24 h-24 bg-slate-100 rounded-3xl flex items-center justify-center mb-8 font-black text-4xl text-slate-300 italic group-hover:scale-110 transition-transform shadow-inner">
                             {u.email?.[0]?.toUpperCase() || "?"}
                           </div>
                           <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 truncate">
-                            {u.email?.split("@")?.[0] || "ADMIN"}
+                            {u.name || u.email?.split("@")?.[0] || "ADMIN"}
                           </h4>
-                          <p className="text-xs font-bold text-slate-400 mb-10 italic">
+                          <p className="text-xs font-bold text-slate-400 mb-2 italic">
                             {u.email}
                           </p>
+                          <div className="mb-8">
+                            <span
+                              className={cn(
+                                "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wider",
+                                u.role === "super"
+                                  ? "bg-red-50 text-brand-red"
+                                  : u.role === "admin"
+                                  ? "bg-blue-50 text-blue-600"
+                                  : u.role === "officer"
+                                  ? "bg-amber-50 text-amber-600"
+                                  : "bg-green-50 text-green-600"
+                              )}
+                            >
+                              {u.role === "super"
+                                ? "Admin Utama"
+                                : u.role === "admin"
+                                ? "Admin"
+                                : u.role === "officer"
+                                ? "Danru"
+                                : "Petugas"}
+                            </span>
+                          </div>
                           <div className="flex gap-4">
                             <button
                               className="flex-1 bg-slate-900 text-white font-black italic uppercase tracking-tighter py-4 rounded-xl text-[10px] shadow-lg hover:bg-brand-red transition-colors"

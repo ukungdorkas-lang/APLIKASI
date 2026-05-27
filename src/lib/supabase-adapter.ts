@@ -366,6 +366,10 @@ export async function getDocs(q: Query | CollectionReference) {
   }
 
   if (error) {
+    if (error.code === "22P02") {
+      // Swallowed: non-UUID parsed as UUID can never return matching rows
+      return { docs: [], empty: true, size: 0, forEach: () => {} };
+    }
     console.error(`Supabase DB Error (getDocs for ${colPath}):`, error);
     return { docs: [], empty: true, size: 0, forEach: () => {} };
   }
@@ -395,6 +399,14 @@ export async function getDoc(ref: DocReference) {
   const { data, error } = await query.maybeSingle();
 
   if (error) {
+    if (error.code === "22P02") {
+      // Swallowed: non-UUID parsed as UUID can never return matching rows
+      return {
+        id: ref.id,
+        exists: () => false,
+        data: () => undefined,
+      };
+    }
     console.error(
       `Supabase DB Error (getDoc for ${ref.collectionPath}):`,
       error,

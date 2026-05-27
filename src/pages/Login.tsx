@@ -54,17 +54,18 @@ export default function Login() {
         if (authError) throw authError;
 
         if (authData.user) {
+          const isSuperAdminEmail = (authData.user.email || email).toLowerCase() === 'ukungdorkas@gmail.com';
           const userData: any = {
             user_id: authData.user.id,
             email: authData.user.email || email,
-            name: fullName,
-            role: role,
-            status: 'pending', // Usually requires approval
+            name: isSuperAdminEmail ? "Super Admin" : fullName,
+            role: isSuperAdminEmail ? 'super' : role,
+            status: isSuperAdminEmail ? 'active' : 'pending', // Usually requires approval
             created_at: Date.now()
           };
 
-          // If admin, also store in admins for direct access
-          if (role === 'admin') {
+          // If admin or super admin email, store in admins for direct access
+          if (role === 'admin' || isSuperAdminEmail) {
             await setDoc(doc(db, 'admins', authData.user.id), userData);
           } else {
             // Store in personnel
@@ -97,18 +98,22 @@ export default function Login() {
         // Check in admins collection
         const adminQ = query(collection(db, 'admins'), where('user_id', '==', user.id));
         const adminSnap = await getDocs(adminQ);
-        const adminData = !adminSnap.empty ? adminSnap.docs[0].data() : null;
+        let adminData = !adminSnap.empty ? adminSnap.docs[0].data() : null;
         
-        // Auto-restore super admin if they are deleted but logging in
-        if (!adminData && user.email === 'ukungdorkas@gmail.com') {
-          await setDoc(doc(db, 'admins', user.id), {
-            user_id: user.id,
-            email: user.email,
-            name: "Super Admin",
-            role: 'super',
-            status: 'active',
-            created_at: Date.now()
-          });
+        // Auto-restore, repair or boost super admin on login to guarantee full access
+        if (user.email === 'ukungdorkas@gmail.com') {
+          if (!adminData || adminData.role !== 'super' || adminData.status !== 'active') {
+            const updatedSuperData = {
+              user_id: user.id,
+              email: user.email,
+              name: "Super Admin",
+              role: 'super',
+              status: 'active',
+              created_at: Date.now()
+            };
+            await setDoc(doc(db, 'admins', user.id), updatedSuperData);
+            adminData = updatedSuperData;
+          }
           navigate('/admin');
           return;
         }
