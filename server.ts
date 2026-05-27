@@ -375,20 +375,42 @@ Hingga laporan penanganan selesai diterbitkan, situasi di lokasi dilaporkan tela
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'spa',
+      appType: 'custom',
     });
     app.use(vite.middlewares);
+
+    // Fallback for SPA routing in development - only serve and transform index.html for HTML requests
+    app.get('*', async (req, res, next) => {
+      if (req.url.startsWith('/api/') || !req.headers.accept?.includes('text/html')) {
+        return next();
+      }
+
+      const url = req.originalUrl;
+      try {
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        if (!fs.existsSync(indexPath)) {
+          return next();
+        }
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        console.error('Vite transform HTML error:', e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.resolve(process.cwd(), 'dist');
     console.log(`Production Mode: Serving static files from ${distPath}`);
     
     app.use(express.static(distPath));
     
-    // Fallback for SPA routing - serve index.html for all non-API GET requests
-    app.get('*', (req, res) => {
-      // Don't serve index.html for API requests that fall through
-      if (req.url.startsWith('/api/')) {
-        return res.status(404).json({ success: false, error: 'API route not found' });
+    // Fallback for SPA routing - serve index.html for all non-API GET requests that accept HTML
+    app.get('*', (req, res, next) => {
+      // Don't serve index.html for API requests or requests that don't accept HTML (like missing static files/modules)
+      if (req.url.startsWith('/api/') || !req.headers.accept?.includes('text/html')) {
+        return next();
       }
       
       const indexPath = path.join(distPath, 'index.html');
