@@ -106,9 +106,7 @@ const VALID_COLUMNS: Record<string, Set<string>> = {
     "officerNotes",
     "newsGenerated",
     "media",
-    "photos",
-    "report_number",
-    "reportNumber"
+    "photos"
   ]),
   news: new Set([
     "id",
@@ -125,6 +123,32 @@ const VALID_COLUMNS: Record<string, Set<string>> = {
     "videos",
     "personnelCount",
     "unitsUsed"
+  ]),
+  personnel: new Set([
+    "id",
+    "user_id",
+    "email",
+    "name",
+    "position",
+    "rank",
+    "status",
+    "department",
+    "created_at"
+  ]),
+  sectors: new Set([
+     "id",
+     "name",
+     "description",
+     "coverage_area",
+     "status"
+  ]),
+  squads: new Set([
+     "id",
+     "name",
+     "sector_id",
+     "leader_id",
+     "shift_schedule",
+     "status"
   ])
 };
 
@@ -155,9 +179,6 @@ const resolveFieldName = (table: string, field: string) => {
     if (field === "order") return "order_num";
     if (field === "updatedAt") return "created_at";
   }
-  if (table === "weather_upstream") {
-    if (field === "updatedAt") return "timestamp";
-  }
   if (table === "river_monitoring") {
     if (field === "updatedAt") return "created_at";
   }
@@ -166,6 +187,22 @@ const resolveFieldName = (table: string, field: string) => {
   }
   if (table === "education") {
     if (field === "imageUrl" || field === "image_url") return "thumbnail";
+  }
+  if (table === "ai_chats") {
+    if (field === "timestamp") return "created_at";
+  }
+  if (table === "personnel") {
+    if (field === "phoneNumber" || field === "phone_number") return "email";
+    if (field === "sectorId" || field === "sector_id") return "position";
+    if (field === "squadId" || field === "squad_id") return "department";
+    if (field === "createdAt" || field === "created_at") return "created_at";
+  }
+  if (table === "squads") {
+    if (field === "sectorId" || field === "sector_id") return "sector_id";
+    if (field === "leaderId" || field === "leader_id") return "leader_id";
+  }
+  if (table === "sectors") {
+    if (field === "coverageArea" || field === "coverage_area") return "coverage_area";
   }
   if (field === "created_at" || field === "createdAt" || field === "createdat") return "created_at";
   if (field === "updated_at" || field === "updatedAt" || field === "updatedat") return "updated_at";
@@ -208,9 +245,6 @@ const mapDocumentData = (table: string, row: any) => {
     camel.order = row.order_num || camel.orderNum;
     camel.updatedAt = row.created_at || camel.createdAt;
   }
-  if (table === "weather_upstream") {
-    camel.updatedAt = row.timestamp || camel.timestamp;
-  }
   if (table === "river_monitoring") {
     camel.updatedAt = row.created_at || camel.createdAt;
   }
@@ -222,6 +256,24 @@ const mapDocumentData = (table: string, row: any) => {
   }
   if (table === "education") {
     camel.imageUrl = row.thumbnail || camel.thumbnail;
+  }
+  if (table === "ai_chats") {
+    camel.timestamp = row.created_at || camel.createdAt;
+  }
+  if (table === "personnel") {
+    camel.phoneNumber = row.email || "08000000";
+    camel.email = row.email || "08000000";
+    camel.sectorId = row.position || "";
+    camel.squadId = row.department || "";
+    camel.role = row.rank === "DANRU" ? "officer" : "field_personnel";
+  }
+  if (table === "squads") {
+    camel.sectorId = row.sector_id || "";
+    camel.leaderId = row.leader_id || "";
+    camel.shiftSchedule = row.shift_schedule || "";
+  }
+  if (table === "sectors") {
+    camel.coverageArea = row.coverage_area || [];
   }
   return camel;
 };
@@ -272,7 +324,10 @@ const tableMap = (colPath: string) => {
   if ([
     "settings", 
     "menus", 
-    "footer_links"
+    "footer_links",
+    "operational_reports",
+    "notification_recipients",
+    "notification_logs"
   ].includes(colPath))
     return "firestore_docs";
   return colPath;
@@ -336,9 +391,9 @@ export async function getDoc(ref: DocReference) {
     query = query.eq("collection_id", ref.collectionPath);
   }
 
-  const { data, error } = await query.single();
+  const { data, error } = await query.maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
     console.error(
       `Supabase DB Error (getDoc for ${ref.collectionPath}):`,
       error,
@@ -381,7 +436,7 @@ export async function setDoc(
         data: finalData,
         updated_at: Date.now(),
       },
-      { onConflict: "id" },
+      { onConflict: "id, collection_id" },
     );
     if (error) console.error("setDoc firestore_docs error", error);
     return;
@@ -475,16 +530,31 @@ export async function deleteDoc(ref: DocReference) {
 }
 
 export function onSnapshot(ref: any, callback: any, errorCallback?: any) {
+  let lastDataStr = '';
+
+  const handleSnap = (snap: any) => {
+    let currentStr = '';
+    if (snap.docs) {
+      currentStr = JSON.stringify(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    } else {
+      currentStr = JSON.stringify({ id: snap.id, data: snap.data(), exists: snap.exists() });
+    }
+    if (currentStr !== lastDataStr) {
+      lastDataStr = currentStr;
+      callback(snap);
+    }
+  };
+
   // Use polling on top of Supabase API to emulate onSnapshot
   if (ref instanceof DocReference) {
     getDoc(ref)
-      .then(callback)
+      .then(handleSnap)
       .catch((err) => {
         if (errorCallback) errorCallback(err);
       });
   } else {
     getDocs(ref)
-      .then(callback)
+      .then(handleSnap)
       .catch((err) => {
         if (errorCallback) errorCallback(err);
       });
@@ -493,11 +563,11 @@ export function onSnapshot(ref: any, callback: any, errorCallback?: any) {
   const interval = setInterval(() => {
     if (ref instanceof DocReference) {
       getDoc(ref)
-        .then(callback)
+        .then(handleSnap)
         .catch((e) => {});
     } else {
       getDocs(ref)
-        .then(callback)
+        .then(handleSnap)
         .catch((e) => {});
     }
   }, 5000);

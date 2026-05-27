@@ -100,54 +100,62 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       setUploading(true);
       setProgress(10);
       
-      try {
-        const fileName = `${Date.now()}-${file.name.replace(/([^\w.-])/g, '_')}`;
-        
-        // Simulasikan progress awal
-        setTimeout(() => setProgress(30), 100);
-        
-        const { data, error } = await supabase.storage
-          .from('gallery')
-          .upload(fileName, file, {
-             cacheControl: '3600',
-             upsert: false
+      const fileName = Date.now() + "-" + file.name.replace(/([^\\w.-])/g, "_");
+      setTimeout(() => setProgress(30), 100);
+      
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const fileData = reader.result;
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileName, fileData })
           });
-          
-        setProgress(80);
-          
-        if (error) {
-          throw error;
+          const resData = await response.json();
+          if (!response.ok || !resData.success) throw new Error(resData.error || "Upload failed");
+          setProgress(100);
+          setPreview(file.type.startsWith("image/") ? resData.fileUrl : null);
+          setTimeout(() => {
+            onUploadSuccess(resData.fileUrl);
+            setUploading(false);
+          }, 300);
+        } catch (err: any) {
+          console.warn("Storage fallback triggered. File will be saved locally/base64.");
+          if (file.type.startsWith("image/")) {
+            const img = new Image();
+            img.onload = () => {
+               const canvas = document.createElement("canvas");
+               const ctx = canvas.getContext("2d");
+               const MAX_WIDTH = 800;
+               const MAX_HEIGHT = 800;
+               let width = img.width;
+               let height = img.height;
+               if (width > height) {
+                 if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+               } else {
+                 if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+               }
+               canvas.width = width;
+               canvas.height = height;
+               ctx?.drawImage(img, 0, 0, width, height);
+               onUploadSuccess(canvas.toDataURL("image/jpeg", 0.7));
+               setUploading(false);
+               setProgress(100);
+            };
+            img.src = reader.result as string;
+          } else if (file.size < 5 * 1024 * 1024) {
+               onUploadSuccess(reader.result as string);
+               setUploading(false);
+               setProgress(100);
+          } else {
+            setUploading(false);
+            setProgress(0);
+            alert("Upload Error: Failed to fetch (Ukuran terlalu besar atau koneksi server gagal)");
+          }
         }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('gallery')
-          .getPublicUrl(fileName);
-          
-        setProgress(100);
-        setPreview(file.type.startsWith('image/') ? publicUrl : null);
-        
-        setTimeout(() => {
-          onUploadSuccess(publicUrl);
-          setUploading(false);
-        }, 300);
-        
-      } catch (err) {
-        console.error('Upload Error:', err);
-        // Fallback to base64 if server fails and file is small enough
-        if (file.size < 700 * 1024) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-             onUploadSuccess(reader.result as string);
-             setUploading(false);
-             setProgress(100);
-          };
-          reader.readAsDataURL(file);
-        } else {
-          setUploading(false);
-          setProgress(0);
-          alert('Gagal mengunggah file. Pastikan bucket "gallery" di Supabase public dan dapat diakses.');
-        }
-      }
+      };
+      reader.readAsDataURL(file);
     };
 
   const removeFile = () => {

@@ -48,7 +48,10 @@ export function useReports() {
         type: reportData.type,
         level: reportData.level,
         description: reportData.description,
-        location: reportData.location,
+        location: {
+          ...(reportData.location || {}),
+          reportNumber
+        },
         media_url: reportData.mediaUrl,
         media: reportData.media,
         status: 'Menunggu Penanganan',

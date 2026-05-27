@@ -627,10 +627,10 @@ export default function OperationalForms() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-full bg-brand-dark flex items-center justify-center font-black italic text-brand-red text-xs">
-                              {record.name[0]}
+                              {record.name ? record.name[0] : '?'}
                             </div>
                             <span className="font-black uppercase italic tracking-tighter text-slate-900">
-                              {record.name}
+                              {record.name || 'UNKNOWN'}
                             </span>
                           </div>
                           <select
