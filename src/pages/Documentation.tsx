@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../lib/db';
 import { collection, query, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
 import { motion, AnimatePresence } from 'motion/react';
-import { Image as ImageIcon, X, MapPin, Calendar, Info, Maximize2, Download } from 'lucide-react';
+import { 
+  Image as ImageIcon, X, MapPin, Calendar, Info, Maximize2, Download,
+  Shield, AlertTriangle, Users, Clock, Heart
+} from 'lucide-react';
 import DynamicBanner from '../components/DynamicBanner';
 import { cn } from '../lib/utils';
 
@@ -13,39 +16,112 @@ interface GalleryItem {
   imageUrl: string;
   description?: string;
   createdAt: number;
+  source?: "manual" | "report";
+  reportData?: any;
+  type?: string;
 }
 
 export default function Documentation() {
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [filter, setFilter] = useState('SEMUA');
 
   useEffect(() => {
-    const q = query(
+    // 1. Subscribe to manual gallery collection
+    const qGallery = query(
       collection(db, 'gallery'),
       orderBy('created_at', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setGallery(snapshot.docs.map(doc => ({
+    const unsubGallery = onSnapshot(qGallery, (snapshot) => {
+      setGalleryItems(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         imageUrl: doc.data().url || doc.data().imageUrl,
-        category: doc.data().type || doc.data().category,
-        createdAt: doc.data().created_at || doc.data().createdAt
-      } as GalleryItem)));
-      setLoading(false);
+        category: doc.data().type || doc.data().category || "OPERASIONAL",
+        createdAt: doc.data().created_at || doc.data().createdAt || Date.now(),
+        source: 'manual' as const,
+        type: 'GALLERY' as const
+      })));
     }, (error) => {
       console.error("Error fetching gallery:", error);
+    });
+
+    // 2. Subscribe to reports collection (citizen reports)
+    const qReports = query(
+      collection(db, 'reports'),
+      orderBy('created_at', 'desc')
+    );
+
+    const unsubReports = onSnapshot(qReports, (snapshot) => {
+      setReports(snapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          createdAt: d.createdAt || d.created_at || Date.now(),
+          reporterName: d.reporterName || d.reporter_name,
+          phoneNumber: d.phoneNumber || d.phone_number,
+          mediaUrl: d.mediaUrl || d.media_url,
+          reportNumber: d.reportNumber || d.report_number,
+          officerNotes: d.officerNotes || d.officer_notes,
+        };
+      }));
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching reports:", error);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubGallery();
+      unsubReports();
+    };
   }, []);
 
+  // Sync / combine data exactly as done in AdminDashboard.tsx
+  const combinedGallery = React.useMemo(() => {
+    const manualGallery = galleryItems.map((item) => ({
+      ...item,
+      source: "manual" as const,
+      type: "GALLERY" as const,
+    }));
+
+    const reportDocumentation = reports.flatMap((r) => {
+      const allPhotos: string[] = [];
+      if (r.photos && Array.isArray(r.photos)) {
+        allPhotos.push(...r.photos);
+      }
+      if (
+        r.documentation &&
+        r.documentation.photos &&
+        Array.isArray(r.documentation.photos)
+      ) {
+        allPhotos.push(...r.documentation.photos);
+      }
+
+      return allPhotos.map((photoUrl, index) => ({
+        id: `report-${r.id}-p${index}`,
+        title: `${r.type} - ${r.location?.address || "Malinau"}`,
+        category: "OPERASIONAL",
+        imageUrl: photoUrl,
+        description: r.documentation?.chronology || r.description || "Laporan kejadian dari warga.",
+        createdAt: r.createdAt || r.created_at || Date.now(),
+        source: "report" as const,
+        reportData: r,
+        type: "REPORT_DOC" as const,
+      }));
+    });
+
+    return [...manualGallery, ...reportDocumentation].sort(
+      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+    );
+  }, [galleryItems, reports]);
+
   const categories = ['SEMUA', 'OPERASIONAL', 'KEGIATAN', 'PELATIHAN', 'ALUTSISTA'];
-  const filteredGallery = filter === 'SEMUA' ? gallery : gallery.filter(item => item.category === filter);
+  const filteredGallery = filter === 'SEMUA' ? combinedGallery : combinedGallery.filter(item => item.category === filter);
 
   return (
     <div className="pb-32 min-h-screen bg-slate-50">
@@ -196,6 +272,89 @@ export default function Documentation() {
                       </p>
                     )}
                   </div>
+
+                  {/* Citizen Report Dossier / Detail Keterangan */}
+                  {selectedImage.source === 'report' && selectedImage.reportData && (() => {
+                    const r = selectedImage.reportData;
+                    return (
+                      <div className="mt-6 border-t-4 border-dashed border-slate-100 pt-6 space-y-6">
+                        <div className="flex items-center gap-3 text-slate-400">
+                          <Shield className="w-5 h-5 text-brand-red" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Informasi Laporan Warga</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-600">
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <span className="text-[9px] text-slate-400 block uppercase tracking-wider mb-1">No. Register Laporan</span>
+                            <span className="font-mono text-slate-950 font-black">{r.reportNumber || r.id?.substring(0, 8).toUpperCase() || '-'}</span>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <span className="text-[9px] text-slate-400 block uppercase tracking-wider mb-1">Jenis Kejadian</span>
+                            <span className="text-slate-950 font-black uppercase italic">{r.type || '-'}</span>
+                          </div>
+                        </div>
+
+                        {r.location?.address && (
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
+                            <span className="text-[9px] text-slate-400 block uppercase tracking-wider mb-1">Lokasi TKP</span>
+                            <p className="font-semibold text-slate-800 flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5 text-brand-red flex-shrink-0" />
+                              {r.location.address}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="bg-red-50/50 p-6 rounded-3xl border-2 border-red-100/40 text-xs space-y-4">
+                          <div className="flex items-center gap-2 border-b border-red-100 pb-2">
+                            <AlertTriangle className="w-4 h-4 text-brand-red" />
+                            <span className="font-black text-brand-red uppercase tracking-wider text-[10px]">Arsip Penanganan Petugas</span>
+                          </div>
+                          
+                          {r.description && (
+                            <div>
+                              <span className="text-[9px] text-red-400 font-extrabold uppercase tracking-wider block">Lapor Kejadian:</span>
+                              <p className="text-slate-700 font-medium italic mt-1 pl-3 border-l-2 border-red-200">
+                                "{r.description}"
+                              </p>
+                            </div>
+                          )}
+
+                          {r.documentation ? (
+                            <div className="grid grid-cols-2 gap-3 pt-2 text-[11px]">
+                              {r.documentation.personnel && (
+                                <div className="flex items-center gap-2">
+                                  <Users className="w-4 h-4 text-slate-500" />
+                                  <span><strong>{r.documentation.personnel}</strong> Personil</span>
+                                </div>
+                              )}
+                              {r.documentation.duration && (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-slate-500" />
+                                  <span><strong>{r.documentation.duration}</strong> Operasi</span>
+                                </div>
+                              )}
+                              {r.documentation.victims && (
+                                <div className="col-span-2 flex items-center gap-2">
+                                  <Heart className="w-4 h-4 text-slate-500" />
+                                  <span>Korban: <strong>{r.documentation.victims}</strong></span>
+                                </div>
+                              )}
+                              {r.documentation.actions && (
+                                <div className="col-span-2 mt-2 pt-2 border-t border-slate-100">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Tindakan Lapangan:</span>
+                                  <p className="text-slate-700 font-semibold">{r.documentation.actions}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-slate-500 italic">
+                              Status Laporan: <strong className="text-brand-red uppercase">{r.status}</strong>. Ditangani oleh personil piket siaga regu Damkar Malinau.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
