@@ -16,6 +16,7 @@ import {
   updateDoc, limit,
   deleteDoc,
   getDocs,
+  where,
 } from '@/src/lib/supabase-adapter';
 import { supabase } from '../lib/supabase';
 import { generateNewsFromReport, developNarrative } from "../lib/gemini";
@@ -116,9 +117,88 @@ export default function AdminDashboard({
 }) {
   const navigate = useNavigate();
   const { reports, loading: reportsLoading, updateStatus } = useReports();
+  const [currentUserRole, setCurrentUserRole] = React.useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<AdminTab>(
     initialTab || "overview",
   );
+
+  React.useEffect(() => {
+    let active = true;
+    const fetchRole = async () => {
+      const email = auth.currentUser?.email;
+      const uid = auth.currentUser?.uid;
+      if (!uid) {
+        if (active) setRoleLoading(false);
+        return;
+      }
+      if (email === "ukungdorkas@gmail.com") {
+        if (active) {
+          setCurrentUserRole("super");
+          setRoleLoading(false);
+        }
+        return;
+      }
+
+      try {
+        // Search in admins first
+        const adminQ = query(collection(db, "admins"), where("user_id", "==", uid));
+        const adminSnap = await getDocs(adminQ);
+        if (!adminSnap.empty) {
+          const data = adminSnap.docs[0].data();
+          if (active) {
+            setCurrentUserRole(data.role || "admin");
+            setRoleLoading(false);
+          }
+          return;
+        }
+
+        // Search in personnel
+        const persQ = query(collection(db, "personnel"), where("user_id", "==", uid));
+        const persSnap = await getDocs(persQ);
+        if (!persSnap.empty) {
+          const data = persSnap.docs[0].data();
+          if (active) {
+            setCurrentUserRole(data.role || "field_personnel");
+            setRoleLoading(false);
+          }
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching user role on dashboard:", err);
+      }
+      if (active) setRoleLoading(false);
+    };
+
+    fetchRole();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Update default active tab if user is restricted
+  React.useEffect(() => {
+    if (!roleLoading && currentUserRole) {
+      if (currentUserRole === "officer" || currentUserRole === "field_personnel") {
+        if (!initialTab || initialTab === "overview") {
+          setActiveTab("internal_ops");
+        }
+      }
+    }
+  }, [roleLoading, currentUserRole, initialTab]);
+
+  // Security guard check
+  React.useEffect(() => {
+    if (!roleLoading && currentUserRole) {
+      if (!isTabAllowed(activeTab, currentUserRole)) {
+        if (currentUserRole === "officer" || currentUserRole === "field_personnel") {
+          setActiveTab("internal_ops");
+        } else {
+          setActiveTab("overview");
+        }
+      }
+    }
+  }, [activeTab, currentUserRole, roleLoading]);
 
   React.useEffect(() => {
     if (initialTab) {
@@ -585,6 +665,10 @@ export default function AdminDashboard({
 
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (auth.currentUser?.email !== "ukungdorkas@gmail.com") {
+      showToast("Akses ditolak: Hanya Admin Utama yang dapat menambahkan petugas baru.", "error");
+      return;
+    }
     try {
       // In a real app we'd use Firebase Admin or a cloud function to create the user with password
       // For this prototype, we'll just add to the admins collection
@@ -1530,7 +1614,7 @@ export default function AdminDashboard({
     }
   };
 
-  const sidebarGroups = [
+  const baseSidebarGroups = [
     {
       title: "Layanan Publik",
       items: [
@@ -1651,7 +1735,61 @@ export default function AdminDashboard({
     },
   ];
 
-  const sidebarItems = sidebarGroups.flatMap((g) => g.items);
+  const filteredSidebarGroups = React.useMemo(() => {
+    if (roleLoading) return [];
+    if (currentUserRole === "super") {
+      return baseSidebarGroups;
+    }
+    if (currentUserRole === "admin") {
+      return baseSidebarGroups.filter(
+        (group) => group.title === "Layanan Publik" || group.title === "Layanan Internal"
+      );
+    }
+    if (currentUserRole === "officer" || currentUserRole === "field_personnel") {
+      return baseSidebarGroups.filter(
+        (group) => group.title === "Layanan Internal"
+      );
+    }
+    return baseSidebarGroups.filter(
+      (group) => group.title === "Layanan Internal"
+    );
+  }, [currentUserRole, roleLoading]);
+
+  const isTabAllowed = (tab: AdminTab, role: string | null) => {
+    if (!role) return false;
+    if (role === "super") return true; 
+    
+    if (role === "admin") {
+      const allowedPublik = [
+        "overview", "reports", "monitoring", "news", "gallery", 
+        "education", "profiles", "org_structure", "posko_status", 
+        "banners", "notifications"
+      ];
+      const allowedInternal = [
+        "internal_ops", "internal_reports", "internal_master", "bank_data"
+      ];
+      return allowedPublik.includes(tab) || allowedInternal.includes(tab);
+    }
+    
+    if (role === "officer" || role === "field_personnel") {
+      const allowedInternal = [
+        "internal_ops", "internal_reports", "internal_master", "bank_data"
+      ];
+      return allowedInternal.includes(tab);
+    }
+    
+    return false;
+  };
+
+  const sidebarItems = filteredSidebarGroups.flatMap((g) => g.items);
+
+  if (roleLoading) {
+    return (
+      <div key="role-loading-wrapper" className="min-h-screen bg-brand-dark flex items-center justify-center">
+        <LoadingSpinner message="MEMVERIFIKASI OTORITAS AKSES PANEL..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex overflow-hidden">
@@ -1717,7 +1855,7 @@ export default function AdminDashboard({
         </div>
 
         <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar pb-10">
-          {sidebarGroups.map((group) => (
+          {filteredSidebarGroups.map((group) => (
             <div key={group.title}>
               <p className="px-6 mb-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] italic">
                 {group.title}
@@ -3582,6 +3720,10 @@ export default function AdminDashboard({
                   <button
                     className="bg-brand-red px-8 py-3 rounded-xl text-white font-black italic uppercase tracking-tighter shadow-xl hover:scale-105 transition-all"
                     onClick={() => {
+                      if (auth.currentUser?.email !== "ukungdorkas@gmail.com") {
+                        showToast("Akses ditolak: Hanya Admin Utama yang dapat menambahkan petugas baru.", "error");
+                        return;
+                      }
                       setUserForm({ email: "", password: "", role: "admin" });
                       setEditingItem(null);
                       setShowUserModal(true);
@@ -3633,6 +3775,10 @@ export default function AdminDashboard({
                               <button
                                 onClick={async () => {
                                   try {
+                                    if (auth.currentUser?.email !== "ukungdorkas@gmail.com") {
+                                      showToast("Akses ditolak: Hanya Admin Utama yang dapat menyetujui pendaftaran.", "error");
+                                      return;
+                                    }
                                     const col =
                                       pendingUser.collection ||
                                       (pendingUser.role === "admin"
@@ -3659,6 +3805,10 @@ export default function AdminDashboard({
                               </button>
                               <button
                                 onClick={async () => {
+                                  if (auth.currentUser?.email !== "ukungdorkas@gmail.com") {
+                                    showToast("Akses ditolak: Hanya Admin Utama yang dapat menolak pendaftaran.", "error");
+                                    return;
+                                  }
                                   if (
                                     confirm(
                                       "Tolak dan hapus data pendaftaran ini?",
