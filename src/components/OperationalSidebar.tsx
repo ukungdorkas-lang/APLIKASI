@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, Users, LayoutDashboard, FileText, Settings, Database, LogOut, ChevronRight, BarChart3, AlertCircle, Phone, Flame, Truck, MapPin, Bell } from 'lucide-react';
+import { ShieldAlert, Users, LayoutDashboard, FileText, Settings, Database, LogOut, ChevronRight, BarChart3, AlertCircle, Phone, Flame, Truck, MapPin, Bell, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/db';
@@ -13,7 +13,12 @@ interface MenuItem {
   category: 'operational' | 'master' | 'system';
 }
 
-export default function OperationalSidebar() {
+interface OperationalSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function OperationalSidebar({ isOpen, onClose }: OperationalSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,18 +37,44 @@ export default function OperationalSidebar() {
   };
 
   return (
-    <aside className="w-72 bg-slate-900 flex flex-col fixed h-full z-40 border-r border-white/5 shadow-2xl">
-      <div className="p-10">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40">
-            <ShieldAlert className="text-white w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="font-display font-black tracking-tighter text-lg leading-none text-white uppercase italic">SI-<span className="text-brand-red">DAMKAR</span></h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 italic">MALINAU PRO</p>
-          </div>
-        </Link>
-      </div>
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={cn(
+        "w-72 bg-slate-900 flex flex-col fixed h-full z-50 border-r border-white/5 shadow-2xl transition-transform duration-300 transform lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-10 relative flex justify-between items-center">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-brand-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40">
+              <ShieldAlert className="text-white w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="font-display font-black tracking-tighter text-lg leading-none text-white uppercase italic">SI-<span className="text-brand-red">DAMKAR</span></h1>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 italic">MALINAU PRO</p>
+            </div>
+          </Link>
+          
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 text-slate-400 hover:text-white bg-white/5 rounded-xl transition-all"
+              aria-label="Tutup menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
       <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar">
         {/* Public Services Context */}
@@ -102,5 +133,6 @@ export default function OperationalSidebar() {
         </button>
       </div>
     </aside>
+  </>
   );
 }

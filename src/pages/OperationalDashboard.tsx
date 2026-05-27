@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   AlertCircle,
   FileDown,
-  Trash2
+  Trash2,
+  Menu
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { LoadingSpinner } from '../components/Loading';
@@ -36,6 +37,7 @@ export default function OperationalDashboard() {
   const [loading, setLoading] = useState(true);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [squads, setSquads] = useState<Squad[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     fire: 0,
@@ -337,18 +339,27 @@ export default function OperationalDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <OperationalSidebar />
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+      <OperationalSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
-      <main className="flex-1 ml-72 p-12">
+      <main className="flex-1 lg:ml-72 p-4 sm:p-8 lg:p-12 overflow-x-hidden w-full">
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-16">
-          <div>
-            <h1 className="text-4xl font-display font-black text-slate-900 uppercase italic tracking-tighter">Monitoring <span className="text-brand-red">Operasional</span></h1>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2 italic">Unit Reaksi Cepat Damkar Malinau</p>
+          <div className="flex items-center gap-4 w-full lg:w-auto">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-3.5 bg-white border-2 border-slate-200 text-slate-800 rounded-2xl shadow-sm hover:bg-slate-50 active:scale-95 transition-all"
+              title="Menu Navigasi"
+            >
+              <Menu className="w-5 h-5 text-slate-700" />
+            </button>
+            <div className="overflow-hidden">
+              <h1 className="text-3xl md:text-4xl font-display font-black text-slate-900 uppercase italic tracking-tighter leading-tight">Monitoring <span className="text-brand-red">Operasional</span></h1>
+              <p className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mt-1 italic truncate">Unit Reaksi Cepat Damkar Malinau</p>
+            </div>
           </div>
           
-          <div className="flex gap-4">
-            <button onClick={() => window.location.href = '/operational/new'} className="bg-brand-red text-white py-4 px-8 rounded-2xl font-black italic uppercase tracking-tighter shadow-xl shadow-red-900/20 hover:scale-105 transition-all flex items-center gap-3">
+          <div className="flex gap-4 w-full sm:w-auto mt-2 lg:mt-0">
+            <button onClick={() => window.location.href = '/operational/new'} className="w-full sm:w-auto bg-brand-red text-white py-4 px-6 md:px-8 rounded-2xl font-black italic uppercase tracking-tighter shadow-xl shadow-red-900/20 hover:scale-[1.03] active:scale-95 transition-all flex items-center justify-center gap-3">
                <Plus className="w-5 h-5" /> Laporan Baru
             </button>
           </div>

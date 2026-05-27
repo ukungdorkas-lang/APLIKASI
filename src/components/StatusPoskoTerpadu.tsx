@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Truck, Users, Wrench, AlertCircle, CheckCircle, Flame, MapPin, Activity, Radio, X, Maximize2 } from 'lucide-react';
-import { doc, onSnapshot } from '@/src/lib/supabase-adapter';
+import { doc, onSnapshot, collection, query } from '@/src/lib/supabase-adapter';
 import { db } from '../lib/db';
 import { cn } from '../lib/utils';
 
@@ -33,13 +33,62 @@ export default function StatusPoskoTerpadu() {
   const [selectedPosko, setSelectedPosko] = useState<any | null>(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "status_posko"), (docSnap) => {
-      if (docSnap.exists() && docSnap.data().data) {
-        setDataPosko(docSnap.data().data);
-      }
-    });
-    return () => unsub();
+    // Dynamic realtime synchronization across Sectors (Manajemen Wilayah) and Picket Status
+    const unsubSectors = onSnapshot(query(collection(db, "sectors")), (sectorSnap) => {
+      const sectorList = sectorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const unsubPosko = onSnapshot(doc(db, "settings", "status_posko"), (poskoSnap) => {
+        const rawPosko = (poskoSnap.exists() && poskoSnap.data().data) ? poskoSnap.data().data : [];
+
+        // Build elegant map merging static Sector setup with live picket rosters
+        const merged = sectorList.map(sector => {
+          const match = rawPosko.find((p: any) => 
+            (p.sectorId && p.sectorId === sector.id) || 
+            (p.namaPosko && p.namaPosko.toLowerCase().includes(sector.name.toLowerCase())) ||
+            (sector.name && sector.name.toLowerCase().includes(p.namaPosko?.toLowerCase()))
+          );
+
+          const isInduk = sector.name.toUpperCase().includes("INDUK") || sector.name.toUpperCase().includes("KOMANDO");
+
+          return {
+            id: sector.id,
+            sectorId: sector.id,
+            namaPosko: isInduk ? "POSKO INDUK DAMKAR MALINAU" : `POSKO SEKTOR ${sector.name.toUpperCase()}`,
+            address: sector.address || match?.address || "Kabupaten Malinau, Kalimantan Utara",
+            phone: sector.phone || match?.phone || "081112223334",
+            coordinates: sector.coordinates || match?.coordinates || { lat: 3.571069, lng: 116.6057099, z: 15 },
+            
+            // Sync with picket report data: ONLY display armada & personil if piketActive is true (filled "datang" / arrival repoart or manually modified active state)
+            statusPosko: match?.piketActive ? (match.statusPosko || "Siaga 24 Jam") : "Piket Belum Datang",
+            piketActive: !!match?.piketActive,
+            danruSiaga: match?.piketActive ? (match.danruSiaga || "") : "",
+            armada: match?.piketActive ? (match.armada || []) : [],
+            personil: match?.piketActive ? (match.personil || []) : []
+          };
+        });
+
+        setDataPosko(merged.length > 0 ? merged : defaultPoskoData);
+      }, (err) => console.warn("Live status_posko snapshot failed", err));
+
+      return () => {
+        unsubPosko();
+      };
+    }, (err) => console.warn("Live sectors snapshot failed", err));
+
+    return () => {
+      unsubSectors();
+    };
   }, []);
+
+  // Update popup detail view dynamic synced state live
+  useEffect(() => {
+    if (selectedPosko) {
+      const updated = dataPosko.find(p => p.id === selectedPosko.id);
+      if (updated) {
+        setSelectedPosko(updated);
+      }
+    }
+  }, [dataPosko]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -95,7 +144,7 @@ export default function StatusPoskoTerpadu() {
                     <span className="text-white font-bold text-sm">Live Monitoring</span>
                  </div>
                </div>
-               <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase italic tracking-tighter leading-none mb-4">
+               <h2 className="text-3xl sm:text-4xl md:text-6xl font-display font-black text-white uppercase italic tracking-tighter leading-tight mb-4">
                   Status <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red to-orange-500">Posko Terpadu</span>
                </h2>
                <p className="text-slate-400 font-medium text-sm leading-relaxed border-l-2 border-white/20 pl-4">
@@ -121,36 +170,59 @@ export default function StatusPoskoTerpadu() {
             viewport={{ once: true }}
             transition={{ delay: idx * 0.1 }}
             key={posko.id || idx} 
-            className="group bg-white rounded-[3rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col hover:border-brand-red/30 transition-all duration-500"
+            className={cn(
+               "group bg-white rounded-[3rem] shadow-2xl border overflow-hidden flex flex-col transition-all duration-500",
+               posko.piketActive ? "border-slate-100 hover:border-brand-red/30" : "border-slate-200/60 hover:border-slate-400/30"
+            )}
           >
             {/* Header Posko */}
             <div 
                onClick={() => setSelectedPosko(posko)}
-               className="bg-slate-900 px-8 py-8 md:px-12 md:py-10 border-b-[6px] border-brand-red flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden group/header cursor-pointer hover:bg-slate-800 transition-colors"
+               className={cn(
+                  "px-8 py-8 md:px-12 md:py-10 border-b-[6px] flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden group/header cursor-pointer hover:bg-slate-850 transition-colors",
+                  posko.piketActive ? "bg-slate-900 border-brand-red" : "bg-slate-800 border-slate-500"
+               )}
             >
-               <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-brand-red/10 blur-[100px] rounded-full pointer-events-none" />
-               <div className="absolute bottom-[-20%] left-[10%] w-[300px] h-[300px] bg-slate-800/30 blur-[80px] rounded-full pointer-events-none" />
+               {posko.piketActive ? (
+                 <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-brand-red/10 blur-[100px] rounded-full pointer-events-none" />
+               ) : (
+                 <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-slate-700/10 blur-[100px] rounded-full pointer-events-none" />
+               )}
+               <div className="absolute bottom-[-20%] left-[10%] w-[300px] h-[300px] bg-slate-900/30 blur-[80px] rounded-full pointer-events-none" />
                
                <div className="relative z-10 flex items-center gap-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-brand-red to-red-800 rounded-[1.5rem] flex items-center justify-center shadow-xl shadow-red-900/40 transform group-hover/header:scale-105 group-hover/header:rotate-3 transition-all duration-500 border border-brand-red/50">
-                     <Flame className="w-10 h-10 text-white" />
+                  <div className={cn(
+                     "w-20 h-20 rounded-[1.5rem] flex items-center justify-center shadow-xl transform group-hover/header:scale-105 group-hover/header:rotate-3 transition-all duration-500 border",
+                     posko.piketActive 
+                        ? "bg-gradient-to-br from-brand-red to-red-800 shadow-red-900/40 border-brand-red/50" 
+                        : "bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-900/40 border-slate-600/50"
+                  )}>
+                     <Flame className={cn("w-10 h-10", posko.piketActive ? "text-white" : "text-slate-400")} />
                   </div>
                   <div>
                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/5 mb-3">
-                        <MapPin className="w-3.5 h-3.5 text-brand-red" />
+                        <MapPin className={cn("w-3.5 h-3.5", posko.piketActive ? "text-brand-red" : "text-slate-450")} />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest">{posko.namaPosko.includes('INDUK') ? 'Pusat Komando' : 'Sektor Wilayah'}</span>
                      </div>
-                     <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase italic tracking-tighter leading-none group-hover/header:text-brand-red transition-colors">{posko.namaPosko}</h3>
+                     <h3 className={cn(
+                        "text-2xl sm:text-3xl md:text-4xl font-display font-black text-white uppercase italic tracking-tighter leading-tight transition-colors",
+                        posko.piketActive ? "group-hover/header:text-brand-red" : "group-hover/header:text-slate-400"
+                     )}>{posko.namaPosko}</h3>
                   </div>
                </div>
                
                <div className="relative z-10 flex items-center gap-4">
-                  <div className="lg:text-right flex flex-col lg:items-end justify-center px-6 py-4 bg-white/5 backdrop-blur-xl rounded-[1.5rem] border border-white/10 border-l-4 border-l-brand-red">
+                  <div className={cn(
+                     "lg:text-right flex flex-col lg:items-end justify-center px-6 py-4 bg-white/5 backdrop-blur-xl rounded-[1.5rem] border border-white/10 border-l-4",
+                     posko.piketActive ? "border-l-brand-red" : "border-l-slate-400"
+                  )}>
                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5 flex items-center gap-2 lg:justify-end">
-                        <Shield className="w-3 h-3 text-brand-red" />
-                        Komandan Regu
+                        <Shield className={cn("w-3 h-3", posko.piketActive ? "text-brand-red" : "text-slate-400")} />
+                        {posko.piketActive ? "Komandan Regu" : "Status Piket"}
                      </p>
-                     <p className="font-bold text-white text-lg italic">{posko.danruSiaga || 'Belum Ditunjuk'}</p>
+                     <p className="font-bold text-white text-lg italic">
+                        {posko.piketActive ? (posko.danruSiaga || 'Belum Ditunjuk') : 'STANDBY DARURAT'}
+                     </p>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); setSelectedPosko(posko); }} className="w-12 h-12 rounded-[1.25rem] bg-brand-red/10 border border-brand-red/20 flex items-center justify-center text-brand-red opacity-0 group-hover/header:opacity-100 transition-opacity" title="Lihat Detail Posko">
                      <Maximize2 className="w-5 h-5" />
@@ -201,8 +273,10 @@ export default function StatusPoskoTerpadu() {
                        </div>
                      ))}
                      {(!posko.armada || posko.armada.length === 0) && (
-                       <div className="h-full min-h-[150px] flex items-center justify-center bg-white/50 rounded-[1.5rem] border-2 border-dashed border-slate-200">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">N/A ARMADA</p>
+                       <div className="flex-1 min-h-[180px] flex flex-col items-center justify-center bg-slate-100/50 rounded-[2rem] border-2 border-dashed border-slate-200 p-6 text-center">
+                          <Truck className="w-8 h-8 text-slate-300 mb-2" />
+                          <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Tidak Ada Armada Aktif</p>
+                          <p className="text-[10px] text-slate-400 mt-1 font-bold italic leading-relaxed max-w-[200px] mx-auto">Regu piket belum mengisi laporan kedatangan untuk shift ini.</p>
                        </div>
                      )}
                   </div>
@@ -286,9 +360,13 @@ export default function StatusPoskoTerpadu() {
                         })}
                      </AnimatePresence>
                      {(!posko.personil || posko.personil.length === 0) && (
-                        <div className="col-span-full h-full min-h-[150px] flex flex-col items-center justify-center bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
-                           <Users className="w-8 h-8 text-slate-300 mb-3" />
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">N/A PERSONIL</p>
+                        <div className="col-span-full h-full min-h-[180px] flex flex-col items-center justify-center bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 p-6 text-center">
+                           <Users className="w-8 h-8 text-slate-300 mb-2" />
+                           <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Tidak Ada Personil Aktif</p>
+                           <p className="text-[10px] text-slate-400 mt-1 font-bold italic leading-relaxed max-w-[280px] mx-auto">Sektor ini sedang standby tanpa personil terdaftar aktif. Kontak nomor darurat di bawah untuk respon cepat.</p>
+                           <a href={`tel:${posko.phone}`} className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-red hover:shadow-lg transition-all duration-300">
+                              Hubungi Posko: {posko.phone}
+                           </a>
                         </div>
                      )}
                   </div>

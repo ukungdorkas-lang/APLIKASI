@@ -18,7 +18,8 @@ import {
   UserPlus,
   Building,
   Database,
-  AlertCircle
+  AlertCircle,
+  Menu
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { LoadingSpinner } from '../components/Loading';
@@ -38,6 +39,7 @@ export default function MasterData() {
   const [seedProgress, setSeedProgress] = useState(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Filter states
   const [filterSectorId, setFilterSectorId] = useState<string>('');
@@ -363,13 +365,22 @@ export default function MasterData() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      <OperationalSidebar />
-      <main className="flex-1 md:ml-72 p-4 md:p-12">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+      <OperationalSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <main className="flex-1 lg:ml-72 p-4 sm:p-8 lg:p-12 overflow-x-hidden w-full">
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-16">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-display font-black text-slate-900 uppercase italic tracking-tighter">Manajemen <span className="text-brand-red">Data Master</span></h1>
-            <p className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mt-2 italic">Pengelolaan Relasional Personil & Unit</p>
+          <div className="flex items-center gap-4 w-full lg:w-auto">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-3.5 bg-white border-2 border-slate-200 text-slate-800 rounded-2xl shadow-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0 animate-fade-in"
+              title="Menu Navigasi"
+            >
+              <Menu className="w-5 h-5 text-slate-700" />
+            </button>
+            <div className="overflow-hidden">
+              <h1 className="text-2xl md:text-4xl font-display font-black text-slate-900 uppercase italic tracking-tighter leading-tight">Manajemen <span className="text-brand-red">Data Master</span></h1>
+              <p className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mt-1 italic truncate">Pengelolaan Relasional Personil & Unit</p>
+            </div>
           </div>
           
           <div className="flex flex-wrap gap-4 relative z-50">

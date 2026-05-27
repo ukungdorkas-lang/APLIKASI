@@ -42,6 +42,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--app-accent', theme.accentColor || '#fbbf24');
     root.style.setProperty('--app-bg', theme.backgroundColor || '#f1f5f9');
     root.style.setProperty('--app-text', theme.textColor || '#0f172a');
+    root.style.setProperty('--app-surface', theme.surfaceColor || '#ffffff');
     root.style.setProperty('--app-font-sans', theme.fontFamily || 'Inter');
     
     if (theme.isDark) {

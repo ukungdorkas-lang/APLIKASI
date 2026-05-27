@@ -9,7 +9,8 @@ import {
   orderBy,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  setDoc
 } from '@/src/lib/supabase-adapter';
 import { Personnel, Squad, Sector, OperationalReport } from "../types";
 import { motion, AnimatePresence } from "motion/react";
@@ -28,6 +29,7 @@ import {
   X,
   ChevronRight,
   Info,
+  Menu
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { LoadingSpinner } from "../components/Loading";
@@ -37,6 +39,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function OperationalForms() {
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [reportType, setReportType] = useState<
     "daily_piket" | "fire" | "rescue"
   >("daily_piket");
@@ -218,18 +221,25 @@ export default function OperationalForms() {
         updatedAt: Date.now(),
       });
 
-      // SYNC TO POSKO STATUS IF THIS IS PIKET DATANG
-      if (reportType === "daily_piket" && form.piketAction === "datang" && form.sectorId) {
+      // SYNC TO POSKO STATUS (DATANG / PULANG)
+      if (reportType === "daily_piket" && form.sectorId) {
         const sector = sectors.find(s => s.id === form.sectorId);
         if (sector) {
           const docRef = doc(db, "settings", "status_posko");
           const snap = await getDoc(docRef);
-          if (snap.exists()) {
-             const data = snap.data().data || [];
-             // Find index by posko name matching sector name roughly, or ID if matched.
-             // We'll try to find by sector.name in namaPosko, or we add/update.
-             let pIdx = data.findIndex((p: any) => p.namaPosko.toLowerCase().includes(sector.name.toLowerCase()) || (p.sectorId && p.sectorId === form.sectorId));
-             
+          
+          let data = [];
+          if (snap.exists() && snap.data()?.data) {
+             data = snap.data().data;
+          }
+
+          // Find index by posko matching sectorId or matching sector name roughly
+          let pIdx = data.findIndex((p: any) => 
+            (p.sectorId && p.sectorId === form.sectorId) || 
+            p.namaPosko.toLowerCase().includes(sector.name.toLowerCase())
+          );
+
+          if (form.piketAction === "datang") {
              const officer = personnel.find(p => p.name === form.officerInChargeId) || { name: form.officerInChargeId, rank: "" };
              const officerName = officer.rank ? `${officer.rank} ${officer.name}` : officer.name;
              
@@ -247,7 +257,7 @@ export default function OperationalForms() {
                    nama: a.name,
                    peran: mappedPeran,
                    foto: psnd?.photoUrl || ""
-                };
+                  };
              }) || [];
 
              const armadaUpdate = form.armadaPiket?.map(a => ({
@@ -262,19 +272,34 @@ export default function OperationalForms() {
                 data[pIdx].danruSiaga = officerName;
                 data[pIdx].personil = personilBertugas;
                 data[pIdx].armada = armadaUpdate;
+                data[pIdx].sectorId = form.sectorId;
+                data[pIdx].piketActive = true;
+                data[pIdx].statusPosko = "Siaga 24 Jam";
              } else {
-                // If not found, just create a new one for this sector
                 data.push({
                    id: "posko-" + form.sectorId,
                    sectorId: form.sectorId,
                    namaPosko: "POSKO " + sector.name.toUpperCase(),
                    danruSiaga: officerName,
                    personil: personilBertugas,
-                   armada: armadaUpdate
+                   armada: armadaUpdate,
+                   piketActive: true,
+                   statusPosko: "Siaga 24 Jam"
                 });
              }
-             await updateDoc(docRef, { data });
+          } else if (form.piketAction === "pulang") {
+             if (pIdx !== -1) {
+                // Clear active roster of personnel & armada if shift returns/expires
+                data[pIdx].danruSiaga = "";
+                data[pIdx].personil = [];
+                data[pIdx].armada = [];
+                data[pIdx].sectorId = form.sectorId;
+                data[pIdx].piketActive = false;
+                data[pIdx].statusPosko = "Piket Selesai / Standby Berganti";
+             }
           }
+
+          await setDoc(docRef, { data });
         }
       }
 
@@ -291,14 +316,21 @@ export default function OperationalForms() {
     );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <OperationalSidebar />
-      <main className="flex-1 ml-72 p-12">
-        <header className="flex justify-between items-center mb-16">
-          <div className="flex items-center gap-6">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+      <OperationalSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <main className="flex-1 lg:ml-72 p-4 sm:p-8 lg:p-12 overflow-x-hidden w-full">
+        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-16">
+          <div className="flex items-center gap-4 sm:gap-6 w-full lg:w-auto">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-3.5 bg-white border-2 border-slate-200 text-slate-800 rounded-2xl shadow-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+              title="Menu Navigasi"
+            >
+              <Menu className="w-5 h-5 text-slate-700" />
+            </button>
             <div
               className={cn(
-                "w-16 h-16 rounded-[2rem] flex items-center justify-center text-white shadow-2xl",
+                "w-12 h-12 sm:w-16 sm:h-16 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center text-white shadow-2xl shrink-0",
                 reportType === "fire"
                   ? "bg-brand-red"
                   : reportType === "rescue"
@@ -307,19 +339,18 @@ export default function OperationalForms() {
               )}
             >
               {reportType === "fire" ? (
-                <Flame className="w-8 h-8" />
+                <Flame className="w-6 h-6 sm:w-8 sm:h-8" />
               ) : reportType === "rescue" ? (
-                <ShieldAlert className="w-8 h-8" />
+                <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8" />
               ) : (
-                <Calendar className="w-8 h-8" />
+                <Calendar className="w-6 h-6 sm:w-8 sm:h-8" />
               )}
             </div>
-            <div>
-              <h1 className="text-4xl font-display font-black text-slate-900 uppercase italic tracking-tighter italic">
-                Input Laporan{" "}
-                <span className="text-brand-red">Operasional</span>
+            <div className="overflow-hidden">
+              <h1 className="text-2xl sm:text-4xl font-display font-black text-slate-900 uppercase italic tracking-tighter leading-none mb-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                Input Laporan <span className="text-brand-red">Operasional</span>
               </h1>
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2 italic">
+              <p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-widest italic leading-tight truncate">
                 Format:{" "}
                 {reportType === "fire"
                   ? "Laporan Kebakaran"
