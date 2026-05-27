@@ -327,7 +327,8 @@ const tableMap = (colPath: string) => {
     "footer_links",
     "operational_reports",
     "notification_recipients",
-    "notification_logs"
+    "notification_logs",
+    "themes"
   ].includes(colPath))
     return "firestore_docs";
   return colPath;
