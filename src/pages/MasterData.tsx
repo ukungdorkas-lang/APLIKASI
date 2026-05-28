@@ -491,92 +491,94 @@ export default function MasterData() {
            {loading ? (
              <div className="p-20"><LoadingSpinner message="Sinkronisasi Database..." /></div>
            ) : (
-             <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-900 text-white">
-                   <tr>
-                      {activeTab === 'personnel' && (<>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Nama / NRP</th>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Pangkat</th>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Penempatan</th>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Status</th>
-                      </>)}
-                      {activeTab === 'squads' && (<>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Nama Regu</th>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Komandan</th>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Sektor</th>
-                      </>)}
-                      {activeTab === 'sectors' && (<>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Nama Sektor</th>
-                        <th className="p-8 text-[10px] font-black uppercase tracking-widest">Alamat Pos</th>
-                      </>)}
-                      <th className="p-8 text-[10px] font-black uppercase tracking-widest text-right">Aksi</th>
-                   </tr>
-                </thead>
-                <tbody className="divide-y-4 divide-slate-50">
-                  {activeTab === 'personnel' && personnel
-                    .filter(p => !filterSectorId || p.sectorId === filterSectorId)
-                    .filter(p => !filterSquadId || p.squadId === filterSquadId)
-                    .map((p, idx) => (
-                      <tr key={`personnel-${p.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-8">
-                          <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-brand-red italic">{p.name ? p.name[0] : '?'}</div>
-                             <div>
-                                <p className="font-black italic uppercase tracking-tighter text-slate-900">{p.name || 'UNKNOWN'}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.phoneNumber}</p>
-                             </div>
-                          </div>
-                        </td>
-                        <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{p.rank}</td>
-                        <td className="p-8">
-                          <p className="text-xs font-black uppercase italic text-slate-900 leading-none mb-1">{squads.find(s => s.id === p.squadId)?.name || 'N/A'}</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{sectors.find(s => s.id === p.sectorId)?.name || 'N/A'}</p>
-                        </td>
-                        <td className="p-8">
-                          <span className={cn("px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-widest", p.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600')}>
-                             {p.status}
-                          </span>
-                        </td>
-                        <td className="p-8 text-right">
-                           <div className="flex justify-end gap-2">
-                             <button onClick={() => { setEditingItem(p); setPersonnelForm(p); setShowModal(true); }} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit className="w-4 h-4" /></button>
-                             <button onClick={() => handleDelete(p.id)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
-                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  {/* Similar mapping for squads and sectors */}
-                  {activeTab === 'squads' && squads
-                    .filter(s => !filterSectorId || s.sectorId === filterSectorId)
-                    .map((s, idx) => (
-                       <tr key={`squad-${s.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-8 font-black italic uppercase tracking-tighter text-slate-900">{s.name}</td>
-                          <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{personnel.find(p => p.id === s.commanderId)?.name || 'Belum Ditunjuk'}</td>
-                          <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{sectors.find(sec => sec.id === s.sectorId)?.name || 'N/A'}</td>
+             <div className="overflow-x-auto w-full">
+               <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-900 text-white">
+                     <tr>
+                        {activeTab === 'personnel' && (<>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Nama / NRP</th>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Pangkat</th>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Penempatan</th>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Status</th>
+                        </>)}
+                        {activeTab === 'squads' && (<>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Nama Regu</th>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Komandan</th>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Sektor</th>
+                        </>)}
+                        {activeTab === 'sectors' && (<>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Nama Sektor</th>
+                          <th className="p-8 text-[10px] font-black uppercase tracking-widest">Alamat Pos</th>
+                        </>)}
+                        <th className="p-8 text-[10px] font-black uppercase tracking-widest text-right">Aksi</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y-4 divide-slate-50">
+                    {activeTab === 'personnel' && personnel
+                      .filter(p => !filterSectorId || p.sectorId === filterSectorId)
+                      .filter(p => !filterSquadId || p.squadId === filterSquadId)
+                      .map((p, idx) => (
+                        <tr key={`personnel-${p.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-8">
+                            <div className="flex items-center gap-4">
+                               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-brand-red italic">{p.name ? p.name[0] : '?'}</div>
+                               <div>
+                                  <p className="font-black italic uppercase tracking-tighter text-slate-900">{p.name || 'UNKNOWN'}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.phoneNumber}</p>
+                               </div>
+                            </div>
+                          </td>
+                          <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{p.rank}</td>
+                          <td className="p-8">
+                            <p className="text-xs font-black uppercase italic text-slate-900 leading-none mb-1">{squads.find(s => s.id === p.squadId)?.name || 'N/A'}</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{sectors.find(s => s.id === p.sectorId)?.name || 'N/A'}</p>
+                          </td>
+                          <td className="p-8">
+                            <span className={cn("px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-widest", p.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600')}>
+                               {p.status}
+                            </span>
+                          </td>
                           <td className="p-8 text-right">
                              <div className="flex justify-end gap-2">
-                               <button onClick={() => { setEditingItem(s); setSquadForm(s); setShowModal(true); }} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit className="w-4 h-4" /></button>
-                               <button onClick={() => handleDelete(s.id)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
+                               <button onClick={() => { setEditingItem(p); setPersonnelForm(p); setShowModal(true); }} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit className="w-4 h-4" /></button>
+                               <button onClick={() => handleDelete(p.id)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
+                             </div>
+                          </td>
+                        </tr>
+                      ))}
+                    {/* Similar mapping for squads and sectors */}
+                    {activeTab === 'squads' && squads
+                      .filter(s => !filterSectorId || s.sectorId === filterSectorId)
+                      .map((s, idx) => (
+                         <tr key={`squad-${s.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                            <td className="p-8 font-black italic uppercase tracking-tighter text-slate-900">{s.name}</td>
+                            <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{personnel.find(p => p.id === s.commanderId)?.name || 'Belum Ditunjuk'}</td>
+                            <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{sectors.find(sec => sec.id === s.sectorId)?.name || 'N/A'}</td>
+                            <td className="p-8 text-right">
+                               <div className="flex justify-end gap-2">
+                                 <button onClick={() => { setEditingItem(s); setSquadForm(s); setShowModal(true); }} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit className="w-4 h-4" /></button>
+                                 <button onClick={() => handleDelete(s.id)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
+                               </div>
+                            </td>
+                         </tr>
+                      ))}
+                    {activeTab === 'sectors' && sectors.map((sec, idx) => (
+                       <tr key={`sector-${sec.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-8 font-black italic uppercase tracking-tighter text-slate-900">{sec.name}</td>
+                          <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{sec.address}</td>
+                          <td className="p-8 text-right">
+                             <div className="flex justify-end gap-2">
+                               <button onClick={() => { setEditingItem(sec); setSectorForm(sec); setShowModal(true); }} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit className="w-4 h-4" /></button>
+                               <button onClick={() => handleDelete(sec.id)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
                              </div>
                           </td>
                        </tr>
                     ))}
-                  {activeTab === 'sectors' && sectors.map((sec, idx) => (
-                     <tr key={`sector-${sec.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-8 font-black italic uppercase tracking-tighter text-slate-900">{sec.name}</td>
-                        <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{sec.address}</td>
-                        <td className="p-8 text-right">
-                           <div className="flex justify-end gap-2">
-                             <button onClick={() => { setEditingItem(sec); setSectorForm(sec); setShowModal(true); }} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit className="w-4 h-4" /></button>
-                             <button onClick={() => handleDelete(sec.id)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
-                           </div>
-                        </td>
-                     </tr>
-                  ))}
-                </tbody>
-             </table>
+                  </tbody>
+               </table>
+             </div>
            )}
-        </div>
+         </div>
 
         {/* Modal Form */}
         <AnimatePresence>

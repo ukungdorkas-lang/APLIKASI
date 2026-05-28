@@ -280,64 +280,66 @@ export default function NotificationManagement() {
         </div>
       ) : (
         <div className="bg-white rounded-[2rem] border-4 border-slate-900 shadow-2xl overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b-4 border-slate-100">
-              <tr>
-                <th className="p-8 tag-label text-slate-400">Waktu</th>
-                <th className="p-8 tag-label text-slate-400">Penerima</th>
-                <th className="p-8 tag-label text-slate-400">Channel</th>
-                <th className="p-8 tag-label text-slate-400">Status</th>
-                <th className="p-8 tag-label text-slate-400">Pesan</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y-2 divide-slate-50">
-              {logs.map((log) => (
-                <tr
-                  key={log.id}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  <td className="p-8 text-xs font-bold text-slate-400">
-                    {new Date(log.timestamp).toLocaleString("id-ID")}
-                  </td>
-                  <td className="p-8">
-                    <p className="font-black italic uppercase tracking-tighter">
-                      {log.recipientName}
-                    </p>
-                    <p className="text-[10px] font-bold text-slate-400">
-                      {log.phoneNumber}
-                    </p>
-                  </td>
-                  <td className="p-8">
-                    <span className="flex items-center gap-2 tag-label text-[10px]">
-                      {log.channel === "whatsapp" && (
-                        <MessageSquare className="w-3 h-3 text-green-500" />
-                      )}
-                      {log.channel === "sms" && (
-                        <Smartphone className="w-3 h-3 text-blue-500" />
-                      )}
-                      {log.channel.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="p-8">
-                    {log.status === "sent" || log.status === "delivered" ? (
-                      <span className="flex items-center gap-1 text-green-500 font-black text-[10px] uppercase">
-                        <CheckCircle className="w-3 h-3" /> Berhasil
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-red-500 font-black text-[10px] uppercase">
-                        <XCircle className="w-3 h-3" /> Gagal
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-8 max-w-xs">
-                    <p className="text-[10px] font-bold text-slate-500 line-clamp-1 italic">
-                      "{log.messageContent}"
-                    </p>
-                  </td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b-4 border-slate-100">
+                <tr>
+                  <th className="p-8 tag-label text-slate-400">Waktu</th>
+                  <th className="p-8 tag-label text-slate-400">Penerima</th>
+                  <th className="p-8 tag-label text-slate-400">Channel</th>
+                  <th className="p-8 tag-label text-slate-400">Status</th>
+                  <th className="p-8 tag-label text-slate-400">Pesan</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y-2 divide-slate-50">
+                {logs.map((log) => (
+                  <tr
+                    key={log.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="p-8 text-xs font-bold text-slate-400">
+                      {new Date(log.timestamp).toLocaleString("id-ID")}
+                    </td>
+                    <td className="p-8">
+                      <p className="font-black italic uppercase tracking-tighter">
+                        {log.recipientName}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400">
+                        {log.phoneNumber}
+                      </p>
+                    </td>
+                    <td className="p-8">
+                      <span className="flex items-center gap-2 tag-label text-[10px]">
+                        {log.channel === "whatsapp" && (
+                          <MessageSquare className="w-3 h-3 text-green-500" />
+                        )}
+                        {log.channel === "sms" && (
+                          <Smartphone className="w-3 h-3 text-blue-500" />
+                        )}
+                        {log.channel.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="p-8">
+                      {log.status === "sent" || log.status === "delivered" ? (
+                        <span className="flex items-center gap-1 text-green-500 font-black text-[10px] uppercase">
+                          <CheckCircle className="w-3 h-3" /> Berhasil
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-red-500 font-black text-[10px] uppercase">
+                          <XCircle className="w-3 h-3" /> Gagal
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-8 max-w-xs">
+                      <p className="text-[10px] font-bold text-slate-500 line-clamp-1 italic">
+                        "{log.messageContent}"
+                      </p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {logs.length === 0 && (
             <div className="p-20 text-center text-slate-300 font-black italic uppercase tracking-[0.3em]">
               TIDAK ADA RIWAYAT PENGIRIMAN

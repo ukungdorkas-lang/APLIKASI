@@ -18,6 +18,13 @@
     @apply font-sans antialiased text-base;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  /* Safe word-wrap parameters to prevent clipping on mobile viewports */
+  p, h1, h2, h3, h4, h5, h6, span, a {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
 }
 
 @theme {
