@@ -561,14 +561,20 @@ export default function MasterData() {
                       .filter(p => !filterSectorId || p.sectorId === filterSectorId)
                       .filter(p => !filterSquadId || p.squadId === filterSquadId)
                       .map((p, idx) => (
-                        <tr key={`personnel-${p.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                        <tr key={`personnel-${p.id}-${idx}`} className="hover:bg-slate-55 transition-colors">
                           <td className="p-8">
                             <div className="flex items-center gap-4">
-                               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-brand-red italic">{p.name ? p.name[0] : '?'}</div>
+                               <div className="w-12 h-12 rounded-full border-2 border-slate-100 bg-slate-150 flex items-center justify-center font-black text-brand-red italic overflow-hidden shadow-sm shrink-0">
+                                 {p.photoUrl ? (
+                                   <img src={p.photoUrl} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                 ) : (
+                                   p.name ? p.name[0] : '?'
+                                 )}
+                               </div>
                                <div>
                                   <p className="font-black italic uppercase tracking-tighter text-slate-900">{p.name || 'UNKNOWN'}</p>
                                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.phoneNumber}</p>
-                               </div>
+                                </div>
                             </div>
                           </td>
                           <td className="p-8 font-bold text-slate-500 italic uppercase italic text-sm">{p.rank}</td>

@@ -315,8 +315,8 @@ export default function StatusPoskoTerpadu() {
                                      "w-14 h-14 sm:w-16 sm:h-16 rounded-full p-[2px] bg-white shadow-sm transition-all duration-300 group-hover/personil:scale-105",
                                      isDanru ? "ring-2 ring-brand-red/40 ring-offset-2" : "border-2 border-slate-100 group-hover/personil:border-slate-200"
                                   )}>
-                                     {personil.foto ? (
-                                        <img src={personil.foto} alt={personil.nama} className="w-full h-full rounded-full object-cover" />
+                                     {personil.foto || personil.photoUrl ? (
+                                        <img src={personil.foto || personil.photoUrl} alt={personil.nama} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                                      ) : (
                                         <div className={cn(
                                             "w-full h-full rounded-full flex items-center justify-center",
@@ -486,8 +486,8 @@ export default function StatusPoskoTerpadu() {
                                        {isDanru && <div className="absolute top-0 left-0 w-2 h-full bg-brand-red" />}
                                        <div className="relative shrink-0">
                                           <div className={cn("w-16 h-16 rounded-full p-[2px]", isDanru ? "ring-2 ring-brand-red/40" : "border-2 border-slate-100")}>
-                                             {personil.foto ? (
-                                                <img src={personil.foto} alt={personil.nama} className="w-full h-full rounded-full object-cover" />
+                                             {personil.foto || personil.photoUrl ? (
+                                                <img src={personil.foto || personil.photoUrl} alt={personil.nama} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                                              ) : (
                                                 <div className="w-full h-full rounded-full flex items-center justify-center bg-slate-50 text-slate-400">
                                                    <Users className="w-7 h-7" />
