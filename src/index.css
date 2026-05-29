@@ -144,3 +144,17 @@
 .dark .border-slate-200 {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
+
+/* Smooth Touch Horizontal Scroll on Mobile devices */
+.overflow-x-auto, .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure that on small screen viewports, elements are allowing overflow scrolling smoothly */
+@media (max-width: 640px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+}
+

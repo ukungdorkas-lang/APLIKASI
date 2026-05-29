@@ -1921,7 +1921,7 @@ export default function AdminDashboard({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:ml-72 overflow-y-auto min-h-screen">
+      <main className="flex-1 lg:ml-72 overflow-x-auto overflow-y-auto min-h-screen w-full">
         {/* Header Bar */}
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 h-20 flex items-center justify-between px-6 md:px-10 sticky top-0 z-30">
           <div className="flex items-center gap-4 md:gap-10 flex-1">
@@ -5544,9 +5544,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Tambah Laporan Manual
                 </h3>
@@ -5557,7 +5557,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveReport} className="p-8 space-y-6">
+              <form onSubmit={handleSaveReport} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -5730,9 +5730,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-3xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white w-full max-w-3xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit Warta Berita" : "Tambah Warta Baru"}
                 </h3>
@@ -5743,7 +5743,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveNews} className="p-8 space-y-6">
+              <form onSubmit={handleSaveNews} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Judul Berita
@@ -5842,9 +5842,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Tambah Akses Petugas
                 </h3>
@@ -5855,7 +5855,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveUser} className="p-8 space-y-6">
+              <form onSubmit={handleSaveUser} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Email Petugas
@@ -5926,9 +5926,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem ? "Edit" : "Tambah"} Sensor Sungai
                 </h3>
@@ -5939,7 +5939,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveRiver} className="p-8 space-y-6">
+              <form onSubmit={handleSaveRiver} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Nama Lokasi / Area
@@ -6041,9 +6041,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-3">
                   <CloudRain className="w-5 h-5 text-brand-red" />
                   <h3 className="text-2xl font-black italic uppercase tracking-tighter">
@@ -6057,7 +6057,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveWeather} className="p-8 space-y-6">
+              <form onSubmit={handleSaveWeather} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="flex justify-center -mt-4 mb-4">
                   <button
                     type="button"
@@ -6192,9 +6192,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white w-full max-w-md rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   Unggah Media Baru
                 </h3>
@@ -6205,7 +6205,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveGallery} className="p-8 space-y-6">
+              <form onSubmit={handleSaveGallery} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Judul Media
@@ -6297,9 +6297,9 @@ export default function AdminDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden text-slate-900"
+              className="bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl relative z-10 overflow-hidden text-slate-900 flex flex-col max-h-[90vh]"
             >
-              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-5 md:p-8 text-white flex justify-between items-center shrink-0">
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">
                   {editingItem
                     ? "Edit Materi Edukasi"
@@ -6312,7 +6312,7 @@ export default function AdminDashboard({
                   <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleSaveEdu} className="p-8 space-y-6">
+              <form onSubmit={handleSaveEdu} className="p-8 space-y-6 overflow-y-auto w-full">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Judul Materi

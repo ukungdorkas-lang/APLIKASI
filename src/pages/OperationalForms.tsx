@@ -318,7 +318,7 @@ export default function OperationalForms() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
       <OperationalSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <main className="flex-1 lg:ml-72 p-4 sm:p-8 lg:p-12 overflow-x-hidden w-full">
+      <main className="flex-1 lg:ml-72 p-4 sm:p-8 lg:p-12 overflow-x-auto w-full">
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-16">
           <div className="flex items-center gap-4 sm:gap-6 w-full lg:w-auto">
             <button 

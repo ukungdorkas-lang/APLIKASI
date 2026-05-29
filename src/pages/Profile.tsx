@@ -184,7 +184,7 @@ export default function Profile() {
                 </h1>
 
                 {activeSection?.content === 'struktur-organisasi-component' ? (
-                  <div className="mb-10 w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                  <div className="mb-10 w-full overflow-x-auto" onClick={(e) => e.stopPropagation()}>
                      <StrukturOrganisasi />
                   </div>
                 ) : (
