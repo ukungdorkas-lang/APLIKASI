@@ -241,6 +241,8 @@ export interface Personnel {
   status: 'active' | 'on_leave' | 'retired';
   role: 'admin' | 'officer' | 'field_personnel';
   photoUrl?: string;
+  foto?: string;
+  photo?: string;
 }
 
 export interface Squad {
