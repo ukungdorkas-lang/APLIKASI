@@ -436,50 +436,6 @@ export default function AdminDashboard({
     thumbnailUrl: "" as string | undefined,
   });
 
-  React.useEffect(() => {
-    const isAnyModalOpen =
-      showReportModal ||
-      showNewsModal ||
-      showUserModal ||
-      showGalleryModal ||
-      showEduModal ||
-      showProfileModal ||
-      showBannerModal ||
-      showFloodModal ||
-      showBankDataModal ||
-      showWeatherModal ||
-      showDocsModal ||
-      showDetailModal ||
-      showThemeModal ||
-      !!fileToRename ||
-      !!fileToDelete;
-
-    if (isAnyModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [
-    showReportModal,
-    showNewsModal,
-    showUserModal,
-    showGalleryModal,
-    showEduModal,
-    showProfileModal,
-    showBannerModal,
-    showFloodModal,
-    showBankDataModal,
-    showWeatherModal,
-    showDocsModal,
-    showDetailModal,
-    showThemeModal,
-    fileToRename,
-    fileToDelete
-  ]);
-
   const THEME_PRESETS = [
     {
       name: "Classic Damkar",

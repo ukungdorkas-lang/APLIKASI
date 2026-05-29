@@ -62,17 +62,6 @@ export default function MasterData() {
   });
 
   useEffect(() => {
-    if (showModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [showModal]);
-
-  useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         if (user.email === 'ukungdorkas@gmail.com') {
@@ -596,13 +585,13 @@ export default function MasterData() {
           {showModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" />
-              <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="p-10 border-b-4 border-slate-50 bg-slate-50/50 flex justify-between items-center shrink-0">
+              <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl overflow-hidden">
+                <div className="p-10 border-b-4 border-slate-50 bg-slate-50/50 flex justify-between items-center">
                    <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">{editingItem ? 'Update' : 'Tambah'} Data {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
                    <button onClick={() => setShowModal(false)} className="p-3 bg-white rounded-xl shadow-lg hover:bg-brand-red hover:text-white transition-all"><X className="w-6 h-6" /></button>
                 </div>
                 
-                <form onSubmit={handleSave} className="p-10 space-y-8 overflow-y-auto w-full">
+                <form onSubmit={handleSave} className="p-10 space-y-8">
                    {activeTab === 'personnel' && (
                      <div className="grid grid-cols-2 gap-6">
                         <div className="col-span-2 space-y-2">
