@@ -2190,7 +2190,7 @@ export default function AdminDashboard({
                 className="space-y-10"
               >
                 <div className="flex flex-wrap justify-between items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full shrink-0">
                     {["SEMUA", "MENUNGGU", "PROSES", "SELESAI"].map((f) => (
                       <button
                         key={`report-filter-${f}`}
@@ -3063,7 +3063,7 @@ export default function AdminDashboard({
                 className="space-y-8"
               >
                 <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 bg-white p-5 md:p-8 rounded-3xl border-4 border-brand-dark shadow-2xl">
-                  <div className="flex flex-wrap gap-2 sm:gap-4">
+                  <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-none max-w-full shrink-0">
                     {["SEMUA", "OPERASIONAL", "KEGIATAN"].map((f) => (
                       <button
                         key={`gallery-filter-${f}`}

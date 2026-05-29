@@ -131,13 +131,13 @@ function Home() {
       
       {/* Quick Action Navigation */}
       {(!config?.homeLayout || config.homeLayout.quickActions?.length > 0) && (
-        <section className="max-w-7xl mx-auto px-6 sm:px-10 -mt-24 relative z-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
+        <section className="max-w-7xl mx-auto px-6 sm:px-10 -mt-24 relative z-20 overflow-x-auto sm:overflow-x-visible custom-scrollbar">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10 max-sm:flex max-sm:overflow-x-auto max-sm:flex-nowrap max-sm:pb-6 max-sm:-mx-6 max-sm:px-6 max-sm:scroll-smooth max-sm:snap-x max-sm:snap-mandatory custom-scrollbar">
             {activeActions.map((action, i) => (
               <Link 
                 key={i} 
                 to={`/report?type=${action.title}`}
-                className="group bg-white rounded-[2rem] p-5 md:p-8 sm:p-10 border border-slate-50 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col items-center text-center overflow-hidden relative"
+                className="group bg-white rounded-[2rem] p-5 md:p-8 sm:p-10 border border-slate-50 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col items-center text-center overflow-hidden relative shrink-0 max-sm:w-[70vw] max-sm:snap-start"
               >
                 <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 transition-transform group-hover:scale-110 duration-500", action.color)}>
                    {iconMap[action.icon] || <Info className="w-8 h-8" />}
@@ -173,17 +173,17 @@ function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 max-sm:flex max-sm:overflow-x-auto max-sm:flex-nowrap max-sm:pb-6 max-sm:-mx-6 max-sm:px-6 max-sm:scroll-smooth max-sm:snap-x max-sm:snap-mandatory custom-scrollbar">
           {loading ? (
             Array(3).fill(0).map((_, i) => (
-              <div key={i} className="bg-white rounded-[2.5rem] p-6 border border-slate-50">
+              <div key={i} className="bg-white rounded-[2.5rem] p-6 border border-slate-50 shrink-0 max-sm:w-[80vw] max-sm:snap-start">
                 <Skeleton className="aspect-video rounded-[2rem] mb-8" />
                 <Skeleton className="h-6 w-3/4 mb-4" />
                 <Skeleton className="h-4 w-full" />
               </div>
             ))
           ) : news.length === 0 ? (
-            <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 rounded-[3rem]">
+            <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 rounded-[3rem] w-full">
                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Belum ada berita dipublikasikan</p>
             </div>
           ) : news.map((item, idx) => (
@@ -193,7 +193,7 @@ function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
-              className="group bg-white rounded-[2.5rem] p-4 border border-slate-50 hover:border-slate-100 hover:shadow-2xl transition-all flex flex-col"
+              className="group bg-white rounded-[2.5rem] p-4 border border-slate-50 hover:border-slate-100 hover:shadow-2xl transition-all flex flex-col shrink-0 max-sm:w-[80vw] max-sm:snap-start"
             >
               <div className="aspect-video relative overflow-hidden rounded-[2rem] bg-slate-100 mb-8">
                 {(item.imageUrl || (item.photos && item.photos[0])) ? (
@@ -258,9 +258,9 @@ function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-sm:flex max-sm:overflow-x-auto max-sm:flex-nowrap max-sm:pb-6 max-sm:-mx-6 max-sm:px-6 max-sm:scroll-smooth max-sm:snap-x max-sm:snap-mandatory custom-scrollbar">
             {recentReports.length === 0 ? (
-              <div className="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200">
+              <div className="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200 w-full">
                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Tidak ada laporan terbaru</p>
               </div>
             ) : recentReports.map((report, idx) => (
@@ -270,7 +270,7 @@ function Home() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-brand-dark p-6 md:p-10 rounded-[3.5rem] text-white border-4 border-slate-900 shadow-2xl relative overflow-hidden group"
+                className="bg-brand-dark p-6 md:p-10 rounded-[3.5rem] text-white border-4 border-slate-900 shadow-2xl relative overflow-hidden group shrink-0 max-sm:w-[80vw] max-sm:snap-start"
               >
                 <div className="absolute top-0 right-0 p-8">
                   <ShieldAlert className="w-10 h-10 text-brand-red opacity-20 group-hover:opacity-100 transition-opacity" />
@@ -336,15 +336,15 @@ function Home() {
           </Link>
         </div>
 
-        <div className="lg:col-span-8 grid md:grid-cols-2 gap-8">
-          <div className="bg-slate-50 p-6 md:p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group">
+        <div className="lg:col-span-8 grid md:grid-cols-2 gap-8 max-sm:flex max-sm:overflow-x-auto max-sm:flex-nowrap max-sm:pb-6 max-sm:-mx-6 max-sm:px-6 max-sm:scroll-smooth max-sm:snap-x max-sm:snap-mandatory custom-scrollbar">
+          <div className="bg-slate-50 p-6 md:p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group shrink-0 max-sm:w-[75vw] max-sm:snap-start">
             <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-8 group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:rotate-6">
               <ShieldAlert className="w-8 h-8" />
             </div>
             <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-4 text-brand-dark">Respon Kilat</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Sistem pelaporan real-time yang terhubung langsung ke unit taktis lapangan.</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Sistem pelaporan real-time yang terhubung langsung to unit taktis lapangan.</p>
           </div>
-          <div className="bg-slate-50 p-6 md:p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group">
+          <div className="bg-slate-50 p-6 md:p-10 rounded-[2rem] border-4 border-slate-100 hover:border-brand-red transition-all cursor-pointer group shrink-0 max-sm:w-[75vw] max-sm:snap-start">
             <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-8 group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:-rotate-6">
               <Newspaper className="w-8 h-8" />
             </div>
