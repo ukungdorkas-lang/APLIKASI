@@ -133,6 +133,7 @@ const VALID_COLUMNS: Record<string, Set<string>> = {
     "rank",
     "status",
     "department",
+    "photo_url",
     "created_at"
   ]),
   sectors: new Set([
@@ -196,6 +197,9 @@ const resolveFieldName = (table: string, field: string) => {
     if (field === "sectorId" || field === "sector_id") return "position";
     if (field === "squadId" || field === "squad_id") return "department";
     if (field === "createdAt" || field === "created_at") return "created_at";
+    if (field === "photoUrl" || field === "photo_url") return "photo_url";
+    if (field === "foto") return "photo_url";
+    if (field === "photo") return "photo_url";
   }
   if (table === "squads") {
     if (field === "sectorId" || field === "sector_id") return "sector_id";
@@ -266,6 +270,9 @@ const mapDocumentData = (table: string, row: any) => {
     camel.sectorId = row.position || "";
     camel.squadId = row.department || "";
     camel.role = row.rank === "DANRU" ? "officer" : "field_personnel";
+    camel.photoUrl = row.photo_url || row.foto || row.photo || "";
+    camel.foto = row.photo_url || row.foto || row.photo || "";
+    camel.photo = row.photo_url || row.foto || row.photo || "";
   }
   if (table === "squads") {
     camel.sectorId = row.sector_id || "";
