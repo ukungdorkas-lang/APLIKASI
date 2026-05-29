@@ -24,6 +24,7 @@ import {
 import { cn } from '../lib/utils';
 import { LoadingSpinner } from '../components/Loading';
 import OperationalSidebar from '../components/OperationalSidebar';
+import { FileUpload } from '../components/FileUpload';
 
 type MasterTab = 'personnel' | 'squads' | 'sectors';
 
@@ -583,15 +584,25 @@ export default function MasterData() {
         {/* Modal Form */}
         <AnimatePresence>
           {showModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" />
-              <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-2xl rounded-[3rem] border-8 border-slate-900 shadow-2xl overflow-hidden">
-                <div className="p-10 border-b-4 border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                   <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">{editingItem ? 'Update' : 'Tambah'} Data {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
-                   <button onClick={() => setShowModal(false)} className="p-3 bg-white rounded-xl shadow-lg hover:bg-brand-red hover:text-white transition-all"><X className="w-6 h-6" /></button>
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+                animate={{ scale: 1, opacity: 1, y: 0 }} 
+                exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+                className={cn(
+                  "relative bg-white w-full rounded-[3rem] border-8 border-slate-900 shadow-2xl overflow-hidden flex flex-col transition-all duration-300",
+                  activeTab === 'personnel' 
+                    ? "max-w-4xl h-[92vh] max-h-[92vh]" 
+                    : "max-w-2xl max-h-[90vh]"
+                )}
+              >
+                <div className="p-6 md:p-10 border-b-4 border-slate-50 bg-slate-50/50 flex justify-between items-center shrink-0">
+                   <h3 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter leading-none">{editingItem ? 'Update' : 'Tambah'} Data {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
+                   <button onClick={() => setShowModal(false)} className="p-2 md:p-3 bg-white rounded-xl shadow-lg hover:bg-brand-red hover:text-white transition-all"><X className="w-5 h-5 md:w-6 md:h-6" /></button>
                 </div>
                 
-                <form onSubmit={handleSave} className="p-10 space-y-8">
+                <form onSubmit={handleSave} className="p-6 md:p-10 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
                    {activeTab === 'personnel' && (
                      <div className="grid grid-cols-2 gap-6">
                         <div className="col-span-2 space-y-2">
@@ -607,8 +618,13 @@ export default function MasterData() {
                            <input required value={personnelForm.phoneNumber || ''} onChange={e => setPersonnelForm({...personnelForm, phoneNumber: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" />
                         </div>
                         <div className="col-span-1 md:col-span-2 space-y-2">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">URL Foto Profil (Opsional)</label>
-                           <input type="text" value={personnelForm.photoUrl || ''} onChange={e => setPersonnelForm({...personnelForm, photoUrl: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold outline-none focus:border-brand-red" placeholder="https://..." />
+                           <FileUpload
+                              label="Upload Foto Profil (Opsional)"
+                              allowedTypes={["image/*"]}
+                              initialUrl={personnelForm.photoUrl}
+                              onUploadSuccess={(url) => setPersonnelForm({ ...personnelForm, photoUrl: url })}
+                            />
+                           <input type="text" value={personnelForm.photoUrl || ''} onChange={e => setPersonnelForm({...personnelForm, photoUrl: e.target.value})} className="hidden" />
                         </div>
                         <div className="space-y-2">
                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sektor / Pos</label>
