@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../lib/db';
-import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, orderBy, getDocs } from '@/src/lib/supabase-adapter';
+import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, orderBy, getDocs, getDoc } from '@/src/lib/supabase-adapter';
 import { Personnel, Squad, Sector, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/errorHandler';
 import { motion, AnimatePresence } from 'motion/react';
@@ -242,10 +242,52 @@ export default function MasterData() {
         };
       }
 
+      // Sanitize the form payload to remove the 'id' field before storing inside document fields,
+      // which avoids Firebase updateDoc/addDoc failures.
+      const { id, ...saveForm } = form as any;
+
       if (editingItem) {
-        await updateDoc(doc(db, col, editingItem.id), form);
+        await updateDoc(doc(db, col, editingItem.id), saveForm);
+
+        // Synchronize edited personnel details with active picket manifests inside settings/status_posko
+        if (activeTab === 'personnel') {
+          try {
+            const poskoDocRef = doc(db, 'settings', 'status_posko');
+            const poskoSnap = await getDoc(poskoDocRef);
+            if (poskoSnap.exists()) {
+              const poskoData = poskoSnap.data()?.data || [];
+              let isUpdated = false;
+
+              const updatedPoskoData = poskoData.map((posko: any) => {
+                if (posko.personil && Array.isArray(posko.personil)) {
+                  const updatedPersonil = posko.personil.map((per: any) => {
+                    if (per.id === editingItem.id || (per.nama && per.nama.toLowerCase().trim() === editingItem.name?.toLowerCase().trim())) {
+                      isUpdated = true;
+                      return {
+                        ...per,
+                        id: editingItem.id,
+                        nama: saveForm.name || per.nama,
+                        peran: saveForm.rank || per.peran,
+                        foto: saveForm.photoUrl || per.foto || ""
+                      };
+                    }
+                    return per;
+                  });
+                  return { ...posko, personil: updatedPersonil };
+                }
+                return posko;
+              });
+
+              if (isUpdated) {
+                await updateDoc(poskoDocRef, { data: updatedPoskoData });
+              }
+            }
+          } catch (syncErr) {
+            console.warn("Failed to synchronize personnel details with settings/status_posko:", syncErr);
+          }
+        }
       } else {
-        await addDoc(collection(db, col), { ...form, createdAt: Date.now() });
+        await addDoc(collection(db, col), { ...saveForm, createdAt: Date.now() });
       }
       setShowModal(false);
       setEditingItem(null);
