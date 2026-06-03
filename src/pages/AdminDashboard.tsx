@@ -1171,43 +1171,53 @@ export default function AdminDashboard({
 
   React.useEffect(() => {
     if (activeTab !== "users") return;
+
+    let adminUsers: any[] = [];
+    let personnelUsers: any[] = [];
+
+    const updateUsers = () => {
+      setUsers([...adminUsers, ...personnelUsers]);
+      setDataLoading((prev) => ({ ...prev, users: false }));
+    };
+
     const unsubUsers = onSnapshot(
       query(collection(db, "admins")),
       (snAdmins) => {
-        const adminUsers = snAdmins.docs.map((d) => ({
+        adminUsers = snAdmins.docs.map((d) => ({
           id: d.id,
           ...d.data(),
           role: d.data().role || "admin",
           collection: "admins",
         }));
-        const unsubPers = onSnapshot(
-          query(collection(db, "personnel")),
-          (snPersonnel) => {
-            const personnelUsers = snPersonnel.docs.map((d) => ({
-              id: d.id,
-              ...d.data(),
-              role: d.data().role || "field_personnel",
-              collection: "personnel",
-            }));
-            setUsers([...adminUsers, ...personnelUsers]);
-            setDataLoading((prev) => ({ ...prev, users: false }));
-          },
-          (err) => {
-            console.warn("Listener failed for collection: personnel", err);
-            setUsers(adminUsers);
-            setDataLoading((prev) => ({ ...prev, users: false }));
-          }
-        );
-        // We can't return the unsub right here natively easily inside nested onSnapshot, 
-        // but for short term let's just let it be GC'd or we refine the approach.
-        // Actually best is to just fetch them simply. 
+        updateUsers();
       },
       (err) => {
         console.warn("Listener failed for collection: admins", err);
-        setDataLoading((prev) => ({ ...prev, users: false }));
+        updateUsers();
       }
     );
-    return () => unsubUsers();
+
+    const unsubPers = onSnapshot(
+      query(collection(db, "personnel")),
+      (snPersonnel) => {
+        personnelUsers = snPersonnel.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          role: d.data().role || "field_personnel",
+          collection: "personnel",
+        }));
+        updateUsers();
+      },
+      (err) => {
+        console.warn("Listener failed for collection: personnel", err);
+        updateUsers();
+      }
+    );
+
+    return () => {
+      unsubUsers();
+      unsubPers();
+    };
   }, [activeTab]);
 
   

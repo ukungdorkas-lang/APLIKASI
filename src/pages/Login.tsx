@@ -23,13 +23,17 @@ export default function Login() {
   const [config, setConfig] = React.useState<any>(null);
 
   React.useEffect(() => {
+    let unsub: any;
     import('@/src/lib/supabase-adapter').then(({ doc, onSnapshot }) => {
-      onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
+      unsub = onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
         if (snap.exists()) {
           setConfig(snap.data());
         }
       });
     });
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   // Simple Captcha

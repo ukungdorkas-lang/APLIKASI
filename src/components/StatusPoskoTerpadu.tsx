@@ -34,49 +34,59 @@ export default function StatusPoskoTerpadu() {
 
   useEffect(() => {
     // Dynamic realtime synchronization across Sectors (Manajemen Wilayah) and Picket Status
+    let unsubPosko: any;
+    let sectorList: any[] = [];
+    
     const unsubSectors = onSnapshot(query(collection(db, "sectors")), (sectorSnap) => {
-      const sectorList = sectorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      const unsubPosko = onSnapshot(doc(db, "settings", "status_posko"), (poskoSnap) => {
-        const rawPosko = (poskoSnap.exists() && poskoSnap.data().data) ? poskoSnap.data().data : [];
-
-        // Build elegant map merging static Sector setup with live picket rosters
-        const merged = sectorList.map(sector => {
-          const match = rawPosko.find((p: any) => 
-            (p.sectorId && p.sectorId === sector.id) || 
-            (p.namaPosko && p.namaPosko.toLowerCase().includes(sector.name.toLowerCase())) ||
-            (sector.name && sector.name.toLowerCase().includes(p.namaPosko?.toLowerCase()))
-          );
-
-          const isInduk = sector.name.toUpperCase().includes("INDUK") || sector.name.toUpperCase().includes("KOMANDO");
-
-          return {
-            id: sector.id,
-            sectorId: sector.id,
-            namaPosko: isInduk ? "POSKO INDUK DAMKAR MALINAU" : `POSKO SEKTOR ${sector.name.toUpperCase()}`,
-            address: sector.address || match?.address || "Kabupaten Malinau, Kalimantan Utara",
-            phone: sector.phone || match?.phone || "081112223334",
-            coordinates: sector.coordinates || match?.coordinates || { lat: 3.571069, lng: 116.6057099, z: 15 },
-            
-            // Sync with picket report data: ONLY display armada & personil if piketActive is true (filled "datang" / arrival repoart or manually modified active state)
-            statusPosko: match?.piketActive ? (match.statusPosko || "Siaga 24 Jam") : "Piket Belum Datang",
-            piketActive: !!match?.piketActive,
-            danruSiaga: match?.piketActive ? (match.danruSiaga || "") : "",
-            armada: match?.piketActive ? (match.armada || []) : [],
-            personil: match?.piketActive ? (match.personil || []) : []
-          };
-        });
-
-        setDataPosko(merged.length > 0 ? merged : defaultPoskoData);
-      }, (err) => console.warn("Live status_posko snapshot failed", err));
-
-      return () => {
-        unsubPosko();
-      };
+      sectorList = sectorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      recalculate();
     }, (err) => console.warn("Live sectors snapshot failed", err));
 
+    unsubPosko = onSnapshot(doc(db, "settings", "status_posko"), (poskoSnap) => {
+      recalculate(poskoSnap);
+    }, (err) => console.warn("Live status_posko snapshot failed", err));
+
+    let lastPoskoSnap: any = null;
+
+    function recalculate(poskoSnap?: any) {
+      if (poskoSnap) lastPoskoSnap = poskoSnap;
+      if (!lastPoskoSnap) return;
+
+      const rawPosko = (lastPoskoSnap.exists() && lastPoskoSnap.data().data) ? lastPoskoSnap.data().data : [];
+
+      // Build elegant map merging static Sector setup with live picket rosters
+      const merged = sectorList.map(sector => {
+        const match = rawPosko.find((p: any) => 
+          (p.sectorId && p.sectorId === sector.id) || 
+          (p.namaPosko && p.namaPosko.toLowerCase().includes(sector.name.toLowerCase())) ||
+          (sector.name && sector.name.toLowerCase().includes(p.namaPosko?.toLowerCase()))
+        );
+
+        const isInduk = sector.name.toUpperCase().includes("INDUK") || sector.name.toUpperCase().includes("KOMANDO");
+
+        return {
+          id: sector.id,
+          sectorId: sector.id,
+          namaPosko: isInduk ? "POSKO INDUK DAMKAR MALINAU" : `POSKO SEKTOR ${sector.name.toUpperCase()}`,
+          address: sector.address || match?.address || "Kabupaten Malinau, Kalimantan Utara",
+          phone: sector.phone || match?.phone || "081112223334",
+          coordinates: sector.coordinates || match?.coordinates || { lat: 3.571069, lng: 116.6057099, z: 15 },
+          
+          // Sync with picket report data: ONLY display armada & personil if piketActive is true (filled "datang" / arrival repoart or manually modified active state)
+          statusPosko: match?.piketActive ? (match.statusPosko || "Siaga 24 Jam") : "Piket Belum Datang",
+          piketActive: !!match?.piketActive,
+          danruSiaga: match?.piketActive ? (match.danruSiaga || "") : "",
+          armada: match?.piketActive ? (match.armada || []) : [],
+          personil: match?.piketActive ? (match.personil || []) : []
+        };
+      });
+
+      setDataPosko(merged.length > 0 ? merged : defaultPoskoData);
+    }
+
     return () => {
-      unsubSectors();
+      if (unsubSectors) unsubSectors();
+      if (unsubPosko) unsubPosko();
     };
   }, []);
 
