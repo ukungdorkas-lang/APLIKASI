@@ -637,7 +637,27 @@ function AppContent() {
   React.useEffect(() => {
     const handleQuota = () => setQuotaExceeded(true);
     window.addEventListener('firebase-quota-exceeded', handleQuota);
-    return () => window.removeEventListener('firebase-quota-exceeded', handleQuota);
+    
+    // Dynamic favicon from Supabase settings/app
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.logoUrl) {
+          let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.getElementsByTagName('head')[0].appendChild(link);
+          }
+          link.href = data.logoUrl;
+        }
+      }
+    });
+
+    return () => {
+      window.removeEventListener('firebase-quota-exceeded', handleQuota);
+      unsubConfig();
+    };
   }, []);
 
   const isAdminRoute = 

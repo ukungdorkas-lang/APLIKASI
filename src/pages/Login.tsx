@@ -20,6 +20,17 @@ export default function Login() {
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
+  const [config, setConfig] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    import('@/src/lib/supabase-adapter').then(({ doc, onSnapshot }) => {
+      onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
+        if (snap.exists()) {
+          setConfig(snap.data());
+        }
+      });
+    });
+  }, []);
 
   // Simple Captcha
   const [captcha, setCaptcha] = React.useState({ a: Math.floor(Math.random() * 10), b: Math.floor(Math.random() * 10) });
@@ -192,8 +203,14 @@ export default function Login() {
               <ArrowRight className="w-4 h-4 rotate-180" />
               Kembali ke Beranda
             </Link>
-            <div className="w-20 h-20 bg-brand-red rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-900/20">
-              {isRegister ? <UserPlus className="text-white w-10 h-10" /> : <ShieldAlert className="text-white w-10 h-10" />}
+            <div className="w-20 h-20 bg-brand-red rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-900/20 relative overflow-hidden">
+              {isRegister ? (
+                <UserPlus className="text-white w-10 h-10 relative z-10" />
+              ) : config?.logoUrl ? (
+                <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain p-2 relative z-10" />
+              ) : (
+                <ShieldAlert className="text-white w-10 h-10 relative z-10" />
+              )}
             </div>
             <h1 className="text-4xl heading-bold text-brand-dark mb-2 leading-none uppercase">
               {isRegister ? 'Daftar' : 'Admin'} <span className="text-brand-red">{isRegister ? 'Petugas.' : 'Login.'}</span>

@@ -9,6 +9,7 @@ interface FileUploadProps {
   maxSize?: number; // in MB
   label?: string;
   initialUrl?: string;
+  bucketName?: string;
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({ 
@@ -39,7 +40,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   ],
   maxSize = 5,
   label = "Unggah Dokumen / Media",
-  initialUrl
+  initialUrl,
+  bucketName = 'personil'
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(initialUrl || null);
@@ -96,13 +98,47 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     startSimulatedUpload(selected);
   };
 
-    const startSimulatedUpload = async (file: File) => {
-      setUploading(true);
-      setProgress(10);
+  const startSimulatedUpload = async (file: File) => {
+    setUploading(true);
+    setProgress(15);
+    
+    // Normalize bucket name by trimming any accidental whitespace
+    const targetBucket = (bucketName || 'personil').trim();
+    const cleanFileName = `${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+    
+    try {
+      setProgress(40);
       
-      const fileName = Date.now() + "-" + file.name.replace(/([^\\w.-])/g, "_");
-      setTimeout(() => setProgress(30), 100);
+      // Upload directly to Supabase storage bucket
+      const { data, error: uploadError } = await supabase.storage
+        .from(targetBucket)
+        .upload(cleanFileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (uploadError) {
+        throw uploadError;
+      }
       
+      setProgress(85);
+      const { data: linkData } = supabase.storage
+        .from(targetBucket)
+        .getPublicUrl(cleanFileName);
+        
+      const publicUrl = linkData?.publicUrl || '';
+      
+      setProgress(100);
+      setPreview(file.type.startsWith("image/") ? publicUrl : null);
+      setTimeout(() => {
+        onUploadSuccess(publicUrl);
+        setUploading(false);
+      }, 300);
+      
+    } catch (sbError: any) {
+      console.warn("Direct Supabase Storage upload failed, trying API fallback:", sbError);
+      
+      // Fallback: Create FileReader for local base64 / api upload fallback
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
@@ -110,10 +146,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           const response = await fetch("/api/upload", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileName, fileData })
+            body: JSON.stringify({ fileName: cleanFileName, fileData })
           });
           const resData = await response.json();
           if (!response.ok || !resData.success) throw new Error(resData.error || "Upload failed");
+          
           setProgress(100);
           setPreview(file.type.startsWith("image/") ? resData.fileUrl : null);
           setTimeout(() => {
@@ -121,7 +158,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             setUploading(false);
           }, 300);
         } catch (err: any) {
-          console.warn("Storage fallback triggered. File will be saved locally/base64.");
+          console.warn("Storage API fallback failed. File will be saved as base64 locally in current state.", err);
+          
           if (file.type.startsWith("image/")) {
             const img = new Image();
             img.onload = () => {
@@ -139,7 +177,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                canvas.width = width;
                canvas.height = height;
                ctx?.drawImage(img, 0, 0, width, height);
-               onUploadSuccess(canvas.toDataURL("image/jpeg", 0.7));
+               const base64Url = canvas.toDataURL("image/jpeg", 0.7);
+               onUploadSuccess(base64Url);
+               setPreview(base64Url);
                setUploading(false);
                setProgress(100);
             };
@@ -151,12 +191,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           } else {
             setUploading(false);
             setProgress(0);
-            alert("Upload Error: Failed to fetch (Ukuran terlalu besar atau koneksi server gagal)");
+            setError("Gagal mengunggah file. Silakan periksa koneksi atau coba gunakan file yang lebih kecil.");
           }
         }
       };
       reader.readAsDataURL(file);
-    };
+    }
+  };
 
   const removeFile = () => {
     setFile(null);

@@ -106,15 +106,15 @@ export default function Footer() {
              <div className="bg-slate-900 p-10 rounded-[3rem] border-4 border-brand-red shadow-emergency relative group overflow-hidden">
                 <div className="relative z-10">
                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-8 uppercase italic">Pusat Komando 24 Jam</h4>
-                   <div className="flex items-center gap-8 mb-10">
-                      <div className="w-20 h-20 bg-brand-red rounded-3xl flex items-center justify-center shadow-2xl shadow-red-900 group-hover:rotate-12 transition-transform">
-                         <Phone className="w-10 h-10 text-white" />
+                   <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 mb-10">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-brand-red rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl shadow-red-900 group-hover:rotate-12 transition-transform shrink-0">
+                         <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                       </div>
-                      <div>
-                         <p className="text-4xl font-display font-black tracking-tighter text-white italic leading-none">
+                      <div className="overflow-hidden min-w-0">
+                         <p className="text-[26px] font-display font-black tracking-tighter text-white italic leading-none break-all">
                            {settings?.emergencyNumber || '112'}
                          </p>
-                         <p className="text-[10px] font-black text-brand-red uppercase animate-pulse mt-2 tracking-widest italic">Ready for response</p>
+                         <p className="text-[10px] font-black text-brand-red uppercase animate-pulse mt-2 tracking-widest italic truncate">Ready for response</p>
                       </div>
                    </div>
                    <a 

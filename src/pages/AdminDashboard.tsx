@@ -1320,7 +1320,7 @@ export default function AdminDashboard({
   }, [activeTab]);
 
   React.useEffect(() => {
-    if (activeTab !== "settings") return;
+    // Always fetch settings to display logo in sidebar
     const unsubSettings = onSnapshot(
       doc(db, "settings", "app"),
       (snap) => {
@@ -1336,7 +1336,7 @@ export default function AdminDashboard({
       }
     );
     return () => unsubSettings();
-  }, [activeTab]);
+  }, []);
 
   React.useEffect(() => {
     if (activeTab !== "monitoring" && activeTab !== "overview") return;
@@ -1840,8 +1840,12 @@ export default function AdminDashboard({
             <CloseIcon className="w-5 h-5" />
           </button>
           <Link to="/" className="flex flex-col items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
-              <ShieldAlert className="text-white w-7 h-7" />
+            <div className="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40 relative overflow-hidden">
+              {settingsForm.logoUrl ? (
+                <img src={settingsForm.logoUrl} alt="Logo" className="w-full h-full object-contain p-1.5 relative z-10" />
+              ) : (
+                <ShieldAlert className="text-white w-7 h-7 relative z-10" />
+              )}
             </div>
             <div>
               <h1 className="font-display font-black tracking-tighter text-xl leading-none text-white uppercase italic">

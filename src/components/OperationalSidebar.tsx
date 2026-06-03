@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Users, LayoutDashboard, FileText, Settings, Database, LogOut, ChevronRight, BarChart3, AlertCircle, Phone, Flame, Truck, MapPin, Bell, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { auth } from '../lib/db';
+import { auth, db } from '../lib/db';
+import { doc, onSnapshot } from '@/src/lib/supabase-adapter';
 import { cn } from '../lib/utils';
+import { AppConfig } from '../types';
 
 interface MenuItem {
   id: string;
@@ -21,6 +23,16 @@ interface OperationalSidebarProps {
 export default function OperationalSidebar({ isOpen, onClose }: OperationalSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [config, setConfig] = useState<AppConfig | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
+      if (snap.exists()) {
+        setConfig(snap.data() as AppConfig);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const menuItems: MenuItem[] = [
     { id: 'dashboard', name: 'Dashboard Piket', icon: <LayoutDashboard className="w-5 h-5" />, path: '/staff/ops', category: 'operational' },
@@ -56,8 +68,12 @@ export default function OperationalSidebar({ isOpen, onClose }: OperationalSideb
       )}>
         <div className="p-10 relative flex justify-between items-center">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40">
-              <ShieldAlert className="text-white w-6 h-6" />
+            <div className="w-10 h-10 bg-brand-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40 relative overflow-hidden">
+              {config?.logoUrl ? (
+                <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain p-1 relative z-10" />
+              ) : (
+                <ShieldAlert className="text-white w-6 h-6 relative z-10" />
+              )}
             </div>
             <div>
               <h1 className="font-display font-black tracking-tighter text-lg leading-none text-white uppercase italic">SI-<span className="text-brand-red">DAMKAR</span></h1>

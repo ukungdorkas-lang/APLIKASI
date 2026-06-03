@@ -104,7 +104,7 @@ export default function Hero() {
               <span className="text-brand-red font-black uppercase tracking-[0.4em] text-[10px]">{config?.agencyName || 'DINAS PEMADAM KEBAKARAN'}</span>
             </div>
             
-            <h1 className="text-[12vw] lg:text-[7vw] font-display font-black leading-[0.8] text-white uppercase tracking-tighter mb-10 italic">
+            <h1 className="text-5xl sm:text-[84px] font-['Georgia'] font-bold leading-tight sm:leading-[83px] text-white uppercase tracking-tighter mb-10 italic break-words hyphens-auto">
               {banner?.title || defaultTitle}
             </h1>
             
@@ -112,34 +112,42 @@ export default function Hero() {
               {banner?.subtitle || config?.slogan || 'Kami siap melindungi masyarakat dari bahaya kebakaran dengan pelayanan cepat, akurat, dan terpercaya selama 24 jam penuh.'}
             </p>
 
-            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-6 mb-20">
-              <Link to={banner?.ctaLink || "/report"} className="emergency-btn group px-8 md:px-12 py-6 text-2xl">
-                <span>{banner?.ctaText || "BUAT LAPORAN"}</span>
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-brand-red transition-all">
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            <div className="flex overflow-x-auto sm:overflow-x-visible sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-6 mb-20 w-full max-w-4xl lg:max-w-none snap-x snap-mandatory pb-4 sm:pb-0 -mx-6 px-6 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <Link 
+                to={banner?.ctaLink || "/report"} 
+                className="shrink-0 snap-start emergency-btn group w-[85vw] sm:w-[240px] sm:h-[77px] px-6 py-5 sm:py-0 flex items-center justify-between sm:justify-center gap-4 whitespace-nowrap"
+              >
+                <span className="truncate text-[14px]">{banner?.ctaText || "BUAT LAPORAN"}</span>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white min-w-[2rem] sm:min-w-[2.5rem] transition-all">
+                  <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-brand-red group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
+              
               <Link 
                 to="/staff/ops" 
-                className="bg-brand-dark/80 backdrop-blur-xl border-2 border-white/10 px-8 md:px-12 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-4 shadow-2xl group"
+                className="shrink-0 snap-start bg-brand-dark/80 backdrop-blur-xl border-2 border-white/10 w-[85vw] sm:w-[240px] sm:h-[77px] px-6 py-5 sm:py-0 rounded-2xl font-black italic uppercase tracking-tighter text-white hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center sm:justify-start gap-3 sm:gap-4 shadow-2xl group whitespace-nowrap"
               >
-                <div className="w-10 h-10 rounded-full bg-brand-red/20 flex items-center justify-center group-hover:bg-brand-red transition-all">
-                  <Users className="w-5 h-5 text-brand-red group-hover:text-white transition-all" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-red/20 flex items-center justify-center group-hover:bg-brand-red min-w-[2rem] sm:min-w-[2.5rem] transition-all">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-brand-red group-hover:text-white transition-all" />
                 </div>
-                LOGIN PETUGAS
+                <span className="truncate text-[15px]">LOGIN PETUGAS</span>
               </Link>
+              
               <Link 
                 to="/profile" 
-                className="bg-slate-900/80 backdrop-blur-xl border-2 border-slate-700 px-8 md:px-8 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-slate-900 transition-all flex items-center justify-center shadow-xl group"
+                className="shrink-0 snap-start bg-slate-900/80 backdrop-blur-xl border-2 border-slate-700 w-[60vw] sm:w-[201px] px-6 md:px-8 py-5 sm:py-6 rounded-2xl font-black italic uppercase tracking-tighter text-sm sm:text-lg text-white hover:bg-white hover:text-slate-900 transition-all flex items-center justify-center shadow-xl group text-center"
               >
                 PROFIL
               </Link>
+              
               <Link 
                 to="/education" 
-                className="bg-brand-red/90 backdrop-blur-xl border-2 border-brand-red px-8 md:px-8 py-6 rounded-2xl font-black italic uppercase tracking-tighter text-xl text-white hover:bg-white hover:text-brand-red transition-all flex items-center justify-center shadow-xl group"
+                className="shrink-0 snap-start bg-brand-red/90 backdrop-blur-xl border-2 border-brand-red w-[60vw] sm:w-[201px] px-6 py-5 sm:py-6 rounded-2xl font-black italic uppercase tracking-tighter text-sm sm:text-lg text-white hover:bg-white hover:text-brand-red transition-all flex items-center justify-center shadow-xl group text-center leading-tight sm:leading-none sm:whitespace-nowrap flex-row gap-2"
               >
-                EDUKASI WARGA
+                <span>EDUKASI WARGA</span>
               </Link>
+              {/* spacer for end masking */}
+              <div className="shrink-0 w-2 sm:hidden relative"></div>
             </div>
 
             <div className="flex items-center gap-10">
