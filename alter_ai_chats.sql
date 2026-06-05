@@ -1,0 +1,2 @@
+ALTER TABLE ai_chats ADD COLUMN IF NOT EXISTS user_message TEXT;
+ALTER TABLE ai_chats ADD COLUMN IF NOT EXISTS assistant_message TEXT;

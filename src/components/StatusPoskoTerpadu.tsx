@@ -301,7 +301,10 @@ export default function StatusPoskoTerpadu() {
                      <span className="text-[10px] font-black bg-brand-red/10 text-brand-red px-3 py-1 rounded-full uppercase tracking-widest">{posko.personil?.length || 0} Bertugas</span>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-5 flex-1 content-start">
+                  <div 
+                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-5 flex-1 content-start"
+                     style={{ width: '636.109px', height: '752.062px' }}
+                  >
                      <AnimatePresence>
                         {posko.personil?.map((personil: any, pIdx: number) => {
                            const isDanru = personil.peran?.toLowerCase() === 'danru' || posko.danruSiaga?.includes(personil.nama);
@@ -317,6 +320,12 @@ export default function StatusPoskoTerpadu() {
                                   "relative flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] border-2 transition-all duration-300 group/personil overflow-hidden",
                                   isDanru ? "border-brand-red/30 bg-gradient-to-br from-red-50/50 to-white hover:border-brand-red hover:shadow-[0_8px_30px_rgb(220,38,38,0.15)] hover:-translate-y-0.5" : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-xl hover:-translate-y-0.5"
                                )}
+                               style={{
+                                   ...(pIdx === 0 ? { width: '210.703px' } : {}),
+                                   ...(pIdx === 3 ? { width: '217.336px' } : {}),
+                                   ...(pIdx === 5 ? { fontSize: '13px' } : {}),
+                                   ...(pIdx === 6 ? { width: '193.359px', height: '117.414px' } : {}),
+                               }}
                              >
                                {isDanru && <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-red to-orange-500" />}
                                
@@ -354,7 +363,16 @@ export default function StatusPoskoTerpadu() {
                                         </span>
                                      </div>
                                   )}
-                                  <p className="font-black text-slate-800 text-[14px] sm:text-[16px] uppercase tracking-tight leading-tight break-words" title={personil.nama}>{personil.nama}</p>
+                                  <p 
+                                    className="font-black text-slate-800 text-[14px] sm:text-[16px] uppercase tracking-tight leading-tight break-words" 
+                                    title={personil.nama}
+                                    style={{
+                                       ...([0, 1, 3, 4].includes(pIdx) ? { fontSize: '13px' } : {}),
+                                       ...(pIdx === 5 ? { fontSize: '14px' } : {}),
+                                    }}
+                                  >
+                                    {personil.nama}
+                                  </p>
                                   <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 pt-1">
                                     <span className={cn(
                                        "w-1.5 h-1.5 rounded-full flex-shrink-0 mt-0.5",
