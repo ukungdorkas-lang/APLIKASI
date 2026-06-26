@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../lib/db';
-import { collection, query, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Image as ImageIcon, X, MapPin, Calendar, Info, Maximize2, Download,

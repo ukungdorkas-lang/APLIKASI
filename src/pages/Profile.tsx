@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { db } from '../lib/db';
-import { collection, query, where, getDocs, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
 import { ProfileSection } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Info, ArrowRight, ShieldAlert, Target, Users, MapPin, ChevronRight, History } from 'lucide-react';

@@ -1,6 +1,6 @@
 import React from 'react';
-import { db } from '../lib/db';
-import { collection, query, where, getDocs } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { EmergencyReport } from '../types';
 import { Search, ShieldAlert, MapPin, Clock, CheckCircle2, AlertTriangle, Loader2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';

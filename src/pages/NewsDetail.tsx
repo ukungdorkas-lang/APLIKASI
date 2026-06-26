@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { db } from '../lib/db';
-import { doc, getDoc } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { NewsArticle } from '../types';
 import { Calendar, MapPin, User, Truck, ArrowLeft, Share2, AlertCircle, Newspaper, Bookmark, X, Maximize2, Image as ImageIcon, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';

@@ -3,8 +3,8 @@ import { ShieldAlert, Newspaper, Image as ImageIcon, Phone, Menu, X, Moon, Sun, 
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Link, useLocation } from 'react-router-dom';
-import { db } from '../lib/db';
-import { doc, onSnapshot, collection, query, where, orderBy } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { AppConfig, ProfileSection } from '../types';
 
 export default function Navbar() {

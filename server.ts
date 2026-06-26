@@ -173,7 +173,7 @@ async function startServer() {
       const weatherData = JSON.parse(response.text);
       res.json({ success: true, data: weatherData });
     } catch (err) {
-      console.warn('Gemini Upstream Weather failed or quote exhausted, falling back to local simulation:', err);
+      console.warn(`Gemini Upstream Weather failed or quote exhausted, falling back to local simulation: ${err instanceof Error ? err.message : 'Unknown error'}`);
       const simulatedWeather = {
         condition: "Hujan Ringan - Berawan Tebal (Estimasi Lokal - Traffic Tinggi)",
         rainfall: 12.5,
@@ -238,7 +238,7 @@ Hingga laporan penanganan selesai diterbitkan, situasi di lokasi dilaporkan tela
       const cleaned = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
       res.json({ success: true, data: JSON.parse(cleaned) });
     } catch (err) {
-      console.warn('Gemini Generate News failed or quota exhausted, falling back to local simulation:', err);
+      console.warn(`Gemini Generate News failed or quota exhausted, falling back to local simulation: ${err instanceof Error ? err.message : 'Unknown error'}`);
       const type = report?.type || "Kejadian Darurat";
       const loc = report?.location?.address || "Kabupaten Malinau";
       const fallbackData = {
@@ -292,7 +292,7 @@ Hingga laporan penanganan selesai diterbitkan, situasi di lokasi dilaporkan tela
       const cleaned = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
       res.json({ success: true, data: JSON.parse(cleaned) });
     } catch (err) {
-      console.warn('Gemini Develop Narrative failed or quota exhausted, falling back to local simulation:', err);
+      console.warn(`Gemini Develop Narrative failed or quota exhausted, falling back to local simulation: ${err instanceof Error ? err.message : 'Unknown error'}`);
       res.json({
         success: true,
         data: {
@@ -327,7 +327,7 @@ Hingga laporan penanganan selesai diterbitkan, situasi di lokasi dilaporkan tela
         summaryText = response.text;
       }
     } catch (err) {
-      console.error('Gemini Laporan Error:', err);
+      console.error(`Gemini Laporan Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
 
     if (!summaryText || summaryText.trim() === "") {

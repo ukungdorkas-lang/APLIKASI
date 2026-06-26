@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, File, Image as ImageIcon, Video, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../lib/supabase';
 
 interface FileUploadProps {
   onUploadSuccess: (url: string) => void;
@@ -83,120 +82,75 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     setFile(selected);
     setError(null);
 
-    // Preview for images
+    // Convert to base64 and compress if it's an image
     if (selected.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreview(reader.result as string);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setPreview(dataUrl);
+          
+          startSimulatedUpload(dataUrl);
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(selected);
     } else {
       setPreview(null);
+      // For non-images, we'll just read as data URL but it might be large
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        startSimulatedUpload(reader.result as string);
+      };
+      reader.readAsDataURL(selected);
     }
-
-    // Simulate Upload immediately for this prototype
-    startSimulatedUpload(selected);
   };
 
-  const startSimulatedUpload = async (file: File) => {
+  const startSimulatedUpload = async (dataUrl: string) => {
     setUploading(true);
-    setProgress(15);
+    setProgress(0);
     
-    // Normalize bucket name by trimming any accidental whitespace
-    const targetBucket = (bucketName || 'personil').trim();
-    const cleanFileName = `${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-    
-    try {
-      setProgress(40);
-      
-      // Upload directly to Supabase storage bucket
-      const { data, error: uploadError } = await supabase.storage
-        .from(targetBucket)
-        .upload(cleanFileName, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-        
-      if (uploadError) {
-        throw uploadError;
-      }
-      
-      setProgress(85);
-      const { data: linkData } = supabase.storage
-        .from(targetBucket)
-        .getPublicUrl(cleanFileName);
-        
-      const publicUrl = linkData?.publicUrl || '';
-      
-      setProgress(100);
-      setPreview(file.type.startsWith("image/") ? publicUrl : null);
-      setTimeout(() => {
-        onUploadSuccess(publicUrl);
-        setUploading(false);
-      }, 300);
-      
-    } catch (sbError: any) {
-      console.warn("Direct Supabase Storage upload failed, trying API fallback:", sbError);
-      
-      // Fallback: Create FileReader for local base64 / api upload fallback
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const fileData = reader.result;
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileName: cleanFileName, fileData })
-          });
-          const resData = await response.json();
-          if (!response.ok || !resData.success) throw new Error(resData.error || "Upload failed");
-          
-          setProgress(100);
-          setPreview(file.type.startsWith("image/") ? resData.fileUrl : null);
-          setTimeout(() => {
-            onUploadSuccess(resData.fileUrl);
-            setUploading(false);
-          }, 300);
-        } catch (err: any) {
-          console.warn("Storage API fallback failed. File will be saved as base64 locally in current state.", err);
-          
-          if (file.type.startsWith("image/")) {
-            const img = new Image();
-            img.onload = () => {
-               const canvas = document.createElement("canvas");
-               const ctx = canvas.getContext("2d");
-               const MAX_WIDTH = 800;
-               const MAX_HEIGHT = 800;
-               let width = img.width;
-               let height = img.height;
-               if (width > height) {
-                 if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-               } else {
-                 if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-               }
-               canvas.width = width;
-               canvas.height = height;
-               ctx?.drawImage(img, 0, 0, width, height);
-               const base64Url = canvas.toDataURL("image/jpeg", 0.7);
-               onUploadSuccess(base64Url);
-               setPreview(base64Url);
-               setUploading(false);
-               setProgress(100);
-            };
-            img.src = reader.result as string;
-          } else if (file.size < 5 * 1024 * 1024) {
-               onUploadSuccess(reader.result as string);
-               setUploading(false);
-               setProgress(100);
-          } else {
-            setUploading(false);
-            setProgress(0);
-            setError("Gagal mengunggah file. Silakan periksa koneksi atau coba gunakan file yang lebih kecil.");
-          }
+    // Simulate upload progress
+    const interval = setInterval(() => {
+      setProgress(p => {
+        if (p >= 100) {
+          clearInterval(interval);
+          return 100;
         }
-      };
-      reader.readAsDataURL(file);
-    }
+        return p + 20;
+      });
+    }, 100);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      setProgress(100);
+      onUploadSuccess(dataUrl);
+      setUploading(false);
+    }, 600);
   };
 
   const removeFile = () => {

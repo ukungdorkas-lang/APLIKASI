@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
-import { collection, query, where, getDocs, setDoc, doc } from '@/src/lib/supabase-adapter';
+import { auth, db } from '../lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { collection, query, where, getDocs, setDoc, doc } from 'firebase/firestore';
 import { ShieldAlert, Lock, Mail, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { onSnapshot } from 'firebase/firestore';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -24,12 +25,10 @@ export default function Login() {
 
   React.useEffect(() => {
     let unsub: any;
-    import('@/src/lib/supabase-adapter').then(({ doc, onSnapshot }) => {
-      unsub = onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
-        if (snap.exists()) {
-          setConfig(snap.data());
-        }
-      });
+    unsub = onSnapshot(doc(db, 'settings', 'app'), (snap: any) => {
+      if (snap.exists()) {
+        setConfig(snap.data());
+      }
     });
     return () => {
       if (unsub) unsub();
@@ -55,24 +54,14 @@ export default function Login() {
     try {
       if (isRegister) {
         // Handle Registration
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              role: role
-            }
-          }
-        });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        if (authError) throw authError;
-
-        if (authData.user) {
-          const isSuperAdminEmail = (authData.user.email || email).toLowerCase() === 'ukungdorkas@gmail.com';
+        if (user) {
+          const isSuperAdminEmail = (user.email || email).toLowerCase() === 'ukungdorkas@gmail.com';
           const userData: any = {
-            user_id: authData.user.id,
-            email: authData.user.email || email,
+            user_id: user.uid,
+            email: user.email || email,
             name: isSuperAdminEmail ? "Super Admin" : fullName,
             role: isSuperAdminEmail ? 'super' : role,
             status: isSuperAdminEmail ? 'active' : 'pending', // Usually requires approval
@@ -81,10 +70,10 @@ export default function Login() {
 
           // If admin or super admin email, store in admins for direct access
           if (role === 'admin' || isSuperAdminEmail) {
-            await setDoc(doc(db, 'admins', authData.user.id), userData);
+            await setDoc(doc(db, 'admins', user.uid), userData);
           } else {
             // Store in personnel
-            await setDoc(doc(db, 'personnel', authData.user.id), {
+            await setDoc(doc(db, 'personnel', user.uid), {
               ...userData,
               position: 'Petugas Damkar',
               rank: role === 'officer' ? 'DANRU' : 'ANGGOTA'
@@ -100,18 +89,13 @@ export default function Login() {
         }, 3000);
       } else {
         // Handle Login
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (authError) throw authError;
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         
-        const user = authData.user;
+        const user = userCredential.user;
         if (!user) throw new Error("Gagal login: User tidak ditemukan.");
         
         // Check in admins collection
-        const adminQ = query(collection(db, 'admins'), where('user_id', '==', user.id));
+        const adminQ = query(collection(db, 'admins'), where('user_id', '==', user.uid));
         const adminSnap = await getDocs(adminQ);
         let adminData = !adminSnap.empty ? adminSnap.docs[0].data() : null;
         
@@ -119,14 +103,14 @@ export default function Login() {
         if (user.email === 'ukungdorkas@gmail.com') {
           if (!adminData || adminData.role !== 'super' || adminData.status !== 'active') {
             const updatedSuperData = {
-              user_id: user.id,
+              user_id: user.uid,
               email: user.email,
               name: "Super Admin",
               role: 'super',
               status: 'active',
               created_at: Date.now()
             };
-            await setDoc(doc(db, 'admins', user.id), updatedSuperData);
+            await setDoc(doc(db, 'admins', user.uid), updatedSuperData);
             adminData = updatedSuperData;
           }
           navigate('/admin');
@@ -135,7 +119,7 @@ export default function Login() {
 
         if (adminData) {
           if (adminData.status === 'pending') {
-            await supabase.auth.signOut();
+            await signOut(auth);
             setLoading(false);
             throw new Error('Akun Admin Anda sedang menunggu verifikasi dari Administrator Utama.');
           }
@@ -144,13 +128,13 @@ export default function Login() {
         }
 
         // Check in personnel collection
-        const persQ = query(collection(db, 'personnel'), where('user_id', '==', user.id));
+        const persQ = query(collection(db, 'personnel'), where('user_id', '==', user.uid));
         const persSnap = await getDocs(persQ);
         const personnelData = !persSnap.empty ? persSnap.docs[0].data() : null;
           
         if (personnelData) {
           if (personnelData.status === 'pending') {
-            await supabase.auth.signOut();
+            await signOut(auth);
             setLoading(false);
             throw new Error('Akun Petugas Anda sedang menunggu verifikasi. Silakan hubungi Pimpinan Regu atau Admin.');
           }
@@ -159,7 +143,7 @@ export default function Login() {
         }
 
         // If neither, sign out
-        await supabase.auth.signOut();
+        await signOut(auth);
         setLoading(false);
         throw new Error('Akun Anda belum memiliki izin akses sistem. Hubungi administrator.');
       }
@@ -176,10 +160,7 @@ export default function Login() {
       return;
     }
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
-      });
-      if (error) throw error;
+      await sendPasswordResetEmail(auth, email);
       setResetSent(true);
       setError(null);
     } catch (err: any) {

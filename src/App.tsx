@@ -7,10 +7,10 @@ import FormLaporan from './components/FormLaporan';
 import DashboardStats from './components/DashboardStats';
 import ReportList from './components/ReportList';
 import { useReports } from './hooks/useReports';
-import { supabase } from './lib/supabase';
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { generateNewsFromReport } from './lib/gemini';
-import { collection, addDoc, getDoc, getDocs, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from '@/src/lib/supabase-adapter';
-import { db, auth } from './lib/db';
+import { collection, addDoc, getDoc, getDocs, doc, query, where, orderBy, limit, onSnapshot, updateDoc } from 'firebase/firestore';
+import { db, auth } from './lib/firebase';
 import { ShieldAlert, Info, Newspaper, ArrowRight, Flame, Phone, Calendar, MapPin, ExternalLink, Activity, AlertTriangle, Lock } from 'lucide-react';
 import { NewsArticle, BannerConfig, AppConfig } from './types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -462,8 +462,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
   React.useEffect(() => {
     let mounted = true;
     
-    const checkAuthStatus = async (session: any) => {
-      const u = session?.user;
+    const checkAuthStatus = async (u: any) => {
       if (u) {
         // Special case for root admin
         if (u.email === 'ukungdorkas@gmail.com') {
@@ -475,7 +474,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
         }
 
         // Check in admins collection
-        const adminQ = query(collection(db, 'admins'), where('user_id', '==', u.id));
+        const adminQ = query(collection(db, 'admins'), where('user_id', '==', u.uid));
         const adminSnap = await getDocs(adminQ);
         const adminData = !adminSnap.empty ? adminSnap.docs[0].data() : null;
           
@@ -495,7 +494,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
         }
 
         // Check in personnel collection
-        const persQ = query(collection(db, 'personnel'), where('user_id', '==', u.id));
+        const persQ = query(collection(db, 'personnel'), where('user_id', '==', u.uid));
         const persSnap = await getDocs(persQ);
         const personnelData = !persSnap.empty ? persSnap.docs[0].data() : null;
           
@@ -509,7 +508,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
           }
           
           if (role === 'admin' && personnelData.role !== 'admin') {
-            supabase.auth.signOut();
+            firebaseSignOut(auth);
             navigate('/login');
             return;
           }
@@ -521,7 +520,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
         }
 
         // Neither admin nor personnel
-        supabase.auth.signOut();
+        firebaseSignOut(auth);
         navigate('/login');
       } else {
         navigate('/login');
@@ -529,19 +528,13 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
       if (mounted) setLoading(false);
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      checkAuthStatus(session);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      checkAuthStatus(user);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        checkAuthStatus(session);
-      }
-    );
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, [navigate, role]);
 
@@ -570,7 +563,7 @@ function RequireAuth({ children, role }: { children: React.ReactNode, role?: 'ad
           <div className="space-y-4">
              <button 
                onClick={() => {
-                 supabase.auth.signOut();
+                 firebaseSignOut(auth);
                  navigate('/login');
                }}
                className="emergency-btn w-full py-4 uppercase tracking-widest text-sm"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { collection, addDoc, doc, getDoc } from '@/src/lib/supabase-adapter';
-import { db } from '../lib/db';
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import {
   AlertCircle,
   CheckCircle2,
@@ -108,6 +108,7 @@ export default function FormLaporan() {
         status: "Menunggu Penanganan",
         reportNumber,
         createdAt: Date.now(),
+        created_at: Date.now(),
         newsGenerated: false,
       };
 

@@ -5,7 +5,7 @@ import { useReports } from "../hooks/useReports";
 import DashboardStats from "../components/DashboardStats";
 import ReportList from "../components/ReportList";
 import ReportChart from "../components/ReportChart";
-import { db, auth } from '../lib/db';
+import { db, auth } from '../lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -17,8 +17,9 @@ import {
   deleteDoc,
   getDocs,
   where,
-} from '@/src/lib/supabase-adapter';
-import { supabase } from '../lib/supabase';
+} from 'firebase/firestore';
+import { storage } from '../lib/firebase';
+import { ref, deleteObject } from 'firebase/storage';
 import { generateNewsFromReport, developNarrative } from "../lib/gemini";
 import {
   Bot,
@@ -606,6 +607,7 @@ export default function AdminDashboard({
         phoneNumber: reportForm.reporterPhone,
         status: editingItem ? editingItem.status : "Menunggu",
         createdAt: editingItem ? editingItem.createdAt : Date.now(),
+        created_at: editingItem ? (editingItem.created_at || editingItem.createdAt) : Date.now(),
         newsGenerated: editingItem ? editingItem.newsGenerated : false,
       };
 
@@ -703,6 +705,7 @@ export default function AdminDashboard({
         await addDoc(collection(db, "gallery"), {
           ...galleryForm,
           createdAt: Date.now(),
+          created_at: Date.now(),
         });
         showToast("Media berhasil diunggah");
       }
@@ -729,6 +732,7 @@ export default function AdminDashboard({
         await addDoc(collection(db, "education"), {
           ...eduForm,
           createdAt: Date.now(),
+          created_at: Date.now(),
         });
         showToast("Materi edukasi berhasil disimpan");
       }
@@ -865,7 +869,7 @@ export default function AdminDashboard({
       showToast("Data posko berhasil diperbarui");
     } catch (err: any) {
       try {
-        const { setDoc } = await import('@/src/lib/supabase-adapter');
+        const { setDoc } = await import('firebase/firestore');
         await setDoc(doc(db, "settings", "status_posko"), { data: poskoDataForm });
         showToast("Data posko berhasil diperbarui");
       } catch (e2) {
@@ -885,7 +889,7 @@ export default function AdminDashboard({
       } else {
          // Create the doc if it doesn't exist
          try {
-           const { setDoc } = await import('@/src/lib/supabase-adapter');
+           const { setDoc } = await import('firebase/firestore');
            await setDoc(doc(db, "settings", "org_structure"), { data: orgDataForm });
            showToast("Struktur organisasi berhasil diperbarui");
          } catch (e2) {
@@ -1123,7 +1127,7 @@ export default function AdminDashboard({
     } catch (err) {
       // If doc doesn't exist, try setting it
       try {
-        const { setDoc } = await import('@/src/lib/supabase-adapter');
+        const { setDoc } = await import('firebase/firestore');
         await setDoc(doc(db, "settings", "app"), settingsForm);
         showToast("Pengaturan sistem diperbarui");
       } catch (e) {
@@ -1443,7 +1447,7 @@ export default function AdminDashboard({
         },
       ];
 
-      const { setDoc } = await import('@/src/lib/supabase-adapter');
+      const { setDoc } = await import('firebase/firestore');
       for (const b of defaults) {
         await setDoc(doc(db, "banners", b.id), { ...b, updatedAt: Date.now() });
       }
@@ -1456,7 +1460,7 @@ export default function AdminDashboard({
   const handleSaveBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { setDoc } = await import('@/src/lib/supabase-adapter');
+      const { setDoc } = await import('firebase/firestore');
       await setDoc(doc(db, "banners", bannerForm.id), {
         ...bannerForm,
         updatedAt: Date.now(),
@@ -3285,7 +3289,7 @@ export default function AdminDashboard({
                                           } else if (url.includes('supabase.co')) {
                                             const fname = url.split('/').pop();
                                             if (fname) {
-                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              const { error } = await deleteObject(ref(storage, `gallery/${fname}`)).then(() => ({error: null})).catch(e => ({error: e}));
                                               if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
                                             }
                                           }
@@ -3337,7 +3341,7 @@ export default function AdminDashboard({
                                           } else if (url.includes('supabase.co')) {
                                             const fname = url.split('/').pop();
                                             if (fname) {
-                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              const { error } = await deleteObject(ref(storage, `gallery/${fname}`)).then(() => ({error: null})).catch(e => ({error: e}));
                                               if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
                                             }
                                           }
@@ -7046,7 +7050,7 @@ export default function AdminDashboard({
                                           } else if (photo.includes('supabase.co')) {
                                             const fname = photo.split('/').pop();
                                             if (fname) {
-                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              const { error } = await deleteObject(ref(storage, `gallery/${fname}`)).then(() => ({error: null})).catch(e => ({error: e}));
                                               if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
                                             }
                                           }
@@ -7078,7 +7082,7 @@ export default function AdminDashboard({
                                           } else if (video.includes('supabase.co')) {
                                             const fname = video.split('/').pop();
                                             if (fname) {
-                                              const { error } = await supabase.storage.from('gallery').remove([fname]);
+                                              const { error } = await deleteObject(ref(storage, `gallery/${fname}`)).then(() => ({error: null})).catch(e => ({error: e}));
                                               if (error) console.error("Gagal menghapus gambar Supabase:", error.message);
                                             }
                                           }

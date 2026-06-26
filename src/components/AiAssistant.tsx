@@ -9,8 +9,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { onSnapshot, doc, collection, addDoc } from '@/src/lib/supabase-adapter';
-import { db } from '../lib/db';
+import { onSnapshot, doc, collection, addDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { getChatAssistantResponse } from "../lib/gemini";
 import { AppConfig } from "../types";
 import Markdown from "react-markdown";

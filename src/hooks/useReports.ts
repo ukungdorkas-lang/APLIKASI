@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { db } from '../lib/db';
-import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { EmergencyReport, OperationType } from '../types';
 
 export function useReports() {

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, ShieldCheck, Flame, Droplets, Info, ExternalLink, FileText, Video, Image as ImageIcon, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db } from '../lib/db';
-import { collection, query, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { X, Download } from 'lucide-react';
 
 import DynamicBanner from '../components/DynamicBanner';

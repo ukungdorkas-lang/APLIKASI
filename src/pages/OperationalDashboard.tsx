@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../lib/db';
-import { collection, query, orderBy, limit, onSnapshot, doc, getDoc, deleteDoc, getDocs } from '@/src/lib/supabase-adapter';
+import { db, auth } from '../lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot, doc, getDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { OperationalReport, Personnel, Squad, Sector, OperationType, AttendanceStatus } from '../types';
 import { handleFirestoreError } from '../lib/errorHandler';
 import { motion, AnimatePresence } from 'motion/react';

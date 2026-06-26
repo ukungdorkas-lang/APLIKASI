@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Truck, Users, Wrench, AlertCircle, CheckCircle, Flame, MapPin, Activity, Radio, X, Maximize2 } from 'lucide-react';
-import { doc, onSnapshot, collection, query } from '@/src/lib/supabase-adapter';
-import { db } from '../lib/db';
+import { doc, onSnapshot, collection, query } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { cn } from '../lib/utils';
 
 export const defaultPoskoData = [

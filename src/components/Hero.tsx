@@ -3,8 +3,8 @@ import { ShieldAlert, Flame, Users, Activity, Phone, ArrowRight, Play } from 'lu
 import { motion, useScroll, useTransform } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
-import { db } from '../lib/db';
-import { doc, onSnapshot } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { AppConfig, BannerConfig } from '../types';
 
 export default function Hero() {

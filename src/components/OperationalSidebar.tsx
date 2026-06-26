@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Users, LayoutDashboard, FileText, Settings, Database, LogOut, ChevronRight, BarChart3, AlertCircle, Phone, Flame, Truck, MapPin, Bell, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { auth, db } from '../lib/db';
-import { doc, onSnapshot } from '@/src/lib/supabase-adapter';
+import { auth, db } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { AppConfig } from '../types';
 

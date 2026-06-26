@@ -1,12 +1,19 @@
-import { supabase } from './src/lib/supabase.js';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import fs from 'fs';
+
+const appletConfig = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
+const app = initializeApp(appletConfig);
+const db = getFirestore(app, appletConfig.firestoreDatabaseId || "(default)");
 
 async function checkReports() {
-  const { data, error } = await supabase.from('reports').select('*');
-  console.log("Error:", error);
-  console.log("Count:", data?.length || 0);
-
-  if (data && data.length > 0) {
-    console.log(JSON.stringify(data[data.length-1], null, 2));
+  const querySnapshot = await getDocs(collection(db, 'reports'));
+  console.log(`Total reports: ${querySnapshot.size}`);
+  for (const docSnap of querySnapshot.docs) {
+    const data = docSnap.data();
+    console.log(`Report ID: ${docSnap.id}, createdAt: ${data.createdAt}, created_at: ${data.created_at}, date: ${data.date}`);
   }
+  process.exit(0);
 }
-checkReports();
+
+checkReports().catch(console.error);

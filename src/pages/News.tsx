@@ -1,7 +1,7 @@
 import React from 'react';
 import { Newspaper, Calendar, MapPin, ArrowRight, X, User, Truck, Camera, Video, Share2, AlertCircle } from 'lucide-react';
-import { db } from '../lib/db';
-import { collection, query, where, orderBy, onSnapshot } from '@/src/lib/supabase-adapter';
+import { db } from '../lib/firebase';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { NewsArticle } from '../types';
 import Markdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
