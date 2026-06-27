@@ -118,7 +118,7 @@ export async function generateNewsArticle(report: EmergencyReport) {
     const result = JSON.parse(response.text || '{}');
     return result;
   } catch (error: any) {
-    console.warn(`AI News Generation failed, applying local fallback template. ${error instanceof Error ? error.message : ''}`);
+    console.warn("AI News Generation failed, applying local fallback template:", error);
     return generateLocalFallbackNews(report);
   }
 }

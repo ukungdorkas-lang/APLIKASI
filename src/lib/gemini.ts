@@ -101,7 +101,7 @@ export async function generateNewsFromReport(report: EmergencyReport, settings?:
       unitsUsed: parsed.unitsUsed || report.documentation?.units || []
     };
   } catch (error: any) {
-    console.warn(`AI Generation Error: Falling back to local template. ${error instanceof Error ? error.message : ''}`);
+    console.warn("AI Generation Error: Falling back to local template", error);
     const type = report.type || "Kejadian Darurat";
     const loc = report.location?.address || "Kabupaten Malinau";
     return {
@@ -186,7 +186,7 @@ export async function developNarrative(outline: string, settings?: AppConfig) {
 
     return JSON.parse(response.text || '{}');
   } catch (error: any) {
-    console.warn(`AI Narrative Development failed, using local fallback. ${error instanceof Error ? error.message : ''}`);
+    console.warn("AI Narrative Development failed, using local fallback:", error);
     return {
       title: "Rilis Resmi: Penanganan Laporan Darurat Lapangan",
       content: `### LAPORAN AKTIVITAS OPERASIONAL DINAS PEMADAM KEBAKARAN KABUPATEN MALINAU

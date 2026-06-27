@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, File, Image as ImageIcon, Video, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { storage } from '../lib/firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 interface FileUploadProps {
   onUploadSuccess: (url: string) => void;
@@ -82,75 +84,58 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     setFile(selected);
     setError(null);
 
-    // Convert to base64 and compress if it's an image
+    // Preview for images
     if (selected.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          setPreview(dataUrl);
-          
-          startSimulatedUpload(dataUrl);
-        };
-        img.src = reader.result as string;
+        setPreview(reader.result as string);
       };
       reader.readAsDataURL(selected);
     } else {
       setPreview(null);
-      // For non-images, we'll just read as data URL but it might be large
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        startSimulatedUpload(reader.result as string);
-      };
-      reader.readAsDataURL(selected);
     }
+
+    // Simulate Upload immediately for this prototype
+    startSimulatedUpload(selected);
   };
 
-  const startSimulatedUpload = async (dataUrl: string) => {
+  const startSimulatedUpload = async (file: File) => {
     setUploading(true);
     setProgress(0);
     
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return p + 20;
-      });
-    }, 100);
+    // Normalize bucket name
+    const targetBucket = (bucketName || 'personil').trim();
+    const cleanFileName = `${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+    const storageRef = ref(storage, `${targetBucket}/${cleanFileName}`);
+    
+    try {
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-    setTimeout(() => {
-      clearInterval(interval);
-      setProgress(100);
-      onUploadSuccess(dataUrl);
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setProgress(Math.round(p));
+        }, 
+        (err) => {
+          console.error("Firebase Storage upload failed:", err);
+          setError("Gagal mengunggah file.");
+          setUploading(false);
+        }, 
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          setPreview(file.type.startsWith("image/") ? downloadURL : null);
+          onUploadSuccess(downloadURL);
+          setUploading(false);
+          setProgress(100);
+        }
+      );
+      
+    } catch (err: any) {
+      console.warn("Storage upload failed.", err);
       setUploading(false);
-    }, 600);
+      setProgress(0);
+      setError("Gagal mengunggah file. Silakan periksa koneksi atau coba gunakan file yang lebih kecil.");
+    }
   };
 
   const removeFile = () => {
